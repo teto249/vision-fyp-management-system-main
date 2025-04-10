@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Image from "next/image";
-import Divider from "../account/ui/Divider";
+
 export default function Navbar({
   sidebarOpen,
   setSidebarOpen,
@@ -11,9 +11,6 @@ export default function Navbar({
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   return (
-
-
-    
     <nav className="sticky top-0 z-40 navbar rounded-br-2xl rounded-bl-2xl bg-base-200 border-b border-base-200 px-4 sm:px-6">
       <button
         className="btn btn-soft  btn-square mr-3"
@@ -69,7 +66,7 @@ export default function Navbar({
           </h1>
         </div>
       </div>
- 
+
       {/* Navigation controls */}
       <div className="navbar-end gap-2">
         {/* Notifications dropdown */}
@@ -232,9 +229,7 @@ export default function Navbar({
               </li>
             </ul>
           )}
-               
         </div>
-        
       </div>
     </nav>
   );

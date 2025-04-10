@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@heroui/image": "^2.2.10",
     "flyonui": "^2.0.1",
     "lucide-react": "^0.487.0",
     "next": "15.2.4",
