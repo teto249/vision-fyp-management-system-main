@@ -1,127 +1,107 @@
 import Card from "./ui/Card";
+// app/universities/page.tsx
 export default function UniversityPage() {
-  const products = [
+  const universities = [
     {
-      title: "Apple Smart Watch",
+      title: "Stanford University",
       description:
-        "Stay connected, motivated, and healthy with the latest Apple Watch.",
-      image: "https://cdn.flyonui.com/fy-assets/components/card/image-9.png",
-    },
-    // Add more products as needed (minimum 4 for demo)
-    {
-      title: "Apple Smart Watch",
-      description:
-        "Stay connected, motivated, and healthy with the latest Apple Watch.",
-      image: "https://cdn.flyonui.com/fy-assets/components/card/image-9.png",
+        "Top-tier institution known for innovation, offering diverse undergraduate and graduate programs.",
+      image: "https://images.unsplash.com/photo-1541339907198-e08756dedf3f",
+      location: "Stanford, CA",
+      students: 16000,
+      capacity: 93,
     },
     {
-      title: "Apple Smart Watch",
+      title: "Harvard University",
       description:
-        "Stay connected, motivated, and healthy with the latest Apple Watch.",
-      image: "https://cdn.flyonui.com/fy-assets/components/card/image-9.png",
+        "Prestigious Ivy League university with a focus on academic excellence and leadership.",
+      image: "https://images.unsplash.com/photo-1607237138185-eedd9c632b0b",
+      location: "Cambridge, MA",
+      students: 20000,
+      capacity: 90,
     },
     {
-      title: "Apple Smart Watch",
+      title: "MIT",
       description:
-        "Stay connected, motivated, and healthy with the latest Apple Watch.",
-      image: "https://cdn.flyonui.com/fy-assets/components/card/image-9.png",
+        "Globally renowned for STEM programs, innovation, and impactful research.",
+      image: "https://images.unsplash.com/photo-1571260899304-425eee4c7efc",
+      location: "Cambridge, MA",
+      students: 12000,
+      capacity: 88,
     },
     {
-      title: "Apple Smart Watch",
+      title: "UC Berkeley",
       description:
-        "Stay connected, motivated, and healthy with the latest Apple Watch.",
-      image: "https://cdn.flyonui.com/fy-assets/components/card/image-9.png",
-    },
-    // Add more products as needed (minimum 4 for demo)
-    {
-      title: "Apple Smart Watch",
-      description:
-        "Stay connected, motivated, and healthy with the latest Apple Watch.",
-      image: "https://cdn.flyonui.com/fy-assets/components/card/image-9.png",
+        "Leading public university fostering groundbreaking research and dynamic campus life.",
+      image: "https://images.unsplash.com/photo-1587613751709-8b1eb8d3fc6c",
+      location: "Berkeley, CA",
+      students: 45000,
+      capacity: 87,
     },
     {
-      title: "Apple Smart Watch",
+      title: "University of Oxford",
       description:
-        "Stay connected, motivated, and healthy with the latest Apple Watch.",
-      image: "https://cdn.flyonui.com/fy-assets/components/card/image-9.png",
+        "A historic institution excelling in academics and intellectual achievements.",
+      image: "https://images.unsplash.com/photo-1562842088-9570f6c29d81",
+      location: "Oxford, UK",
+      students: 26000,
+      capacity: 91,
     },
     {
-      title: "Apple Smart Watch",
+      title: "University of Toronto",
       description:
-        "Stay connected, motivated, and healthy with the latest Apple Watch.",
-      image: "https://cdn.flyonui.com/fy-assets/components/card/image-9.png",
+        "Respected Canadian university, known for its international outlook and research impact.",
+      image: "https://images.unsplash.com/photo-1580327331265-6ac5900ab784",
+      location: "Toronto, Canada",
+      students: 95000,
+      capacity: 88,
     },
     {
-      title: "Apple Smart Watch",
+      title: "Yale University",
       description:
-        "Stay connected, motivated, and healthy with the latest Apple Watch.",
-      image: "https://cdn.flyonui.com/fy-assets/components/card/image-9.png",
-    },
-    // Add more products as needed (minimum 4 for demo)
-    {
-      title: "Apple Smart Watch",
-      description:
-        "Stay connected, motivated, and healthy with the latest Apple Watch.",
-      image: "https://cdn.flyonui.com/fy-assets/components/card/image-9.png",
+        "Ivy League university combining rich history and academic excellence.",
+      image: "https://images.unsplash.com/photo-1561484934-9982b372f830",
+      location: "New Haven, CT",
+      students: 15000,
+      capacity: 85,
     },
     {
-      title: "Apple Smart Watch",
+      title: "University of Tokyo",
       description:
-        "Stay connected, motivated, and healthy with the latest Apple Watch.",
-      image: "https://cdn.flyonui.com/fy-assets/components/card/image-9.png",
-    },
-    {
-      title: "Apple Smart Watch",
-      description:
-        "Stay connected, motivated, and healthy with the latest Apple Watch.",
-      image: "https://cdn.flyonui.com/fy-assets/components/card/image-9.png",
-    },
-    {
-      title: "Apple Smart Watch",
-      description:
-        "Stay connected, motivated, and healthy with the latest Apple Watch.",
-      image: "https://cdn.flyonui.com/fy-assets/components/card/image-9.png",
-    },
-    // Add more products as needed (minimum 4 for demo)
-    {
-      title: "Apple Smart Watch",
-      description:
-        "Stay connected, motivated, and healthy with the latest Apple Watch.",
-      image: "https://cdn.flyonui.com/fy-assets/components/card/image-9.png",
-    },
-    {
-      title: "Apple Smart Watch",
-      description:
-        "Stay connected, motivated, and healthy with the latest Apple Watch.",
-      image: "https://cdn.flyonui.com/fy-assets/components/card/image-9.png",
-    },
-    {
-      title: "Apple Smart Watch",
-      description:
-        "Stay connected, motivated, and healthy with the latest Apple Watch.",
-      image: "https://cdn.flyonui.com/fy-assets/components/card/image-9.png",
+        "Premier Japanese institution offering world-class education and diverse research opportunities.",
+      image: "https://images.unsplash.com/photo-1571781926291-c477ebfd024b",
+      location: "Tokyo, Japan",
+      students: 30000,
+      capacity: 89,
     },
   ];
-  return (
-    <div className="w-full  px-10 py-10">
-      <div className="text-center mb-8 max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-3">Universities</h1>{" "}
-        <div className="w-24 h-1.5 bg-primary mx-auto"></div>{" "}
-      </div>
-      <p className="text-xl mb-10 text-center max-w-3xl mx-auto">
-        {" "}
-        Welcome to the Universities Page!
-      </p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-        {products.map((product, index) => (
-          <Card
-            key={index}
-            title={product.title}
-            description={product.description}
-            image={product.image}
-          />
-        ))}
+  return (
+    <div className="w-full px-4 sm:px-6  py-12">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-300 mb-3">
+            Universities
+          </h1>
+          <div className="w-24 h-1.5 bg-teal-600 mx-auto rounded-full" />
+          <p className="mt-6 text-lg text-gray-200 max-w-2xl mx-auto">
+            Explore partner universities and their current system utilization
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          {universities.map((uni, index) => (
+            <Card
+              key={index}
+              title={uni.title}
+              description={uni.description}
+              image={uni.image}
+              location={uni.location}
+              students={uni.students}
+              capacity={uni.capacity}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

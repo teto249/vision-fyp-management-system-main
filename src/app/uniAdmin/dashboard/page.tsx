@@ -11,8 +11,8 @@ import {
 } from "chart.js";
 import { Bar, Pie } from "react-chartjs-2";
 import { PencilIcon } from "@heroicons/react/24/outline";
-import PerformancePanel from "./components/Dashboard/PerformancePanel";
-import SummaryCard from "./components/Dashboard/SummaryCard";
+import PerformancePanel from "../components/Dashboard/PerformancePanel";
+import SummaryCard from "../components/Dashboard/SummaryCard";
 ChartJS.register(
   CategoryScale,
   LinearScale,

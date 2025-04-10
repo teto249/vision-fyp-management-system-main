@@ -1,9 +1,35 @@
+// app/dashboard/page.tsx
+import SummaryCard from './components/dashboard/SummaryCard';
+import LineChart from './components/dashboard/LineChart';
+import DonutChart from './components/dashboard/DountChart';
+import UniversityTable from './components/dashboard/UniversityTable';
+import PerformancePanel from './components/dashboard/PerformancePanel';
+
+// Mock data - replace with real API calls
+const mockUniversities = [
+  { id: '1', name: 'University A', users: 250, capacity: 75, status: 'warning' },
+  { id: '2', name: 'University B', users: 180, capacity: 60, status: 'normal' },
+  { id: '3', name: 'University C', users: 420, capacity: 95, status: 'critical' },
+];
+
 export default function Dashboard() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <h1 className="text-2xl font-bold">Main Admin</h1>
-      <div className="flex flex-col items-center justify-center">
-        <p className="text-lg">Welcome to the Main Admin Dashboard!</p>
+    <div className="p-12">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+        <SummaryCard title="Total Users" value={850} change={12} />
+        <SummaryCard title="Total Universities" value={23} />
+        <SummaryCard title="Capacity Usage" value="850/1,000" />
+        <SummaryCard title="Active Projects" value={427} change={-2} />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <LineChart />
+        <DonutChart />
+      </div>
+
+      <div className="grid grid-cols-1 gap-6">
+        <UniversityTable data={mockUniversities} />
+        <PerformancePanel />
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Image from "next/image";
-
+import Divider from "../account/ui/Divider";
 export default function Navbar({
   sidebarOpen,
   setSidebarOpen,
@@ -11,9 +11,9 @@ export default function Navbar({
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   return (
-    <nav className="sticky top-0 z-40 navbar rounded-br-2xl rounded-bl-2xl bg-base-200 border-b border-base-200 px-4 sm:px-6">
+    <nav className="sticky top-0 z-40 navbar rounded-br-2xl rounded-bl-2xl bg-teal-900 border-b border-teal-800 px-4 sm:px-6 text-gray-300">
       <button
-        className="btn btn-soft  btn-square mr-3"
+        className="btn btn-soft bg-teal-950  btn-square mr-3"
         onClick={() => setSidebarOpen(!sidebarOpen)}
         aria-label="Toggle sidebar"
       >
@@ -148,7 +148,12 @@ export default function Navbar({
             aria-label="User menu"
           >
             <div className="w-8 rounded-full">
-              <Image src="" alt="User profile" width={32} height={32} />
+              <Image
+                src="/logo.png"
+                alt="User profile"
+                width={32}
+                height={32}
+              />
             </div>
           </button>
 
@@ -158,7 +163,12 @@ export default function Navbar({
                 <div className="flex items-center gap-3">
                   <div className="avatar">
                     <div className="w-10 rounded-full">
-                      <Image src="" alt="User profile" width={40} height={40} />
+                      <Image
+                        src="/logo.png"
+                        alt="User profile"
+                        width={40}
+                        height={40}
+                      />
                     </div>
                   </div>
                   <div>

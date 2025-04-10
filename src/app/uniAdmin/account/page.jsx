@@ -61,8 +61,8 @@ export default function UniAdminProfile() {
   };
 
   return (
-    <div className="flex justify-center items-start min-h-screen bg-base-100 py-10">
-      <div className="w-full max-w-7xl mx-4 bg-base-200 rounded-2xl shadow-lg overflow-hidden">
+    <div className="flex justify-center items-start min-h-screen bg-gray-900 py-10">
+      <div className="w-full max-w-7xl mx-4  rounded-2xl shadow-lg overflow-hidden bg-gray-800">
         <ProHeader isEditMode={isEditMode} toggleEditMode={toggleEditMode} />
         <Divider />
         <Profile

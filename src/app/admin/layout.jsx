@@ -4,7 +4,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       
-      <body>
+      <body className="bg-gray-900">
         <UniversityLayout />
         {children}
       </body>
