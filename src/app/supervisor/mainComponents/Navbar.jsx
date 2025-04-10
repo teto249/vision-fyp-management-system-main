@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Image from "next/image";
-
+import Divider from "../account/ui/Divider";
 export default function Navbar({
   sidebarOpen,
   setSidebarOpen,
@@ -11,9 +11,9 @@ export default function Navbar({
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   return (
-    <nav className="sticky top-0 z-40 navbar rounded-br-2xl rounded-bl-2xl bg-base-200 border-b border-base-200 px-4 sm:px-6">
+    <nav className="sticky top-0 z-40 navbar rounded-br-2xl rounded-bl-2xl bg-teal-900 border-b border-teal-800 px-4 sm:px-6 text-gray-300">
       <button
-        className="btn btn-soft  btn-square mr-3"
+        className="btn btn-soft bg-teal-950  btn-square mr-3"
         onClick={() => setSidebarOpen(!sidebarOpen)}
         aria-label="Toggle sidebar"
       >

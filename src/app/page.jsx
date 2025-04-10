@@ -12,7 +12,7 @@ export default function Home() {
       <ValueProposition />
       <Features />
       {/* CTA Section */}
-      <section className="bg-gray-800 py-20">
+      <section className="bg-gray-800 py-20 mx-10 rounded-3xl">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <h2 className="text-3xl font-bold mb-6 text-green-400">
             Ready to Transform FYP Management?

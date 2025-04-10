@@ -7,7 +7,7 @@ export default function Navigation() {
   const searchParams = useSearchParams();
   const url = searchParams.get("link");
   return (
-    <nav className="bg-gray-900 shadow-xl">
+    <nav className="bg-gray-900 sticky z-0 shadow-xl">
       <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
         <Link href="/" className="flex items-center space-x-3">
           <Image

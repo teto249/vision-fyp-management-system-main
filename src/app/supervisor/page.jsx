@@ -2,12 +2,11 @@
 import React from "react";
 import { useState } from "react";
 import { BarChart, LineChart, PieChart } from "lucide-react";
-import HeaderData from "./components/header";
+
 import { studentList } from "./data/Studentlist";
 
 export default function Supervisor() {
   const [students, setStudents] = useState(studentList);
-
   const [activeTab, setActiveTab] = useState("overview");
   const [selectedStudent, setSelectedStudent] = useState(null);
 
@@ -30,14 +29,14 @@ export default function Supervisor() {
 
   // Status indicator component
   const StatusIndicator = ({ value }) => {
-    let color = "bg-[#2EB67D]"; // Slack Green
-    if (value < 50) color = "bg-[#E01E5A]"; // Slack Red
-    else if (value < 75) color = "bg-[#ECB22E]"; // Slack Yellow
+    let color = "bg-teal-400"; // Teal
+    if (value < 50) color = "bg-red-500"; // Red
+    else if (value < 75) color = "bg-yellow-400"; // Yellow
 
     return (
       <div className="flex items-center">
         <div className={`h-3 w-3 rounded-full mr-2 ${color}`}></div>
-        <span>{value}%</span>
+        <span className="text-gray-300">{value}%</span>
       </div>
     );
   };
@@ -57,10 +56,10 @@ export default function Supervisor() {
   // Assignment status badge
   const AssignmentStatusBadge = ({ status }) => {
     const statusStyles = {
-      completed: "bg-[#2EB67D]/20 text-[#2EB67D]", // Slack Green
-      "in-progress": "bg-[#36C5F0]/20 text-[#36C5F0]", // Slack Blue
-      overdue: "bg-[#E01E5A]/20 text-[#E01E5A]", // Slack Red
-      "not-started": "bg-[#616061]/20 text-[#616061]", // Text Secondary
+      completed: "bg-teal-400/20 text-teal-400", // Teal
+      "in-progress": "bg-blue-400/20 text-blue-400", // Blue
+      overdue: "bg-red-500/20 text-red-500", // Red
+      "not-started": "bg-gray-600/20 text-gray-400", // Gray
     };
 
     return (
@@ -73,23 +72,21 @@ export default function Supervisor() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F6F6F6]">
-      {" "}
-      {/* Slack Light Gray */}
+    <div className="min-h-screen bg-gray-800">
       {/* Header */}
-      <HeaderData />
+ 
       {/* Main Content */}
       <main className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Navigation Tabs */}
-          <div className="border-b border-[#DDDDDD] mb-6">
+          <div className="border-b border-gray-700 mb-6">
             <nav className="-mb-px flex space-x-8">
               <button
                 onClick={() => setActiveTab("overview")}
                 className={`pb-4 px-1 ${
                   activeTab === "overview"
-                    ? "border-b-2 border-[#36C5F0] text-[#1D1D1D]" // Slack Blue and Dark Gray
-                    : "text-[#616061] hover:text-[#1D1D1D] hover:border-[#B8A1C7]" // Text Secondary and Light Purple
+                    ? "border-b-2 border-teal-400 text-teal-400"
+                    : "text-gray-400 hover:text-gray-300 hover:border-gray-500"
                 }`}
               >
                 Overview
@@ -98,8 +95,8 @@ export default function Supervisor() {
                 onClick={() => setActiveTab("students")}
                 className={`pb-4 px-1 ${
                   activeTab === "students"
-                    ? "border-b-2 border-[#36C5F0] text-[#1D1D1D]"
-                    : "text-[#616061] hover:text-[#1D1D1D] hover:border-[#B8A1C7]"
+                    ? "border-b-2 border-teal-400 text-teal-400"
+                    : "text-gray-400 hover:text-gray-300 hover:border-gray-500"
                 }`}
               >
                 Students
@@ -108,8 +105,8 @@ export default function Supervisor() {
                 onClick={() => setActiveTab("assignments")}
                 className={`pb-4 px-1 ${
                   activeTab === "assignments"
-                    ? "border-b-2 border-[#36C5F0] text-[#1D1D1D]"
-                    : "text-[#616061] hover:text-[#1D1D1D] hover:border-[#B8A1C7]"
+                    ? "border-b-2 border-teal-400 text-teal-400"
+                    : "text-gray-400 hover:text-gray-300 hover:border-gray-500"
                 }`}
               >
                 Assignments
@@ -118,8 +115,8 @@ export default function Supervisor() {
                 onClick={() => setActiveTab("reports")}
                 className={`pb-4 px-1 ${
                   activeTab === "reports"
-                    ? "border-b-2 border-[#36C5F0] text-[#1D1D1D]"
-                    : "text-[#616061] hover:text-[#1D1D1D] hover:border-[#B8A1C7]"
+                    ? "border-b-2 border-teal-400 text-teal-400"
+                    : "text-gray-400 hover:text-gray-300 hover:border-gray-500"
                 }`}
               >
                 Reports
@@ -133,14 +130,12 @@ export default function Supervisor() {
               {/* Summary Cards */}
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-6">
                 {/* Total Students Card */}
-                <div className="bg-white overflow-hidden shadow rounded-lg">
+                <div className="bg-gray-700 overflow-hidden shadow rounded-lg">
                   <div className="px-4 py-5 sm:p-6">
                     <div className="flex items-center">
-                      <div className="flex-shrink-0 bg-[#4A154B] rounded-md p-3">
-                        {" "}
-                        {/* Slack Purple */}
+                      <div className="flex-shrink-0 bg-teal-400 rounded-md p-3">
                         <svg
-                          className="h-6 w-6 text-white"
+                          className="h-6 w-6 text-gray-900"
                           xmlns="http://www.w3.org/2000/svg"
                           fill="none"
                           viewBox="0 0 24 24"
@@ -156,14 +151,10 @@ export default function Supervisor() {
                       </div>
                       <div className="ml-5 w-0 flex-1">
                         <dl>
-                          <dt className="text-sm font-medium text-[#616061] truncate">
-                            {" "}
-                            {/* Text Secondary */}
+                          <dt className="text-sm font-medium text-gray-400 truncate">
                             Total Students
                           </dt>
-                          <dd className="text-3xl font-semibold text-[#1D1D1D]">
-                            {" "}
-                            {/* Text Primary */}
+                          <dd className="text-3xl font-semibold text-gray-100">
                             {students.length}
                           </dd>
                         </dl>
@@ -173,14 +164,12 @@ export default function Supervisor() {
                 </div>
 
                 {/* Average Progress Card */}
-                <div className="bg-white overflow-hidden shadow rounded-lg">
+                <div className="bg-gray-700 overflow-hidden shadow rounded-lg">
                   <div className="px-4 py-5 sm:p-6">
                     <div className="flex items-center">
-                      <div className="flex-shrink-0 bg-[#2EB67D] rounded-md p-3">
-                        {" "}
-                        {/* Slack Green */}
+                      <div className="flex-shrink-0 bg-teal-400 rounded-md p-3">
                         <svg
-                          className="h-6 w-6 text-white"
+                          className="h-6 w-6 text-gray-900"
                           xmlns="http://www.w3.org/2000/svg"
                           fill="none"
                           viewBox="0 0 24 24"
@@ -196,10 +185,10 @@ export default function Supervisor() {
                       </div>
                       <div className="ml-5 w-0 flex-1">
                         <dl>
-                          <dt className="text-sm font-medium text-[#616061] truncate">
+                          <dt className="text-sm font-medium text-gray-400 truncate">
                             Average Progress
                           </dt>
-                          <dd className="text-3xl font-semibold text-[#1D1D1D]">
+                          <dd className="text-3xl font-semibold text-gray-100">
                             {Math.round(overallProgress)}%
                           </dd>
                         </dl>
@@ -209,14 +198,12 @@ export default function Supervisor() {
                 </div>
 
                 {/* Average Attendance Card */}
-                <div className="bg-white overflow-hidden shadow rounded-lg">
+                <div className="bg-gray-700 overflow-hidden shadow rounded-lg">
                   <div className="px-4 py-5 sm:p-6">
                     <div className="flex items-center">
-                      <div className="flex-shrink-0 bg-[#ECB22E] rounded-md p-3">
-                        {" "}
-                        {/* Slack Yellow */}
+                      <div className="flex-shrink-0 bg-yellow-400 rounded-md p-3">
                         <svg
-                          className="h-6 w-6 text-white"
+                          className="h-6 w-6 text-gray-900"
                           xmlns="http://www.w3.org/2000/svg"
                           fill="none"
                           viewBox="0 0 24 24"
@@ -232,10 +219,10 @@ export default function Supervisor() {
                       </div>
                       <div className="ml-5 w-0 flex-1">
                         <dl>
-                          <dt className="text-sm font-medium text-[#616061] truncate">
-                            Average Attendance
+                          <dt className="text-sm font-medium text-gray-400 truncate">
+                            Average Response Time
                           </dt>
-                          <dd className="text-3xl font-semibold text-[#1D1D1D]">
+                          <dd className="text-3xl font-semibold text-gray-100">
                             {Math.round(overallAttendance)}%
                           </dd>
                         </dl>
@@ -245,14 +232,12 @@ export default function Supervisor() {
                 </div>
 
                 {/* Completed Assignments Card */}
-                <div className="bg-white overflow-hidden shadow rounded-lg">
+                <div className="bg-gray-700 overflow-hidden shadow rounded-lg">
                   <div className="px-4 py-5 sm:p-6">
                     <div className="flex items-center">
-                      <div className="flex-shrink-0 bg-[#36C5F0] rounded-md p-3">
-                        {" "}
-                        {/* Slack Blue */}
+                      <div className="flex-shrink-0 bg-blue-400 rounded-md p-3">
                         <svg
-                          className="h-6 w-6 text-white"
+                          className="h-6 w-6 text-gray-900"
                           xmlns="http://www.w3.org/2000/svg"
                           fill="none"
                           viewBox="0 0 24 24"
@@ -268,10 +253,10 @@ export default function Supervisor() {
                       </div>
                       <div className="ml-5 w-0 flex-1">
                         <dl>
-                          <dt className="text-sm font-medium text-[#616061] truncate">
-                            Completed Assignments
+                          <dt className="text-sm font-medium text-gray-400 truncate">
+                            Completed Tasks
                           </dt>
-                          <dd className="text-3xl font-semibold text-[#1D1D1D]">
+                          <dd className="text-3xl font-semibold text-gray-100">
                             {completedAssignments}/{totalAssignments}
                           </dd>
                         </dl>
@@ -282,79 +267,77 @@ export default function Supervisor() {
               </div>
 
               {/* Student Progress Table */}
-              <div className="bg-white shadow rounded-lg mb-6">
-                <div className="px-4 py-5 border-b border-[#DDDDDD] sm:px-6">
-                  <h3 className="text-lg font-medium text-[#1D1D1D]">
+              <div className="bg-gray-700 shadow rounded-lg mb-6">
+                <div className="px-4 py-5 border-b border-gray-600 sm:px-6">
+                  <h3 className="text-lg font-medium text-gray-100">
                     Student Progress
                   </h3>
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-[#DDDDDD]">
-                    <thead className="bg-[#F6F6F6]">
-                      {" "}
-                      {/* Slack Light Gray */}
+                  <table className="min-w-full divide-y divide-gray-600">
+                    <thead className="bg-gray-800">
                       <tr>
                         <th
                           scope="col"
-                          className="px-6 py-3 text-left text-xs font-medium text-[#616061] uppercase tracking-wider"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
                         >
                           Student
                         </th>
                         <th
                           scope="col"
-                          className="px-6 py-3 text-left text-xs font-medium text-[#616061] uppercase tracking-wider"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
                         >
                           Course
                         </th>
                         <th
                           scope="col"
-                          className="px-6 py-3 text-left text-xs font-medium text-[#616061] uppercase tracking-wider"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
                         >
                           Progress
                         </th>
                         <th
                           scope="col"
-                          className="px-6 py-3 text-left text-xs font-medium text-[#616061] uppercase tracking-wider"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
                         >
-                          Attendance
+                          Response
                         </th>
                         <th
                           scope="col"
-                          className="px-6 py-3 text-left text-xs font-medium text-[#616061] uppercase tracking-wider"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
                         >
                           Last Active
                         </th>
                         <th
                           scope="col"
-                          className="px-6 py-3 text-left text-xs font-medium text-[#616061] uppercase tracking-wider"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
                         >
                           Action
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-[#DDDDDD]">
+                    <tbody className="bg-gray-700 divide-y divide-gray-600">
                       {students.map((student) => (
-                        <tr key={student.id}>
+                        <tr key={student.id} className="hover:bg-gray-600">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <div className="h-10 w-10 flex-shrink-0">
-                                <div className="h-10 w-10 rounded-full bg-[#F6F6F6] flex items-center justify-center">
-                                  <span className="text-[#616061] font-medium">
+                                <div className="h-10 w-10 rounded-full bg-gray-800 flex items-center justify-center">
+                                  <span className="text-gray-400 font-medium">
                                     {student.name.charAt(0)}
                                   </span>
                                 </div>
                               </div>
                               <div className="ml-4">
-                                <div className="text-sm font-medium text-[#1D1D1D]">
+                                <div className="text-sm font-medium text-gray-100">
                                   {student.name}
                                 </div>
-                                <div className="text-sm text-[#616061]">
+                                <div className="text-sm text-gray-400">
                                   {student.email}
                                 </div>
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-[#616061]">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
                             {student.course}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
@@ -363,13 +346,13 @@ export default function Supervisor() {
                           <td className="px-6 py-4 whitespace-nowrap">
                             <StatusIndicator value={student.attendance} />
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-[#616061]">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
                             {student.lastActive}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <button
                               onClick={() => viewStudentDetails(student)}
-                              className="text-[#36C5F0] hover:text-[#3BAFDA]"
+                              className="text-teal-400 hover:text-teal-300"
                             >
                               View Details
                             </button>
@@ -382,82 +365,20 @@ export default function Supervisor() {
               </div>
 
               {/* Recent Activity */}
-              <div className="bg-white shadow rounded-lg">
-                <div className="px-4 py-5 border-b border-[#DDDDDD] sm:px-6">
-                  <h3 className="text-lg font-medium text-[#1D1D1D]">
+              <div className="bg-gray-700 shadow rounded-lg">
+                <div className="px-4 py-5 border-b border-gray-600 sm:px-6">
+                  <h3 className="text-lg font-medium text-gray-100">
                     Recent Activity
                   </h3>
                 </div>
                 <div className="p-6">
-                  <ul className="divide-y divide-[#DDDDDD]">
+                  <ul className="divide-y divide-gray-600">
                     <li className="py-4">
                       <div className="flex space-x-3">
                         <div className="flex-shrink-0">
-                          <div className="h-10 w-10 rounded-full bg-[#36C5F0]/20 flex items-center justify-center">
-                            {" "}
-                            {/* Slack Blue with opacity */}
+                          <div className="h-10 w-10 rounded-full bg-blue-400/20 flex items-center justify-center">
                             <svg
-                              className="h-6 w-6 text-[#36C5F0]"
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                              />
-                            </svg>
-                          </div>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-[#1D1D1D]">
-                            Taylor Wilson submitted Final Presentation
-                          </p>
-                          <p className="text-sm text-[#616061]">5 hours ago</p>
-                        </div>
-                      </div>
-                    </li>
-                    <li className="py-4">
-                      <div className="flex space-x-3">
-                        <div className="flex-shrink-0">
-                          <div className="h-10 w-10 rounded-full bg-[#E01E5A]/20 flex items-center justify-center">
-                            {" "}
-                            {/* Slack Red with opacity */}
-                            <svg
-                              className="h-6 w-6 text-[#E01E5A]"
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                              />
-                            </svg>
-                          </div>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-[#1D1D1D]">
-                            Jamie Smith's Visualization Project is overdue
-                          </p>
-                          <p className="text-sm text-[#616061]">1 day ago</p>
-                        </div>
-                      </div>
-                    </li>
-                    <li className="py-4">
-                      <div className="flex space-x-3">
-                        <div className="flex-shrink-0">
-                          <div className="h-10 w-10 rounded-full bg-[#2EB67D]/20 flex items-center justify-center">
-                            {" "}
-                            {/* Slack Green with opacity */}
-                            <svg
-                              className="h-6 w-6 text-[#2EB67D]"
+                              className="h-6 w-6 text-blue-400"
                               xmlns="http://www.w3.org/2000/svg"
                               fill="none"
                               viewBox="0 0 24 24"
@@ -473,10 +394,66 @@ export default function Supervisor() {
                           </div>
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-[#1D1D1D]">
+                          <p className="text-sm font-medium text-gray-100">
+                            Taylor Wilson submitted Final Presentation
+                          </p>
+                          <p className="text-sm text-gray-400">5 hours ago</p>
+                        </div>
+                      </div>
+                    </li>
+                    <li className="py-4">
+                      <div className="flex space-x-3">
+                        <div className="flex-shrink-0">
+                          <div className="h-10 w-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                            <svg
+                              className="h-6 w-6 text-red-500"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                              />
+                            </svg>
+                          </div>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-gray-100">
+                            Jamie Smith's Visualization Project is overdue
+                          </p>
+                          <p className="text-sm text-gray-400">1 day ago</p>
+                        </div>
+                      </div>
+                    </li>
+                    <li className="py-4">
+                      <div className="flex space-x-3">
+                        <div className="flex-shrink-0">
+                          <div className="h-10 w-10 rounded-full bg-teal-400/20 flex items-center justify-center">
+                            <svg
+                              className="h-6 w-6 text-teal-400"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                              />
+                            </svg>
+                          </div>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-gray-100">
                             Alex Johnson achieved 68% course progress
                           </p>
-                          <p className="text-sm text-[#616061]">2 days ago</p>
+                          <p className="text-sm text-gray-400">2 days ago</p>
                         </div>
                       </div>
                     </li>
@@ -485,21 +462,19 @@ export default function Supervisor() {
               </div>
             </div>
           )}
-
-          {/* Students Tab */}
-          {activeTab === "students" && (
-            <div className="bg-white shadow rounded-lg">
-              <div className="px-4 py-5 border-b border-[#DDDDDD] sm:px-6 flex justify-between items-center">
-                <h3 className="text-lg font-medium text-[#1D1D1D]">
+ {activeTab === "students" && (
+            <div className="bg-gray-700 shadow rounded-lg">
+              <div className="px-4 py-5 border-b border-gray-600 sm:px-6 flex justify-between items-center">
+                <h3 className="text-lg font-medium text-gray-100">
                   All Students
                 </h3>
                 <div className="flex space-x-3">
-                  <select className="border border-[#DDDDDD] rounded-md px-3 py-2">
+                  <select className="border border-gray-600 bg-gray-800 text-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-400 focus:border-teal-400">
                     <option>All Courses</option>
                     <option>Computer Science</option>
                     <option>Data Science</option>
                   </select>
-                  <select className="border border-[#DDDDDD] rounded-md px-3 py-2">
+                  <select className="border border-gray-600 bg-gray-800 text-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-400 focus:border-teal-400">
                     <option>All Progress</option>
                     <option>High Progress (75%+)</option>
                     <option>Medium Progress (50-75%)</option>
@@ -508,107 +483,107 @@ export default function Supervisor() {
                 </div>
               </div>
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-[#DDDDDD]">
-                  <thead className="bg-[#F6F6F6]">
+                <table className="min-w-full divide-y divide-gray-600">
+                  <thead className="bg-gray-800">
                     <tr>
                       <th
                         scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-[#616061] uppercase tracking-wider"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
                       >
                         Student
                       </th>
                       <th
                         scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-[#616061] uppercase tracking-wider"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
                       >
                         Course
                       </th>
                       <th
                         scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-[#616061] uppercase tracking-wider"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
                       >
                         Progress
                       </th>
                       <th
                         scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-[#616061] uppercase tracking-wider"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
                       >
                         Attendance
                       </th>
                       <th
                         scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-[#616061] uppercase tracking-wider"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
                       >
                         Last Active
                       </th>
                       <th
                         scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-[#616061] uppercase tracking-wider"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
                       >
                         Actions
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-[#DDDDDD]">
+                  <tbody className="bg-gray-700 divide-y divide-gray-600">
                     {students.map((student) => (
-                      <tr key={student.id}>
+                      <tr key={student.id} className="hover:bg-gray-600">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <div className="h-10 w-10 flex-shrink-0">
-                              <div className="h-10 w-10 rounded-full bg-[#F6F6F6] flex items-center justify-center">
-                                <span className="text-[#616061] font-medium">
+                              <div className="h-10 w-10 rounded-full bg-gray-800 flex items-center justify-center">
+                                <span className="text-gray-400 font-medium">
                                   {student.name.charAt(0)}
                                 </span>
                               </div>
                             </div>
                             <div className="ml-4">
-                              <div className="text-sm font-medium text-[#1D1D1D]">
+                              <div className="text-sm font-medium text-gray-100">
                                 {student.name}
                               </div>
-                              <div className="text-sm text-[#616061]">
+                              <div className="text-sm text-gray-400">
                                 {student.email}
                               </div>
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-[#616061]">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
                           {student.course}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="w-full bg-[#F6F6F6] rounded-full h-2.5">
+                          <div className="w-full bg-gray-800 rounded-full h-2.5">
                             <div
                               className={`h-2.5 rounded-full ${
                                 student.progress >= 75
-                                  ? "bg-[#2EB67D]" // Slack Green
+                                  ? "bg-teal-400"
                                   : student.progress >= 50
-                                  ? "bg-[#ECB22E]" // Slack Yellow
-                                  : "bg-[#E01E5A]" // Slack Red
+                                  ? "bg-yellow-400"
+                                  : "bg-red-500"
                               }`}
                               style={{ width: `${student.progress}%` }}
                             ></div>
                           </div>
-                          <div className="text-xs mt-1 text-[#616061]">
+                          <div className="text-xs mt-1 text-gray-400">
                             {student.progress}%
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <StatusIndicator value={student.attendance} />
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-[#616061]">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
                           {student.lastActive}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex space-x-3">
                             <button
                               onClick={() => viewStudentDetails(student)}
-                              className="text-[#36C5F0] hover:text-[#3BAFDA]"
+                              className="text-teal-400 hover:text-teal-300"
                             >
                               View
                             </button>
-                            <button className="text-[#616061] hover:text-[#1D1D1D]">
+                            <button className="text-gray-400 hover:text-gray-300">
                               Edit
                             </button>
-                            <button className="text-[#E01E5A] hover:text-[#E01E5A]/80">
+                            <button className="text-red-500 hover:text-red-400">
                               Remove
                             </button>
                           </div>
@@ -623,12 +598,12 @@ export default function Supervisor() {
 
           {/* Assignments Tab */}
           {activeTab === "assignments" && (
-            <div className="bg-white shadow rounded-lg">
-              <div className="px-4 py-5 border-b border-[#DDDDDD] sm:px-6 flex justify-between items-center">
-                <h3 className="text-lg font-medium text-[#1D1D1D]">
+            <div className="bg-gray-700 shadow rounded-lg">
+              <div className="px-4 py-5 border-b border-gray-600 sm:px-6 flex justify-between items-center">
+                <h3 className="text-lg font-medium text-gray-100">
                   All Assignments
                 </h3>
-                <button className="bg-[#36C5F0] text-white px-4 py-2 rounded-md hover:bg-[#3BAFDA]">
+                <button className="bg-teal-400 text-gray-900 px-4 py-2 rounded-md hover:bg-teal-500 font-medium transition-colors">
                   Create Assignment
                 </button>
               </div>
@@ -643,10 +618,12 @@ export default function Supervisor() {
                   ].map((assignment, index) => (
                     <div
                       key={index}
-                      className="border border-[#DDDDDD] rounded-lg p-4 hover:shadow-md transition-shadow"
+                      className="border border-gray-600 bg-gray-800 rounded-lg p-4 hover:shadow-md transition-shadow"
                     >
-                      <h4 className="font-medium text-lg mb-2">{assignment}</h4>
-                      <div className="text-sm text-[#616061] mb-4">
+                      <h4 className="font-medium text-lg text-gray-100 mb-2">
+                        {assignment}
+                      </h4>
+                      <div className="text-sm text-gray-400 mb-4">
                         Due:{" "}
                         {
                           ["Apr 15", "Mar 30", "May 10", "Apr 20", "Apr 5"][
@@ -655,21 +632,21 @@ export default function Supervisor() {
                         }
                       </div>
                       <div className="flex justify-between items-center mb-3">
-                        <span className="text-sm font-medium">
+                        <span className="text-sm font-medium text-gray-300">
                           Completion Rate:
                         </span>
-                        <span className="text-sm">
+                        <span className="text-sm text-gray-400">
                           {[100, 100, 33, 33, 0][index]}%
                         </span>
                       </div>
-                      <div className="w-full bg-[#F6F6F6] rounded-full h-2 mb-4">
+                      <div className="w-full bg-gray-700 rounded-full h-2 mb-4">
                         <div
-                          className="bg-[#36C5F0] h-2 rounded-full"
+                          className="bg-teal-400 h-2 rounded-full"
                           style={{ width: `${[100, 100, 33, 33, 0][index]}%` }}
                         ></div>
                       </div>
                       <div className="flex justify-end">
-                        <button className="text-[#36C5F0] hover:text-[#3BAFDA] text-sm">
+                        <button className="text-teal-400 hover:text-teal-300 text-sm">
                           View Details
                         </button>
                       </div>
@@ -683,23 +660,23 @@ export default function Supervisor() {
           {/* Reports Tab */}
           {activeTab === "reports" && (
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              <div className="bg-white shadow rounded-lg">
-                <div className="px-4 py-5 border-b border-[#DDDDDD] sm:px-6 flex justify-between items-center">
-                  <h3 className="text-lg font-medium text-[#1D1D1D]">
+              <div className="bg-gray-700 shadow rounded-lg">
+                <div className="px-4 py-5 border-b border-gray-600 sm:px-6 flex justify-between items-center">
+                  <h3 className="text-lg font-medium text-gray-100">
                     Overall Progress
                   </h3>
                   <div className="flex items-center">
-                    <BarChart className="h-5 w-5 text-[#616061] mr-2" />
-                    <span className="text-sm text-[#616061]">Last 30 Days</span>
+                    <BarChart className="h-5 w-5 text-gray-400 mr-2" />
+                    <span className="text-sm text-gray-400">Last 30 Days</span>
                   </div>
                 </div>
                 <div className="p-6">
-                  <div className="h-64 flex items-center justify-center bg-[#F6F6F6] rounded-md">
+                  <div className="h-64 flex items-center justify-center bg-gray-800 rounded-md">
                     <div className="text-center">
-                      <div className="text-[#616061] mb-2">
+                      <div className="text-gray-400 mb-2">
                         Visualization placeholder
                       </div>
-                      <div className="text-sm text-[#B8A1C7]">
+                      <div className="text-sm text-teal-400">
                         Course progress chart would appear here
                       </div>
                     </div>
