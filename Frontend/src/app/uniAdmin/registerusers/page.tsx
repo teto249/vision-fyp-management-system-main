@@ -7,6 +7,7 @@ import RoleSelector from "../components/UserRegistration/RoleSelector";
 import SingleRegistrationForm from "../components/UserRegistration/SingleRegistrationForm";
 import BulkRegistrationForm from "../components/UserRegistration/BulkRegistrationForm";
 import SubmitButton from "../components/UserRegistration/SubmitButton";
+import { registerSingleUser, registerBulkUsers } from "../../../api/uniAdmin/RegisterUniUsers";
 
 export default function RegistrationForm() {
   const [role, setRole] = useState("Student");
@@ -21,6 +22,8 @@ export default function RegistrationForm() {
   const [bulkUploadData, setBulkUploadData] = useState([]);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [uploadStatus, setUploadStatus] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   const handleChange = (e) => {
     const { id, value } = e.target;
@@ -38,42 +41,68 @@ export default function RegistrationForm() {
     setRole(newRole);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Prepare submitted data, excluding supervisor fields for Student role
-    const submittedData = {
-      ...formData,
-      role,
-      ...(role === "Supervisor" ? { contactEmail: formData.contactEmail, officeAddress: formData.officeAddress } : {}),
-    };
-    console.log("Submitted data:", submittedData);
-    // Reset form based on current role
-    setFormData({
-      fullName: "",
-      universityEmail: "",
-      phoneNumber: "",
-      address: "",
-      idNumber: "",
-      ...(role === "Supervisor" ? { contactEmail: "", officeAddress: "" } : {}),
-    });
+    setError("");
+    setIsSubmitting(true);
+
+    try {
+      const submittedData = {
+        ...formData,
+        role,
+        ...(role === "Supervisor" 
+          ? { contactEmail: formData.contactEmail, officeAddress: formData.officeAddress } 
+          : {}),
+      };
+
+      const result = await registerSingleUser(submittedData);
+      console.log("Registration successful:", result);
+      setFormData({
+        fullName: "",
+        universityEmail: "",
+        phoneNumber: "",
+        address: "",
+        idNumber: "",
+        ...(role === "Supervisor" ? { contactEmail: "", officeAddress: "" } : {}),
+      });
+      setUploadStatus("User registered successfully!");
+    } catch (error) {
+      console.error("Registration failed:", error);
+      setError(error.message || "Registration failed");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleBulkSubmit = (e) => {
+  const handleBulkSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    setIsSubmitting(true);
+
     if (bulkUploadData.length === 0) {
       setUploadStatus("No data to upload");
       return;
     }
 
-    // Prepare bulk data, excluding supervisor fields for Student role
-    const submittedBulkData = bulkUploadData.map((item) => ({
-      ...item,
-      role,
-      ...(role === "Supervisor" ? { contactEmail: item.contactEmail, officeAddress: item.officeAddress } : {}),
-    }));
-    console.log("Bulk submitted data:", submittedBulkData);
-    setUploadStatus(`Successfully registered ${submittedBulkData.length} users`);
-    setBulkUploadData([]);
+    try {
+      const submittedBulkData = bulkUploadData.map((item) => ({
+        ...item,
+        role,
+        ...(role === "Supervisor" 
+          ? { contactEmail: item.contactEmail, officeAddress: item.officeAddress } 
+          : {}),
+      }));
+
+      const result = await registerBulkUsers(submittedBulkData);
+      console.log("Bulk registration successful:", result);
+      setBulkUploadData([]);
+      setUploadStatus(`Successfully registered ${submittedBulkData.length} users`);
+    } catch (error) {
+      console.error("Bulk registration failed:", error);
+      setError(error.message || "Bulk registration failed");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleFileUpload = (e) => {
