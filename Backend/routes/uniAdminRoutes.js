@@ -2,11 +2,13 @@ const express = require("express");
 const {
   getUniAdminAccount,
   updateUniAdminAccount,
-} = require("../controllers/uniAdminController");
-const {
-  registerSingleUser,
+    registerSingleUser,
   registerBulkUsers
-} = require("../controllers/registrationController");
+} = require("../controllers/uniAdminController");
+// const {
+//   registerSingleUser,
+//   registerBulkUsers
+// } = require("../controllers/registrationController");
 
 const router = express.Router();
 

@@ -17,6 +17,8 @@ export default function RegistrationForm() {
     phoneNumber: "",
     address: "",
     idNumber: "",
+    department: "", // Added department field
+    ...(role === "Student" ? { level: "PSM-1" } : {}), // Default level for Student
     ...(role === "Supervisor" ? { contactEmail: "", officeAddress: "" } : {}),
   });
   const [bulkUploadData, setBulkUploadData] = useState([]);
@@ -31,9 +33,9 @@ export default function RegistrationForm() {
   };
 
   const handleRoleChange = (newRole) => {
-    // Update formData to include/exclude supervisor-specific fields based on new role
     setFormData((prev) => ({
       ...prev,
+      ...(newRole === "Student" ? { level: "PSM-1" } : {}), // Add level for Student
       ...(newRole === "Supervisor"
         ? { contactEmail: prev.contactEmail || "", officeAddress: prev.officeAddress || "" }
         : {}),
@@ -47,11 +49,14 @@ export default function RegistrationForm() {
     setIsSubmitting(true);
 
     try {
+      const password = `${formData.department}${formData.idNumber}`; // Compute password
       const submittedData = {
         ...formData,
-        role,
-        ...(role === "Supervisor" 
-          ? { contactEmail: formData.contactEmail, officeAddress: formData.officeAddress } 
+        role: role as "Student" | "Supervisor",
+        password,
+        ...(role === "Student" ? { level: formData.level } : {}), // Include level for Student
+        ...(role === "Supervisor"
+          ? { contactEmail: formData.contactEmail, officeAddress: formData.officeAddress }
           : {}),
       };
 
@@ -63,6 +68,8 @@ export default function RegistrationForm() {
         phoneNumber: "",
         address: "",
         idNumber: "",
+        department: "",
+        ...(role === "Student" ? { level: "PSM-1" } : {}),
         ...(role === "Supervisor" ? { contactEmail: "", officeAddress: "" } : {}),
       });
       setUploadStatus("User registered successfully!");
@@ -88,8 +95,10 @@ export default function RegistrationForm() {
       const submittedBulkData = bulkUploadData.map((item) => ({
         ...item,
         role,
-        ...(role === "Supervisor" 
-          ? { contactEmail: item.contactEmail, officeAddress: item.officeAddress } 
+        password: `${item.department}${item.idNumber}`, // Compute password
+        ...(role === "Student" ? { level: item.level } : {}), // Include level for Student
+        ...(role === "Supervisor"
+          ? { contactEmail: item.contactEmail, officeAddress: item.officeAddress }
           : {}),
       }));
 
@@ -111,27 +120,35 @@ export default function RegistrationForm() {
 
     const reader = new FileReader();
     reader.onload = (e) => {
-      const data = new Uint8Array(e.target.result as ArrayBuffer);
-      const workbook = XLSX.read(data, { type: "array" });
-      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+      if (e.target.result instanceof ArrayBuffer) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
 
-      const formattedData = jsonData.map((row) => ({
-        fullName: row["Full Name"] || row["fullName"] || "",
-        universityEmail: row["University Email"] || row["universityEmail"] || "",
-        phoneNumber: row["Phone Number"] || row["phoneNumber"] || "",
-        address: row["Address"] || row["address"] || "",
-        idNumber: row["ID Number"] || row["idNumber"] || "",
-        ...(role === "Supervisor"
-          ? {
-              contactEmail: row["Contact Email"] || row["contactEmail"] || "",
-              officeAddress: row["Office Address"] || row["officeAddress"] || "",
-            }
-          : {}),
-      }));
+        const formattedData = jsonData.map((row) => ({
+          fullName: row["Full Name"] || row["fullName"] || "",
+          universityEmail: row["University Email"] || row["universityEmail"] || "",
+          phoneNumber: row["Phone Number"] || row["phoneNumber"] || "",
+          address: row["Address"] || row["address"] || "",
+          idNumber: row["ID Number"] || row["idNumber"] || "",
+          department: row["Department"] || row["department"] || "",
+          ...(role === "Student"
+            ? { level: row["Level"] || row["level"] || "PSM-1" } // Default to PSM-1 if missing
+            : {}),
+          ...(role === "Supervisor"
+            ? {
+                contactEmail: row["Contact Email"] || row["contactEmail"] || "",
+                officeAddress: row["Office Address"] || row["officeAddress"] || "",
+              }
+            : {}),
+        }));
 
-      setBulkUploadData(formattedData);
-      setUploadStatus(`Loaded ${formattedData.length} users from file`);
+        setBulkUploadData(formattedData);
+        setUploadStatus(`Loaded ${formattedData.length} users from file`);
+      } else {
+        setUploadStatus("File reading failed: result is not an ArrayBuffer");
+      }
     };
     reader.readAsArrayBuffer(file);
   };

@@ -11,7 +11,8 @@ export default function BulkRegistrationForm({
         <h3 className="text-xl font-semibold text-gray-100">Bulk User Registration</h3>
         <p className="text-sm text-gray-400 mt-1">
           Upload an Excel or CSV file with user data. The file should include columns for:
-          Full Name, University Email, Phone Number, ID Number, Address
+          Full Name, University Email, Phone Number, ID Number, Address, Department
+          {role === "Student" ? ", Level (PSM-1 or PSM-2)" : ""}
           {role === "Supervisor" ? ", Contact Email, Office Address" : ""}.
         </p>
       </div>
@@ -85,6 +86,12 @@ export default function BulkRegistrationForm({
                     <th className="p-3 text-left text-sm font-medium text-gray-300">Name</th>
                     <th className="p-3 text-left text-sm font-medium text-gray-300">Email</th>
                     <th className="p-3 text-left text-sm font-medium text-gray-300">Phone</th>
+                    {role === "Student" && (
+                      <th className="p-3 text-left text-sm font-medium text-gray-300">Level</th>
+                    )}
+                    {role === "Supervisor" && (
+                      <th className="p-3 text-left text-sm font-medium text-gray-300">Contact Email</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-600">
@@ -93,11 +100,17 @@ export default function BulkRegistrationForm({
                       <td className="p-3 text-sm text-gray-300">{user.fullName}</td>
                       <td className="p-3 text-sm text-gray-300">{user.universityEmail}</td>
                       <td className="p-3 text-sm text-gray-300">{user.phoneNumber}</td>
+                      {role === "Student" && (
+                        <td className="p-3 text-sm text-gray-300">{user.level}</td>
+                      )}
+                      {role === "Supervisor" && (
+                        <td className="p-3 text-sm text-gray-300">{user.contactEmail}</td>
+                      )}
                     </tr>
                   ))}
                   {bulkUploadData.length > 10 && (
                     <tr>
-                      <td colSpan={3} className="p-3 text-center text-sm text-gray-400">
+                      <td colSpan={role === "Student" || role === "Supervisor" ? 4 : 3} className="p-3 text-center text-sm text-gray-400">
                         + {bulkUploadData.length - 10} more users
                       </td>
                     </tr>

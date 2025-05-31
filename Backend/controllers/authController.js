@@ -3,7 +3,8 @@ const bcrypt = require("bcryptjs");
 const { Op } = require("sequelize");
 const MainAdmin = require("../models/MainAdmin");
 const UniAdmin = require("../models/UniAdmin");
-const User = require("../models/user");
+const Student = require("../models/Student");
+const Supervisor = require("../models/Supervisor");
 
 exports.login = async (req, res) => {
   const { username, password } = req.body;
@@ -14,33 +15,39 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: "Username and password are required" });
     }
 
-    // Update base attributes to match model fields
-    const baseAttributes = ["username", "password", "role"];
-
-    // Update role attributes to match model fields
-    const roleAttributes = {
-      MainAdmin: ["email"],
-      UniAdmin: ["universityId", "primaryEmail"], // Changed email to primaryEmail
-      Supervisor: ["universityId", "primaryEmail"],
-      Student: ["universityId", "primaryEmail"]
+    // Define base attributes for each role
+    const baseAttributes = {
+      MainAdmin: ["username", "password", "role", "email"],
+      UniAdmin: ["username", "password", "role", "universityId", "primaryEmail"],
+      Student: ["userId", "password", "role", "universityId", "email", "universityEmail", "level"],
+      Supervisor: ["userId", "password", "role", "universityId", "email", "universityEmail"]
     };
 
-    // Update queries to use primaryEmail
+    // Update queries with role-specific attributes
     const userQueries = [
       {
         model: MainAdmin,
         where: { [Op.or]: [{ username }, { email: username }] },
-        defaultRole: "MainAdmin"
+        defaultRole: "MainAdmin",
+        attributes: baseAttributes.MainAdmin
       },
       {
         model: UniAdmin,
-        where: { [Op.or]: [{ username }, { primaryEmail: username }] }, // Changed email to primaryEmail
-        defaultRole: "UniAdmin"
+        where: { [Op.or]: [{ username }, { primaryEmail: username }] },
+        defaultRole: "UniAdmin",
+        attributes: baseAttributes.UniAdmin
       },
       {
-        model: User,
-        where: { [Op.or]: [{ username }, { email: username }] },
-        useStoredRole: true
+        model: Student,
+        where: { [Op.or]: [{ userId: username }] },
+        defaultRole: "Student",
+        attributes: baseAttributes.Student
+      },
+      {
+        model: Supervisor,
+        where: { [Op.or]: [{ userId: username }, { universityEmail: username }] },
+        defaultRole: "Supervisor",
+        attributes: baseAttributes.Supervisor
       }
     ];
 
@@ -51,12 +58,12 @@ exports.login = async (req, res) => {
     for (const query of userQueries) {
       const result = await query.model.findOne({
         where: query.where,
-        attributes: [...baseAttributes, ...(roleAttributes[query.defaultRole] || [])]
+        attributes: query.attributes
       });
 
       if (result) {
         user = result;
-        userType = query.useStoredRole ? user.role : query.defaultRole;
+        userType = query.defaultRole;
         break;
       }
     }
@@ -72,9 +79,9 @@ exports.login = async (req, res) => {
 
     // Create JWT with essential data only
     const tokenPayload = {
-      username: user.username,
+      username: user.userId || user.username, // Use userId for students
       role: userType,
-      ...(user.universityId && { universityId: user.universityId })
+      universityId: user.universityId
     };
 
     const token = jwt.sign(
@@ -85,10 +92,11 @@ exports.login = async (req, res) => {
 
     // Prepare response with role-specific data
     const responseUser = {
-      username: user.username,
+      username: user.userId || user.username, // Use userId for students
       role: userType,
-      email: user.primaryEmail, // Changed from email to primaryEmail
-      ...(user.universityId && { universityId: user.universityId })
+      email: user.email || user.primaryEmail,
+      universityId: user.universityId,
+      ...(userType === "Student" && { level: user.level })
     };
 
     res.status(200).json({

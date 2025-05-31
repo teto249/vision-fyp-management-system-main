@@ -1,10 +1,14 @@
 export interface UserInfo {
-  username: string;
-  fullName: string;
-  primaryEmail: string; // Changed from email to match backend
+  username: string;  // This will be userId for students and supervisors
+  email?: string;    // For MainAdmin
+  primaryEmail?: string;  // For UniAdmin
+  universityEmail?: string;  // For Students and Supervisors
   role: 'MainAdmin' | 'UniAdmin' | 'Supervisor' | 'Student';
   universityId?: string;
-  universityShortName?: string;
+  level?: string;  // For Students only
+  fullName?: string;
+  phoneNumber?: string;
+  profilePhoto?: string;
 }
 
 export interface LoginResponse {
@@ -66,11 +70,14 @@ export async function login(
     // Store auth data securely
     try {
       localStorage.setItem("authToken", data.token);
-      localStorage.setItem("adminInfo", JSON.stringify(data.user));
+      // Store user info with role-specific key
+      const storageKey = data.user.role === 'Student' ? 'studentInfo' : 
+                        data.user.role === 'Supervisor' ? 'supervisorInfo' : 'adminInfo';
+      localStorage.setItem(storageKey, JSON.stringify(data.user));
       
       // Verify storage
       const storedToken = localStorage.getItem("authToken");
-      const storedInfo = localStorage.getItem("adminInfo");
+      const storedInfo = localStorage.getItem(storageKey);
       
       if (!storedToken || !storedInfo) {
         throw new Error("Failed to store authentication data");
@@ -92,25 +99,25 @@ export async function login(
 }
 
 /**
- * Checks if the user is currently authenticated
- */
-export function isAuthenticated(): boolean {
-  const token = localStorage.getItem("authToken");
-  const userInfo = localStorage.getItem("adminInfo");
-  return !!(token && userInfo);
-}
-
-/**
- * Gets the current user's information
+ * Gets the current user's information based on role
  */
 export function getCurrentUser(): UserInfo | null {
-  const userInfo = localStorage.getItem("adminInfo");
-  if (!userInfo) return null;
-  try {
-    return JSON.parse(userInfo) as UserInfo;
-  } catch {
-    return null;
+  const token = localStorage.getItem("authToken");
+  if (!token) return null;
+
+  // Try to get user info from different storage keys
+  const storageKeys = ['adminInfo', 'studentInfo', 'supervisorInfo'];
+  for (const key of storageKeys) {
+    const userInfo = localStorage.getItem(key);
+    if (userInfo) {
+      try {
+        return JSON.parse(userInfo) as UserInfo;
+      } catch {
+        continue;
+      }
+    }
   }
+  return null;
 }
 
 /**
@@ -118,9 +125,11 @@ export function getCurrentUser(): UserInfo | null {
  */
 export async function logout(): Promise<void> {
   try {
-    // Clear authentication data
+    // Clear all possible auth data
     localStorage.removeItem("authToken");
     localStorage.removeItem("adminInfo");
+    localStorage.removeItem("studentInfo");
+    localStorage.removeItem("supervisorInfo");
 
     // Verify cleanup
     if (isAuthenticated()) {
@@ -131,7 +140,15 @@ export async function logout(): Promise<void> {
     window.location.href = "/auth";
   } catch (error) {
     console.error("Logout error:", error);
-    // Force redirect even if cleanup failed
     window.location.href = "/auth";
   }
+}
+
+/**
+ * Checks if the user is currently authenticated
+ */
+export function isAuthenticated(): boolean {
+  const token = localStorage.getItem("authToken");
+  const userInfo = getCurrentUser();
+  return !!(token && userInfo);
 }

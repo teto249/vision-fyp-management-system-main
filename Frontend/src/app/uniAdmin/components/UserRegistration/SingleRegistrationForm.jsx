@@ -52,6 +52,32 @@ export default function SingleRegistrationForm({ role, formData, handleChange })
             className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-gray-100 focus:ring-2 focus:ring-teal-400 focus:border-teal-400"
           />
         </div>
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-300">Department</label>
+          <input
+            id="department"
+            placeholder="Department"
+            value={formData.department}
+            onChange={handleChange}
+            required
+            className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-gray-100 focus:ring-2 focus:ring-teal-400 focus:border-teal-400"
+          />
+        </div>
+        {role === "Student" && (
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-300">Level</label>
+            <select
+              id="level"
+              value={formData.level}
+              onChange={handleChange}
+              required
+              className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-gray-100 focus:ring-2 focus:ring-teal-400 focus:border-teal-400"
+            >
+              <option value="PSM-1">PSM-1</option>
+              <option value="PSM-2">PSM-2</option>
+            </select>
+          </div>
+        )}
       </div>
 
       <div className="space-y-2">

@@ -1,5 +1,8 @@
 const UniAdmin = require('../models/UniAdmin');
 const University = require('../models/University');
+const jwt = require('jsonwebtoken');
+const Student = require('../models/Student');
+const Supervisor = require('../models/Supervisor');
 
 // Get UniAdmin account
 exports.getUniAdminAccount = async (req, res) => {
@@ -141,6 +144,157 @@ exports.updateUniAdminAccount = async (req, res) => {
     });
   } catch (error) {
     console.error('Failed to update UniAdmin account:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Register single user
+exports.registerSingleUser = async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Get the university ID from the authenticated UniAdmin
+    const uniAdmin = await UniAdmin.findOne({
+      where: { username: decoded.username, role: 'UniAdmin' }
+    });
+
+    if (!uniAdmin) {
+      return res.status(404).json({ message: 'UniAdmin not found' });
+    }
+
+    const {
+      fullName,
+      universityEmail,
+      phoneNumber,
+      address,
+      idNumber,
+      department,
+      role,
+      level,
+    } = req.body;
+
+    // Generate initial password
+    const password = `${department}${idNumber}`;
+
+    const userData = {
+      userId: idNumber,
+      fullName,
+      email: universityEmail,
+      universityEmail,
+      password,
+      phoneNumber,
+      address,
+      department,
+      universityId: uniAdmin.universityId,
+      role: role
+    };
+
+    if (role === 'Student') {
+      userData.level = level || 'PSM-1';
+      const student = await Student.create(userData);
+      res.status(201).json({
+        message: 'Student registered successfully',
+        userId: student.userId
+      });
+    } else if (role === 'Supervisor') {
+      const { contactEmail, officeAddress } = req.body;
+      userData.contactEmail = contactEmail;
+      userData.officeAddress = officeAddress;
+      const supervisor = await Supervisor.create(userData);
+      res.status(201).json({
+        message: 'Supervisor registered successfully',
+        userId: supervisor.userId
+      });
+    } else {
+      res.status(400).json({ message: 'Invalid role specified' });
+    }
+
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Register bulk users
+exports.registerBulkUsers = async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Get the university ID from the authenticated UniAdmin
+    const uniAdmin = await UniAdmin.findOne({
+      where: { username: decoded.username, role: 'UniAdmin' }
+    });
+
+    if (!uniAdmin) {
+      return res.status(404).json({ message: 'UniAdmin not found' });
+    }
+
+    const users = req.body;
+    const results = [];
+
+    for (const userData of users) {
+      try {
+        const password = `${userData.department}${userData.idNumber}`;
+        
+        const baseUserData = {
+          userId: userData.idNumber,
+          fullName: userData.fullName,
+          email: userData.universityEmail,
+          universityEmail: userData.universityEmail,
+          password,
+          phoneNumber: userData.phoneNumber,
+          address: userData.address,
+          department: userData.department,
+          universityId: uniAdmin.universityId,
+          role: userData.role
+        };
+
+        if (userData.role === 'Student') {
+          baseUserData.level = userData.level || 'PSM-1';
+          const student = await Student.create(baseUserData);
+          results.push({
+            success: true,
+            userId: student.userId,
+            message: 'Student registered successfully'
+          });
+        } else if (userData.role === 'Supervisor') {
+          baseUserData.contactEmail = userData.contactEmail;
+          baseUserData.officeAddress = userData.officeAddress;
+          const supervisor = await Supervisor.create(baseUserData);
+          results.push({
+            success: true,
+            userId: supervisor.userId,
+            message: 'Supervisor registered successfully'
+          });
+        }
+      } catch (error) {
+        results.push({
+          success: false,
+          data: userData,
+          error: error.message
+        });
+      }
+    }
+
+    res.status(200).json({
+      message: 'Bulk registration completed',
+      results
+    });
+
+  } catch (error) {
+    console.error('Bulk registration error:', error);
     res.status(500).json({ message: error.message });
   }
 };
