@@ -41,7 +41,7 @@ interface UpdateUniAdminData {
 class ApiError extends Error {
   constructor(message: string, public status?: number) {
     super(message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
   }
 }
 
@@ -49,10 +49,10 @@ class ApiError extends Error {
 function isUniversity(data: any): data is University {
   return (
     data &&
-    typeof data === 'object' &&
-    typeof data.id === 'string' &&
-    typeof data.shortName === 'string' &&
-    typeof data.fullName === 'string'
+    typeof data === "object" &&
+    typeof data.id === "string" &&
+    typeof data.shortName === "string" &&
+    typeof data.fullName === "string"
   );
 }
 
@@ -60,11 +60,11 @@ function isUniversity(data: any): data is University {
 function isUniAdminData(data: any): data is UniAdminData {
   return (
     data &&
-    typeof data === 'object' &&
-    typeof data.username === 'string' &&
-    typeof data.fullName === 'string' &&
-    typeof data.primaryEmail === 'string' &&
-    typeof data.role === 'string' &&
+    typeof data === "object" &&
+    typeof data.username === "string" &&
+    typeof data.fullName === "string" &&
+    typeof data.primaryEmail === "string" &&
+    typeof data.role === "string" &&
     (data.university === null || isUniversity(data.university))
   );
 }
@@ -78,9 +78,9 @@ async function fetchWithAuth(url: string, options: RequestInit = {}) {
   };
 
   if (authToken) {
-    headers['authorization'] = `Bearer ${authToken}`;
+    headers["authorization"] = `Bearer ${authToken}`;
   } else {
-    throw new ApiError('No authentication token found');
+    throw new ApiError("No authentication token found");
   }
 
   try {
@@ -89,14 +89,14 @@ async function fetchWithAuth(url: string, options: RequestInit = {}) {
     const isJson = contentType?.includes("application/json");
 
     if (!response.ok) {
-      const errorMessage = isJson 
-        ? (await response.json()).message 
+      const errorMessage = isJson
+        ? (await response.json()).message
         : response.statusText;
       throw new ApiError(errorMessage, response.status);
     }
 
     const data = await response.json();
-    
+
     if (!isUniAdminData(data)) {
       throw new ApiError("Invalid response format");
     }
@@ -104,11 +104,15 @@ async function fetchWithAuth(url: string, options: RequestInit = {}) {
     return data;
   } catch (error) {
     if (error instanceof ApiError) throw error;
-    throw new ApiError(error instanceof Error ? error.message : 'Network error');
+    throw new ApiError(
+      error instanceof Error ? error.message : "Network error"
+    );
   }
 }
 
-export async function fetchUniAdminAccount(username: string): Promise<UniAdminData> {
+export async function fetchUniAdminAccount(
+  username: string
+): Promise<UniAdminData> {
   try {
     if (!username) {
       throw new ApiError("Username is required");
@@ -119,13 +123,15 @@ export async function fetchUniAdminAccount(username: string): Promise<UniAdminDa
     localStorage.setItem("adminInfo", JSON.stringify(uniAdminData));
     return uniAdminData;
   } catch (error) {
-    throw error instanceof ApiError 
-      ? error 
+    throw error instanceof ApiError
+      ? error
       : new ApiError("Failed to fetch UniAdmin account");
   }
 }
 
-export async function updateUniAdminAccount(updatedData: UpdateUniAdminData): Promise<UniAdminData> {
+export async function updateUniAdminAccount(
+  updatedData: UpdateUniAdminData
+): Promise<UniAdminData> {
   try {
     if (!updatedData.username) {
       throw new ApiError("Username is required");
@@ -139,8 +145,8 @@ export async function updateUniAdminAccount(updatedData: UpdateUniAdminData): Pr
     localStorage.setItem("adminInfo", JSON.stringify(data));
     return data;
   } catch (error) {
-    throw error instanceof ApiError 
-      ? error 
+    throw error instanceof ApiError
+      ? error
       : new ApiError("Failed to update UniAdmin account");
   }
 }

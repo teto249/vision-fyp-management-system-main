@@ -60,6 +60,10 @@ const Supervisor = sequelize.define("Supervisor", {
   department: {
     type: DataTypes.STRING,
     allowNull: false,  // Required during registration
+  },
+  requirePasswordChange: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true  // New supervisors will need to change password
   }
 });
 

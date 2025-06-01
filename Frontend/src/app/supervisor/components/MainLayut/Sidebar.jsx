@@ -1,7 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { Home, User, MessageCircle, Building, Presentation } from "lucide-react"; // Icons
+import {
+  Home,
+  User,
+  MessageCircle,
+  Building,
+  Presentation,
+  FileText,
+} from "lucide-react"; // Icons
 
 export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
   return (
@@ -32,6 +39,11 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
                 text: "Students Progress",
                 href: "students-progress",
               },
+              {
+                icon: <FileText size={20} />,
+                text: "Documents",
+                href: "document",
+              }, // New menu item
             ].map((item) => (
               <li key={item.text}>
                 <Link

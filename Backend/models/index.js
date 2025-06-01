@@ -5,6 +5,7 @@ const Institution = require("./Institution");
 const UniAdmin = require("./UniAdmin");
 const Student = require("./Student");
 const Supervisor = require("./Supervisor");
+const Document = require("./Document");  // Add this line
 
 // Institution & MainAdmin associations
 Institution.hasMany(MainAdmin, { as: "admins", foreignKey: "institutionId" });
@@ -78,6 +79,29 @@ Student.belongsTo(Supervisor, {
   foreignKey: "supervisorId"
 });
 
+// Document associations
+Supervisor.hasMany(Document, {
+  foreignKey: "supervisorId",
+  onDelete: "CASCADE",
+  as: "documents"
+});
+
+Document.belongsTo(Supervisor, {
+  foreignKey: "supervisorId",
+  as: "supervisor"
+});
+
+Student.hasMany(Document, {
+  foreignKey: "studentId",
+  onDelete: "CASCADE",
+  as: "documents"
+});
+
+Document.belongsTo(Student, {
+  foreignKey: "studentId",
+  as: "student"
+});
+
 // Export all models
 module.exports = {
   User,
@@ -86,5 +110,6 @@ module.exports = {
   Institution,
   UniAdmin,
   Student,
-  Supervisor
+  Supervisor,
+  Document  // Add this line
 };

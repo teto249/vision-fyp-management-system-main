@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -13,6 +13,8 @@ import { Bar, Pie } from "react-chartjs-2";
 import { PencilIcon } from "@heroicons/react/24/outline";
 import PerformancePanel from "./components/Dashboard/PerformancePanel";
 import SummaryCard from "./components/Dashboard/SummaryCard";
+import { fetchUsersByUniversity } from "../../api/uniAdmin/FetchUsers"; // Adjust the path to where your API functions are defined
+
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -22,34 +24,13 @@ ChartJS.register(
   Legend
 );
 
-// Mock Data
-const users = [
-  {
-    id: 1,
-    name: "Dr. Sarah Johnson",
-    role: "Supervisor",
-    department: "Computer Science",
-  },
-  {
-    id: 2,
-    name: "Ahmed Mahmoud",
-    role: "Student",
-    project: "AI Security Framework",
-  },
-  {
-    id: 3,
-    name: "University of Tech",
-    role: "University Admin",
-    department: "Administration",
-  },
-];
-
+// Mock Data (retained for other parts of the dashboard, not used in UserManagementTable)
 const projects = [
   { id: 1, name: "Cloud Security System", progress: 65, milestones: 3 },
   { id: 2, name: "AI Learning Platform", progress: 42, milestones: 2 },
 ];
 
-// Chart Data
+// Chart Data (retained for other parts of the dashboard)
 const milestoneData = {
   labels: ["Requirements", "Design", "Implementation"],
   datasets: [
@@ -71,7 +52,7 @@ const systemStatusData = {
   ],
 };
 
-const UserManagementTable = () => (
+const UserManagementTable = ({ users }) => (
   <div className="bg-gray-800 rounded-xl shadow-lg mt-8 overflow-hidden border border-gray-600">
     <table className="w-full">
       <thead className="bg-gray-900">
@@ -163,20 +144,59 @@ const ProjectAnalytics = () => (
 
 export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [totalStudents, setTotalStudents] = useState(0);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [usersData, setUsersData] = useState({ supervisors: [], students: [] });
+
+  useEffect(() => {
+    const universityId = "UTHM"; // Replace with actual universityId from auth or props
+    fetchUsersByUniversity(universityId)
+      .then((data) => {
+        setTotalStudents(data.students.length);
+        setTotalUsers(data.students.length + data.supervisors.length);
+        setUsersData(data);
+        setIsLoading(false);
+      })
+      .catch((error) => {
+        console.error("Failed to fetch users:", error);
+        setError(error.message);
+        setIsLoading(false);
+      });
+  }, []);
+
+  const allUsers = [
+    ...usersData.students.map((student) => ({
+      id: student.userId,
+      name: student.fullName,
+      role: student.role || "Student", // Fallback in case role is missing
+    })),
+    ...usersData.supervisors.map((supervisor) => ({
+      id: supervisor.userId,
+      name: supervisor.fullName,
+      role: supervisor.role || "Supervisor", // Fallback in case role is missing
+    })),
+  ];
 
   return (
-    <div className="min-h-screen px-10 bg-gray-900 ">
+    <div className="min-h-screen px-10 bg-gray-900">
       <div className="flex">
         <main className="flex-1 p-8">
           <h1 className="text-3xl font-bold text-gray-100 mb-8">
-            {" "}
             Dashboard Overview
           </h1>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-gray-800 text-gray-200 p-6 rounded-xl shadow-lg border border-gray-600">
-              <h3 className="text-lg font-bold">Total Users</h3>
-              <p className="text-3xl mt-2 text-green-400">1,243</p>
+              <h3 className="text-lg font-bold">Total Students</h3>
+              {isLoading ? (
+                <p className="text-3xl mt-2 text-green-400">Loading...</p>
+              ) : error ? (
+                <p className="text-3xl mt-2 text-red-400">Error: {error}</p>
+              ) : (
+                <p className="text-3xl mt-2 text-green-400">{totalStudents}</p>
+              )}
             </div>
             <div className="bg-gray-800 text-gray-200 p-6 rounded-xl shadow-lg border border-gray-600">
               <h3 className="text-lg font-bold">Active Projects</h3>
@@ -190,13 +210,13 @@ export default function Dashboard() {
 
           <PerformancePanel />
 
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
-            <SummaryCard title="Total Users" value={850} change={12} />
-            <SummaryCard title="Total Universities" value={23} />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <SummaryCard title="Total Users" value={totalUsers} change={12} />
             <SummaryCard title="Capacity Usage" value="850/1,000" />
             <SummaryCard title="Active Projects" value={427} change={-2} />
           </div>
-          <UserManagementTable />
+
+          <UserManagementTable users={allUsers} />
           <ProjectAnalytics />
         </main>
       </div>

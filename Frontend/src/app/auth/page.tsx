@@ -4,43 +4,47 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, FormEvent } from "react";
-import { login, logout } from "../../api/auth"; // Import the login and logout functions
+import { login, logout, AuthError } from "../../api/auth";
 
 export default function LoginForm() {
-  const [error, setError] = useState<string>(""); // State for error messages
-  const [loading, setLoading] = useState<boolean>(false); // State for loading indicator
-  const [showPassword, setShowPassword] = useState<boolean>(false); // State to toggle password visibility
+  const [error, setError] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [username, setUsername] = useState<string>("");
   const router = useRouter();
 
-  // Inactivity timer
+  // Inactivity timer configuration
   const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes
   let inactivityTimer: NodeJS.Timeout;
 
   const resetInactivityTimer = () => {
     clearTimeout(inactivityTimer);
-    inactivityTimer = setTimeout(() => {
-      handleLogout(); // Automatically log out the user
-    }, INACTIVITY_TIMEOUT);
+    inactivityTimer = setTimeout(handleLogout, INACTIVITY_TIMEOUT);
   };
 
-  const handleLogout = () => {
-    logout(); // Clear localStorage
-    router.push("/"); // Redirect to login page
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push("/");
+    } catch (error) {
+      console.error("Logout failed:", error);
+      // Force redirect even if logout fails
+      router.push("/");
+    }
   };
 
   useEffect(() => {
-    // Set up event listeners for user activity
-    window.addEventListener("mousemove", resetInactivityTimer);
-    window.addEventListener("keydown", resetInactivityTimer);
-
-    // Start the inactivity timer
+    const events = ["mousemove", "keydown", "click", "scroll"];
+    events.forEach((event) =>
+      window.addEventListener(event, resetInactivityTimer)
+    );
     resetInactivityTimer();
 
-    // Clean up event listeners on component unmount
     return () => {
       clearTimeout(inactivityTimer);
-      window.removeEventListener("mousemove", resetInactivityTimer);
-      window.removeEventListener("keydown", resetInactivityTimer);
+      events.forEach((event) =>
+        window.removeEventListener(event, resetInactivityTimer)
+      );
     };
   }, []);
 
@@ -53,18 +57,23 @@ export default function LoginForm() {
     const username = formData.get("username") as string;
     const password = formData.get("password") as string;
 
+    if (!username || !password) {
+      setError("Please enter both username and password");
+      setLoading(false);
+      return;
+    }
+
     try {
       const data = await login(username, password);
-      const storedAdminInfo = localStorage.getItem("adminInfo");
+      const role = data.user.role;
 
-      if (!storedAdminInfo) {
-        throw new Error("User information not found");
+      // Show success message before redirect
+      const successMessage = document.getElementById("success-message");
+      if (successMessage) {
+        successMessage.classList.remove("hidden");
       }
 
-      const userInfo = JSON.parse(storedAdminInfo);
-      const role = userInfo.role;
-
-      // Redirect based on user role with delay for better UX
+      // Redirect based on role with delay
       setTimeout(() => {
         switch (role) {
           case "MainAdmin":
@@ -80,13 +89,17 @@ export default function LoginForm() {
             router.push("/student");
             break;
           default:
+            setError("Invalid user role");
             router.push("/");
-            break;
         }
-      }, 500);
-    } catch (err: any) {
+      }, 1000);
+    } catch (err) {
+      if (err instanceof AuthError) {
+        setError(err.message);
+      } else {
+        setError("An unexpected error occurred. Please try again.");
+      }
       console.error("Login Error:", err);
-      setError(err.message || "Login failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -103,6 +116,7 @@ export default function LoginForm() {
             width={70}
             height={70}
             className="rounded-full"
+            priority
           />
           <span className="text-4xl font-serif font-bold text-green-400">
             VISION
@@ -125,6 +139,13 @@ export default function LoginForm() {
           </div>
         )}
 
+        <div
+          id="success-message"
+          className="hidden mb-4 p-3 bg-green-900 text-green-100 rounded-lg text-sm"
+        >
+          Login successful! Redirecting...
+        </div>
+
         <div className="mb-6">
           <label
             htmlFor="username"
@@ -136,9 +157,11 @@ export default function LoginForm() {
             type="text"
             id="username"
             name="username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             required
             className="w-full px-4 py-3 rounded-lg border border-gray-600 bg-gray-700 text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-400 transition-colors"
-            placeholder="Enter your username"
+            placeholder="Enter your ID or email"
           />
         </div>
 
@@ -166,18 +189,6 @@ export default function LoginForm() {
               {showPassword ? "Hide" : "Show"}
             </button>
           </div>
-        </div>
-
-        <div className="flex items-center mb-6">
-          <input
-            type="checkbox"
-            id="remember-me"
-            name="remember-me"
-            className="h-4 w-4 text-green-400 focus:ring-green-400 border-gray-600 rounded"
-          />
-          <label htmlFor="remember-me" className="ml-2 text-sm text-gray-300">
-            Remember me
-          </label>
         </div>
 
         <button
@@ -212,12 +223,12 @@ export default function LoginForm() {
         </button>
 
         <div className="mt-6 text-center">
-          <a
-            href="#forgot-password"
+          <Link
+            href="/forgot-password"
             className="text-sm text-green-400 hover:text-green-500 transition-colors"
           >
             Forgot password?
-          </a>
+          </Link>
         </div>
 
         <Link href="/">

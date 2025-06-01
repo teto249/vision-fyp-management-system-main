@@ -1,11 +1,16 @@
+export interface LoginCredentials {
+  username: string;
+  password: string;
+}
+
 export interface UserInfo {
-  username: string;  // This will be userId for students and supervisors
-  email?: string;    // For MainAdmin
-  primaryEmail?: string;  // For UniAdmin
-  universityEmail?: string;  // For Students and Supervisors
-  role: 'MainAdmin' | 'UniAdmin' | 'Supervisor' | 'Student';
+  username: string; // This will be userId for students and supervisors
+  email?: string; // For MainAdmin
+  primaryEmail?: string; // For UniAdmin
+  universityEmail?: string; // For Students and Supervisors
+  role: "MainAdmin" | "UniAdmin" | "Supervisor" | "Student";
   universityId?: string;
-  level?: string;  // For Students only
+  level?: string; // For Students only
   fullName?: string;
   phoneNumber?: string;
   profilePhoto?: string;
@@ -18,13 +23,9 @@ export interface LoginResponse {
 }
 
 export class AuthError extends Error {
-  constructor(
-    message: string,
-    public status?: number,
-    public code?: string
-  ) {
+  constructor(message: string, public status?: number, public code?: string) {
     super(message);
-    this.name = 'AuthError';
+    this.name = "AuthError";
   }
 }
 
@@ -36,15 +37,27 @@ export async function login(
   password: string
 ): Promise<LoginResponse> {
   if (!username || !password) {
-    throw new AuthError('Username and password are required');
+    throw new AuthError("Username and password are required");
   }
 
   try {
-    const response = await fetch("http://localhost:3000/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
-    });
+    const credentials: LoginCredentials = {
+      username,
+      password,
+    };
+
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/api/auth/login`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(credentials),
+        credentials: "include", // Include cookies if using session-based auth
+      }
+    );
 
     const contentType = response.headers.get("content-type");
     const isJson = contentType?.includes("application/json");
@@ -53,34 +66,41 @@ export async function login(
       if (isJson) {
         const errorData = await response.json();
         throw new AuthError(
-          errorData.message || 'Login failed',
+          errorData.message || "Login failed",
           response.status,
           errorData.code
         );
       }
-      throw new AuthError(`Login failed: ${response.statusText}`, response.status);
+      throw new AuthError(
+        `Login failed: ${response.statusText || "Network error"}`,
+        response.status
+      );
+    }
+
+    if (!isJson) {
+      throw new AuthError("Invalid response format from server");
     }
 
     const data: LoginResponse = await response.json();
-    
+
     if (!data.token || !data.user) {
       throw new AuthError("Invalid response format from server");
     }
 
     // Store auth data securely
     try {
+      // Store token
       localStorage.setItem("authToken", data.token);
-      // Store user info with role-specific key
-      const storageKey = data.user.role === 'Student' ? 'studentInfo' : 
-                        data.user.role === 'Supervisor' ? 'supervisorInfo' : 'adminInfo';
+
+      // Determine storage key based on user role
+      const storageKey = getStorageKeyByRole(data.user.role);
+
+      // Store user info
       localStorage.setItem(storageKey, JSON.stringify(data.user));
-      
+
       // Verify storage
-      const storedToken = localStorage.getItem("authToken");
-      const storedInfo = localStorage.getItem(storageKey);
-      
-      if (!storedToken || !storedInfo) {
-        throw new Error("Failed to store authentication data");
+      if (!verifyStoredData(data.token, storageKey)) {
+        throw new Error("Failed to verify stored authentication data");
       }
     } catch (storageError) {
       console.error("Storage error:", storageError);
@@ -93,9 +113,33 @@ export async function login(
       throw error;
     }
     throw new AuthError(
-      error instanceof Error ? error.message : 'An unexpected error occurred'
+      error instanceof Error ? error.message : "An unexpected error occurred"
     );
   }
+}
+
+// Helper functions
+function getStorageKeyByRole(role: UserInfo["role"]): string {
+  switch (role) {
+    case "Student":
+      return "studentInfo";
+    case "Supervisor":
+      return "supervisorInfo";
+    case "MainAdmin":
+    case "UniAdmin":
+      return "adminInfo";
+    default:
+      throw new AuthError("Invalid user role");
+  }
+}
+
+function verifyStoredData(token: string, storageKey: string): boolean {
+  const storedToken = localStorage.getItem("authToken");
+  const storedInfo = localStorage.getItem(storageKey);
+
+  return !!(
+    storedToken && storedInfo && storedToken === token
+  );
 }
 
 /**
@@ -106,7 +150,7 @@ export function getCurrentUser(): UserInfo | null {
   if (!token) return null;
 
   // Try to get user info from different storage keys
-  const storageKeys = ['adminInfo', 'studentInfo', 'supervisorInfo'];
+  const storageKeys = ["adminInfo", "studentInfo", "supervisorInfo"];
   for (const key of storageKeys) {
     const userInfo = localStorage.getItem(key);
     if (userInfo) {

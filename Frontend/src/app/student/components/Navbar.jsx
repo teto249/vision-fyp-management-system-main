@@ -1,7 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { logout } from "../../../api/auth"; 
+
 
 export default function Navbar({
   sidebarOpen,
@@ -9,8 +12,22 @@ export default function Navbar({
   profileOpen,
   setProfileOpen,
 }) {
+const [studentInfo, setStudentInfo] = useState({});
+  const router = useRouter();
+  
+  useEffect(() => {
+    const storedInfo = JSON.parse(localStorage.getItem("studentInfo"));
+    if (storedInfo) {
+      setStudentInfo(storedInfo);
+    }
+  }, []);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
+  const handleLogout = () => {
+    setProfileOpen(false);
+    logout();
+    router.push("/");
+  };
   return (
     <nav className="sticky top-0 z-40 navbar rounded-br-2xl rounded-bl-2xl bg-teal-700 border-b border-gray-700 px-4 sm:px-6 text-gray-300">
       <button
@@ -179,8 +196,8 @@ export default function Navbar({
                     </div>
                   </div>
                   <div>
-                    <h4 className="font-bold text-gray-200">John Doe</h4>
-                    <p className="text-sm text-gray-400">Admin</p>
+                    <h4 className="font-bold text-gray-200">{studentInfo.fullName}</h4>
+                    <p className="text-sm text-gray-400">{studentInfo.role}</p>
                   </div>
                 </div>
               </li>
@@ -209,7 +226,7 @@ export default function Navbar({
               </li>
 
               <li>
-                <button className="w-full text-left px-4 py-2 hover:bg-gray-700 text-status-critical flex items-center gap-2">
+                <button className="w-full text-left px-4 py-2 hover:bg-gray-700 text-status-critical flex items-center gap-2"  onClick={handleLogout} >
                   <svg
                     className="w-5 h-5"
                     fill="none"

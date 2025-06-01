@@ -28,7 +28,7 @@ exports.getAdminAccount = async (req, res) => {
         ],
       },
     });
-
+ 
     if (!admin) {
       return res.status(404).json({ message: "Admin not found" });
     }
@@ -113,7 +113,7 @@ exports.updateAdminAccount = async (req, res) => {
 // Register university
 exports.registerUniversity = async (req, res) => {
   const transaction = await sequelize.transaction();
-
+ 
   try {
     const {
       shortName,
@@ -128,7 +128,7 @@ exports.registerUniversity = async (req, res) => {
       adminPassword,
       adminPhone,
     } = req.body;
-
+ 
     // Validate required fields
     const missingFields = [];
     if (!shortName) missingFields.push("shortName");

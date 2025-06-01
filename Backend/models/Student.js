@@ -102,6 +102,10 @@ const Student = sequelize.define("Student", {
     },
     onDelete: "SET NULL",
     onUpdate: "CASCADE"
+  },
+  requirePasswordChange: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true  // New students will need to change password
   }
 }, {
   tableName: 'Students',

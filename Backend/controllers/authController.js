@@ -6,61 +6,45 @@ const UniAdmin = require("../models/UniAdmin");
 const Student = require("../models/Student");
 const Supervisor = require("../models/Supervisor");
 
+
 exports.login = async (req, res) => {
   const { username, password } = req.body;
-  console.log("Login attempt with username:", username);
 
   try {
     if (!username || !password) {
       return res.status(400).json({ message: "Username and password are required" });
     }
 
-    // Define base attributes for each role
-    const baseAttributes = {
-      MainAdmin: ["username", "password", "role", "email"],
-      UniAdmin: ["username", "password", "role", "universityId", "primaryEmail"],
-      Student: ["userId", "password", "role", "universityId", "email", "universityEmail", "level"],
-      Supervisor: ["userId", "password", "role", "universityId", "email", "universityEmail"]
-    };
+    let user = null;
+    let userType = null;
 
-    // Update queries with role-specific attributes
+    // Try to find user in different roles
     const userQueries = [
       {
         model: MainAdmin,
         where: { [Op.or]: [{ username }, { email: username }] },
-        defaultRole: "MainAdmin",
-        attributes: baseAttributes.MainAdmin
+        defaultRole: "MainAdmin"
       },
       {
         model: UniAdmin,
         where: { [Op.or]: [{ username }, { primaryEmail: username }] },
-        defaultRole: "UniAdmin",
-        attributes: baseAttributes.UniAdmin
+        defaultRole: "UniAdmin"
       },
       {
         model: Student,
-        where: { [Op.or]: [{ userId: username }] },
-        defaultRole: "Student",
-        attributes: baseAttributes.Student
+        where: { userId: username },
+        defaultRole: "Student"
       },
       {
         model: Supervisor,
-        where: { [Op.or]: [{ userId: username }, { universityEmail: username }] },
-        defaultRole: "Supervisor",
-        attributes: baseAttributes.Supervisor
+        where: { userId: username },
+        defaultRole: "Supervisor"
       }
     ];
-
-    let user = null;
-    let userType = null;
-
-    // Execute queries sequentially until user is found
+  
+    // Find user
     for (const query of userQueries) {
-      const result = await query.model.findOne({
-        where: query.where,
-        attributes: query.attributes
-      });
-
+      const result = await query.model.findOne({ where: query.where });
       if (result) {
         user = result;
         userType = query.defaultRole;
@@ -72,29 +56,40 @@ exports.login = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch) {
+    // Handle different authentication for different roles
+    let isValidPassword = false;
+
+    if (userType === 'Student' || userType === 'Supervisor') {
+      // For students and supervisors, password should match their ID
+      isValidPassword = password === user.userId;
+    } else {
+      // For admins, use bcrypt comparison
+      isValidPassword = await bcrypt.compare(password, user.password);
+    }
+
+    if (!isValidPassword) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // Create JWT with essential data only
-    const tokenPayload = {
-      username: user.userId || user.username, // Use userId for students
-      role: userType,
-      universityId: user.universityId
-    };
-
+    // Create JWT token
     const token = jwt.sign(
-      tokenPayload,
+      {
+        username: user.userId || user.username,
+        role: userType,
+        universityId: user.universityId
+      },
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
 
-    // Prepare response with role-specific data
+    // Prepare response
     const responseUser = {
-      username: user.userId || user.username, // Use userId for students
+      username: user.userId || user.username,
+      fullName: user.fullName,
       role: userType,
-      email: user.email || user.primaryEmail,
+      email: userType === "MainAdmin" ? user.email :
+             userType === "UniAdmin" ? user.primaryEmail :
+             user.universityEmail,
       universityId: user.universityId,
       ...(userType === "Student" && { level: user.level })
     };
@@ -106,11 +101,50 @@ exports.login = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Login error:", error);
-    res.status(500).json({
-      message: process.env.NODE_ENV === "development" 
-        ? error.message 
-        : "An unexpected error occurred"
+    res.status(500).json({ 
+      message: "An unexpected error occurred during login",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+ 
+exports.changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const { username, role } = req.user;
+
+    // Only allow Students and Supervisors to use this endpoint
+    if (role !== 'Student' && role !== 'Supervisor') {
+      return res.status(403).json({ 
+        message: 'This endpoint is only for Students and Supervisors' 
+      });
+    }
+
+    const UserModel = role === 'Student' ? Student : Supervisor;
+    const user = await UserModel.findOne({
+      where: { userId: username }
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check if the current password matches
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Current password is incorrect" });
+    }
+
+    // Hash the new password and update it in the database
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedNewPassword;
+    await user.save();
+
+    res.status(200).json({ message: "Password changed successfully" });
+  } catch (error) {
+    res.status(500).json({ 
+      message: 'Failed to change password',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };

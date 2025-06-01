@@ -3,6 +3,7 @@ const University = require('../models/University');
 const jwt = require('jsonwebtoken');
 const Student = require('../models/Student');
 const Supervisor = require('../models/Supervisor');
+const bcrypt = require('bcryptjs');
 
 // Get UniAdmin account
 exports.getUniAdminAccount = async (req, res) => {
@@ -55,8 +56,10 @@ exports.getUniAdminAccount = async (req, res) => {
         : null,
     });
   } catch (error) {
-    console.error('Failed to get UniAdmin account:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ 
+      message: 'Failed to get UniAdmin account',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
@@ -178,16 +181,14 @@ exports.registerSingleUser = async (req, res) => {
       role,
       level,
     } = req.body;
-
-    // Generate initial password
-    const password = `${department}${idNumber}`;
-
+    
+    // For students and supervisors, use ID as password without hashing
     const userData = {
       userId: idNumber,
       fullName,
       email: universityEmail,
       universityEmail,
-      password,
+      password: idNumber, // Store ID as plain password
       phoneNumber,
       address,
       department,
@@ -195,29 +196,39 @@ exports.registerSingleUser = async (req, res) => {
       role: role
     };
 
-    if (role === 'Student') {
-      userData.level = level || 'PSM-1';
-      const student = await Student.create(userData);
-      res.status(201).json({
-        message: 'Student registered successfully',
-        userId: student.userId
-      });
-    } else if (role === 'Supervisor') {
+    if (role === 'Supervisor') {
       const { contactEmail, officeAddress } = req.body;
       userData.contactEmail = contactEmail;
       userData.officeAddress = officeAddress;
       const supervisor = await Supervisor.create(userData);
+      
       res.status(201).json({
+        success: true,
         message: 'Supervisor registered successfully',
-        userId: supervisor.userId
+        userId: supervisor.userId,
+        initialPassword: supervisor.userId
+      });
+    } else if (role === 'Student') {
+      userData.level = level || 'PSM-1';
+      const student = await Student.create(userData);
+      res.status(201).json({
+        success: true,
+        message: 'Student registered successfully',
+        userId: student.userId,
+        initialPassword: student.userId
       });
     } else {
-      res.status(400).json({ message: 'Invalid role specified' });
+      res.status(400).json({ 
+        success: false,
+        message: 'Invalid role specified' 
+      });
     }
-
   } catch (error) {
-    console.error('Registration error:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ 
+      success: false,
+      message: 'Registration failed',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
@@ -246,14 +257,12 @@ exports.registerBulkUsers = async (req, res) => {
 
     for (const userData of users) {
       try {
-        const password = `${userData.department}${userData.idNumber}`;
-        
         const baseUserData = {
           userId: userData.idNumber,
           fullName: userData.fullName,
           email: userData.universityEmail,
           universityEmail: userData.universityEmail,
-          password,
+          password: userData.idNumber, // Store ID as plain password
           phoneNumber: userData.phoneNumber,
           address: userData.address,
           department: userData.department,
@@ -261,40 +270,88 @@ exports.registerBulkUsers = async (req, res) => {
           role: userData.role
         };
 
-        if (userData.role === 'Student') {
-          baseUserData.level = userData.level || 'PSM-1';
-          const student = await Student.create(baseUserData);
-          results.push({
-            success: true,
-            userId: student.userId,
-            message: 'Student registered successfully'
-          });
-        } else if (userData.role === 'Supervisor') {
+        if (userData.role === 'Supervisor') {
           baseUserData.contactEmail = userData.contactEmail;
           baseUserData.officeAddress = userData.officeAddress;
           const supervisor = await Supervisor.create(baseUserData);
           results.push({
             success: true,
             userId: supervisor.userId,
-            message: 'Supervisor registered successfully'
+            message: 'Supervisor registered successfully',
+            initialPassword: supervisor.userId
+          });
+        } else if (userData.role === 'Student') {
+          baseUserData.level = userData.level || 'PSM-1';
+          const student = await Student.create(baseUserData);
+          results.push({
+            success: true,
+            userId: student.userId,
+            message: 'Student registered successfully',
+            initialPassword: student.userId
           });
         }
       } catch (error) {
         results.push({
           success: false,
           data: userData,
-          error: error.message
+          error: process.env.NODE_ENV === 'development' ? error.message : 'Registration failed'
         });
       }
     }
 
     res.status(200).json({
+      success: true,
       message: 'Bulk registration completed',
       results
     });
-
   } catch (error) {
-    console.error('Bulk registration error:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ 
+      success: false,
+      message: 'Bulk registration failed',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Get all students and supervisors for the UniAdmin's university
+// Get all students and supervisors by universityId
+exports.getUsersByUniversityId = async (req, res) => {
+  try {
+    const { universityId } = req.params;
+
+    if (!universityId) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'University ID is required' 
+      });
+    }
+
+    const supervisors = await Supervisor.findAll({
+      where: { universityId },
+      attributes: [
+        'userId', 'fullName', 'universityEmail', 'department',
+        'contactEmail', 'officeAddress'
+      ]
+    });
+
+    const students = await Student.findAll({
+      where: { universityId },
+      attributes: [
+        'userId', 'fullName', 'universityEmail', 'department', 'level'
+      ]
+    });
+
+    res.status(200).json({
+      success: true,
+      universityId,
+      supervisors,
+      students
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to fetch users',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };

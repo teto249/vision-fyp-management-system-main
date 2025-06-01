@@ -1,6 +1,8 @@
 import LabelInput from "./LabelInput";
 import SubmitButtons from "./SubmitButtons";
 import TextDivider from "./TextDivider";
+import { getInitials } from "../../../../utils/getInitials";
+
 export default function Profile({
   formData,
   fileInputRef,
@@ -13,59 +15,89 @@ export default function Profile({
 }) {
   return (
     <>
-      <div className="mt-4 flex justify-center ">
-        <div className="relative w-[200px] h-[200px] rounded-full ">
-          <img
-            alt="Profile Photo"
-            className="w-full h-full rounded-full object-cover"
-            src={formData.profilePhoto}
-          />
+      <div className="mt-4 flex justify-center">
+        <div className="relative">
+          {formData.profilePhoto ? (
+            <Image
+              src={formData.profilePhoto}
+              alt={`${formData.fullName}'s profile`}
+              width={128}
+              height={128}
+              className="rounded-full object-cover"
+              priority
+            />
+          ) : (
+            <div className="w-32 h-32 rounded-full bg-primary flex items-center justify-center">
+              <span className="text-3xl font-semibold text-white">
+                {getInitials(formData.fullName)}
+              </span>
+            </div>
+          )}
           {isEditMode && (
-            <div className="absolute inset-0 hover:bg-black/40 transition-all duration-300 rounded-2xl">
+            <>
               <input
                 type="file"
                 ref={fileInputRef}
                 onChange={handlePhotoChange}
                 accept="image/*"
                 className="hidden"
+                aria-label="Upload profile photo"
               />
               <button
                 type="button"
                 onClick={triggerFileInput}
-                className="absolute inset-0 w-full h-full flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity text-2xl font-medium text-white"
+                className="absolute bottom-0 right-0 bg-gray-700 p-2 rounded-full hover:bg-gray-600 transition-colors"
+                aria-label="Change profile photo"
               >
-                Change Photo
+                <svg
+                  className="w-5 h-5 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
               </button>
-            </div>
+            </>
           )}
         </div>
       </div>
 
       <div className="p-6">
         <form onSubmit={handleSubmit} className="grid gap-y-2">
-          {/* Admin Section */}
           <TextDivider>Supervisor Details</TextDivider>
           <LabelInput
-            id="adminName"
+            id="fullName"
             type="text"
-            value={formData.adminName}
+            value={formData.fullName}
             onChange={handleInputChange}
             disabled={!isEditMode}
-            htmlFor="adminName"
+            htmlFor="fullName"
           >
-            Admin Full Name
+            Full Name
           </LabelInput>
           <LabelInput
-            id="adminEmail"
+            id="universityEmail"
             type="email"
-            value={formData.adminEmail}
+            value={formData.universityEmail}
             onChange={handleInputChange}
             disabled
-            htmlFor="adminEmail"
+            htmlFor="universityEmail"
           >
-            Admin Email
+            University Email
           </LabelInput>
-          {/* Contact Section */}
+
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <LabelInput
               id="contactEmail"
@@ -88,50 +120,42 @@ export default function Profile({
               Phone Number
             </LabelInput>
           </div>
+
           <LabelInput
-            id="adminAddress"
+            id="officeAddress"
             type="text"
-            value={formData.adminAddress}
+            value={formData.officeAddress}
             onChange={handleInputChange}
             disabled={!isEditMode}
-            htmlFor="adminAddress"
+            htmlFor="officeAddress"
           >
-            Address
+            Office Address
           </LabelInput>
-          {/* Company Section */}
-          <TextDivider>University Details</TextDivider>
+
+          <TextDivider>Department Details</TextDivider>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <LabelInput
-              id="shortName"
+              id="department"
               type="text"
-              value={formData.shortName}
+              value={formData.department}
               onChange={handleInputChange}
-              disabled
-              htmlFor="shortName"
+              disabled={!isEditMode}
+              htmlFor="department"
             >
-              Short Name
+              Department
             </LabelInput>
             <LabelInput
-              id="universityName"
+              id="universityId"
               type="text"
-              value={formData.universityName}
+              value={formData.university.id}
               onChange={handleInputChange}
               disabled
-              htmlFor="universityName"
+              htmlFor="universityId"
             >
-              Full Company Name
+              University ID
             </LabelInput>
           </div>
-          <LabelInput
-            htmlFor="universityAddress"
-            id="universityAddress"
-            type="text"
-            value={formData.universityAddress}
-            onChange={handleInputChange}
-            disabled
-          >
-            Address
-          </LabelInput>
+
           {isEditMode && <SubmitButtons toggleEditMode={toggleEditMode} />}
         </form>
       </div>

@@ -15,7 +15,7 @@ export default function Navbar({
   const [adminInfo, setAdminInfo] = useState({});
   const router = useRouter();
 
-  useEffect(() => {}, []);
+
   useEffect(() => {
     const storedAdminInfo = JSON.parse(localStorage.getItem("adminInfo"));
     if (storedAdminInfo) {
@@ -208,7 +208,7 @@ export default function Navbar({
                 </div>
               </li>
               <li>
-                <Link href="/admin/account">
+                <Link href="/uniAdmin/account">
                   <button
                     className="w-full text-left px-4 py-2 hover:bg-gray-700 flex items-center gap-2 text-gray-300"
                     onClick={() => setProfileOpen(false)}
