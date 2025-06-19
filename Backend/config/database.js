@@ -1,12 +1,39 @@
 const { Sequelize } = require("sequelize");
+const mysql = require('mysql2/promise');
 require("dotenv").config();
 
+const DB_NAME = process.env.DB_NAME || "vision-fyp-management-system";
+const DB_USER = process.env.DB_USER || "root";
+const DB_PASSWORD = process.env.DB_PASSWORD || "";
+const DB_HOST = process.env.DB_HOST || "localhost";
+
+// Create database if it doesn't exist
+async function createDatabase() {
+  try {
+    // Create a temporary connection without database selection
+    const connection = await mysql.createConnection({
+      host: DB_HOST,
+      user: DB_USER,
+      password: DB_PASSWORD
+    });
+
+    // Create database if it doesn't exist
+    await connection.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;`);
+    console.log("Database checked/created successfully");
+    await connection.end();
+  } catch (err) {
+    console.error("Database creation failed:", err);
+    process.exit(1);
+  }
+}
+
+// Initialize Sequelize
 const sequelize = new Sequelize(
-  process.env.DB_NAME || "vision-fyp-management-system",
-  process.env.DB_USER || "root",
-  process.env.DB_PASSWORD || "",
+  DB_NAME,
+  DB_USER,
+  DB_PASSWORD,
   {
-    host: process.env.DB_HOST || "localhost",
+    host: DB_HOST,
     dialect: "mysql",
     logging: false,
     pool: {
@@ -21,18 +48,12 @@ const sequelize = new Sequelize(
   }
 );
 
-// Add this before your connectDB function
-sequelize
-  .authenticate()
-  .then(() => {
-    console.log("Connection has been established successfully.");
-  })
-  .catch((err) => {
-    console.error("Unable to connect to the database:", err);
-  });
 
 const connectDB = async () => {
   try {
+    // First create database if it doesn't exist
+    await createDatabase();
+
     // Test database connection
     await sequelize.authenticate();
     console.log("MySQL connected successfully");
@@ -44,61 +65,29 @@ const connectDB = async () => {
     const UniAdmin = require("../models/UniAdmin");
     const Supervisor = require("../models/Supervisor");
     const Student = require("../models/Student");
+    const Project = require("../models/Project");
 
-    // Define associations
-    // MainAdmin - Institution relationship
-    Institution.hasMany(MainAdmin, {
-      foreignKey: "institutionId",
-      onDelete: "CASCADE",
-    });
-    MainAdmin.belongsTo(Institution, {
-      foreignKey: "institutionId",
-    });
+    // Import and initialize model associations
+    require("../models/index");
 
-    // UniAdmin - University relationship (changed to one-to-one)
-    University.hasOne(UniAdmin, {
-      foreignKey: "universityId",
-      onDelete: "CASCADE",
-      unique: true, // Ensures one admin per university
-    });
-    UniAdmin.belongsTo(University, {
-      foreignKey: "universityId",
-    });
+    // Check if database is already initialized by looking for Institution table
+    const [results] = await sequelize.query(
+      "SELECT table_name FROM information_schema.tables WHERE table_schema = :schema AND table_name = 'Institutions'",
+      {
+        replacements: { schema: DB_NAME },
+        type: sequelize.QueryTypes.SELECT
+      }
+    );
 
-    // Supervisor - University relationship
-    University.hasMany(Supervisor, {
-      foreignKey: "universityId",
-      onDelete: "CASCADE",
-    });
-    Supervisor.belongsTo(University, {
-      foreignKey: "universityId",
-    });
+    // Only initialize if tables don't exist
+    if (!results) {
+      console.log("First time initialization - creating tables...");
+      await sequelize.sync({ force: true });
+      console.log("All tables created successfully");
 
-    // Student - University and Supervisor relationships
-    University.hasMany(Student, {
-      foreignKey: "universityId",
-      onDelete: "CASCADE",
-    });
-    Student.belongsTo(University, {
-      foreignKey: "universityId",
-    });
-    
-    Supervisor.hasMany(Student, {
-      foreignKey: "supervisorId",
-      onDelete: "SET NULL",
-    });
-    Student.belongsTo(Supervisor, {
-      foreignKey: "supervisorId",
-    });
-
-    // Sync only the required tables
-    await sequelize.sync(); // or use { alter: true } for non-destructive changes
-
-    // Create default institution if it doesn't exist
-    let institution = await Institution.findOne();
-    if (!institution) {
+      // Create default institution
       console.log("Creating default institution...");
-      institution = await Institution.create({
+      const institution = await Institution.create({
         shortName: "GreenTel Agriculture",
         fullName: "GreenTel For Agriculture and Technology",
         address: "Khartoum City, Sudan",
@@ -107,14 +96,8 @@ const connectDB = async () => {
         logoPath: "https://ui-avatars.com/api/?name=GA&size=256&background=random",
       });
       console.log("Default institution created:", institution.shortName);
-    }
 
-    // Create default admin if doesn't exist
-    const adminExists = await MainAdmin.findOne({
-      where: { email: "altayebnuba@gmail.com" },
-    });
-
-    if (!adminExists) {
+      // Create default admin
       console.log("Creating default admin account...");
       const bcrypt = require("bcryptjs");
       const hashedPassword = await bcrypt.hash("admin123", 10);
@@ -132,18 +115,21 @@ const connectDB = async () => {
         institutionId: institution.id,
       });
 
-      console.log("Default admin created:", newAdmin.email);
-
       if (process.env.NODE_ENV === "development") {
         console.log("Default admin credentials:");
         console.log("Email:", newAdmin.email);
         console.log("Password: admin123");
       }
+    } else {
+      // If tables exist, just sync models without force
+      await sequelize.sync();
+      console.log("Database already initialized - syncing models only");
     }
 
     console.log("Database initialization completed successfully");
   } catch (error) {
     console.error("Database initialization failed:", error);
+    console.error("Error details:", error.stack);
     process.exit(1);
   }
 };

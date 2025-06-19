@@ -15,7 +15,7 @@ const Supervisor = sequelize.define("Supervisor", {
   email: {
     type: DataTypes.STRING,
     allowNull: false,
-    unique: true,
+  
   },
   universityEmail: {
     type: DataTypes.STRING,
@@ -28,19 +28,19 @@ const Supervisor = sequelize.define("Supervisor", {
   },
   phoneNumber: {
     type: DataTypes.STRING,
-    allowNull: true,  // Optional during initial registration
+    // Optional during initial registration
   },
   address: {
     type: DataTypes.STRING,
-    allowNull: true,  // Optional during initial registration
+  // Optional during initial registration
   },
   contactEmail: {
     type: DataTypes.STRING,
-    allowNull: true,  // Optional during initial registration
+     // Optional during initial registration
   },
   officeAddress: {
     type: DataTypes.STRING,
-    allowNull: true,  // Optional during initial registration
+   // Optional during initial registration
   },
   role: {
     type: DataTypes.ENUM("Supervisor"),

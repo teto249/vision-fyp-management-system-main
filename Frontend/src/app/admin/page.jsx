@@ -1,21 +1,51 @@
-import SummaryCard from './components/dashboard/SummaryCard';
-import LineChart from './components/dashboard/LineChart';
-import DonutChart from './components/dashboard/DountChart';
-import UniversityTable from './components/dashboard/UniversityTable';
-import PerformancePanel from './components/dashboard/PerformancePanel';
+"use client";
+import SummaryCard from "./components/dashboard/SummaryCard";
+import LineChart from "./components/dashboard/LineChart";
+import DonutChart from "./components/dashboard/DountChart";
+import UniversityTable from "./components/dashboard/UniversityTable";
+import PerformancePanel from "./components/dashboard/PerformancePanel";
+import { fetchUniversities } from "../../api/admin/fetchUniversities";
+import { use, useState, useEffect } from "react";
 
 const mockUniversities = [
-  { id: '1', name: 'University A', users: 250, capacity: 75, status: 'warning' },
-  { id: '2', name: 'University B', users: 180, capacity: 60, status: 'normal' },
-  { id: '3', name: 'University C', users: 420, capacity: 95, status: 'critical' },
+  {
+    id: "1",
+    name: "University A",
+    users: 250,
+    capacity: 75,
+    status: "warning",
+  },
+  { id: "2", name: "University B", users: 180, capacity: 60, status: "normal" },
+  {
+    id: "3",
+    name: "University C",
+    users: 420,
+    capacity: 95,
+    status: "critical",
+  },
 ];
 
 export default function Dashboard() {
+  const [universities, setUniversities] = useState([]);
+
+  useEffect(() => {
+    const loadUniversities = async () => {
+      try {
+        const data = await fetchUniversities();
+        setUniversities(data);
+      } catch (err) {
+        console.error("Failed to load universities", err);
+      }
+    };
+
+    loadUniversities();
+  }, []);
+
   return (
     <div className="p-12 bg-gray-800 min-h-screen">
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
         <SummaryCard title="Total Users" value={850} change={12} />
-        <SummaryCard title="Total Universities" value={23} />
+        <SummaryCard title="Total Universities" value={universities.length} />
         <SummaryCard title="Capacity Usage" value="850/1,000" />
         <SummaryCard title="Active Projects" value={427} change={-2} />
       </div>
@@ -26,7 +56,7 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 gap-6">
-        <UniversityTable data={mockUniversities} />
+        <UniversityTable data={universities} />
         <PerformancePanel />
       </div>
     </div>

@@ -1,5 +1,8 @@
+/* eslint-disable @next/next/no-img-element */
 // components/ui/Card.tsx
 import Image from "next/image";
+import { useRouter } from "next/navigation"; // Add this import
+
 
 export default function Card({
   id,
@@ -9,21 +12,22 @@ export default function Card({
   location,
   students,
   capacity,
-  onView
+  onView,
 }) {
-
   const statusColor =
     capacity >= 90
       ? "bg-red-900"
       : capacity >= 75
       ? "bg-orange-900"
       : "bg-green-900";
-      
- const handleViewDetails = () => {
-    onView(id)
+  const router = useRouter(); // Initialize the router
+
+  // Function to handle the view details action
+  
+
+  const handleViewDetails = () => {
+    onView(id);
   };
-
-
 
   return (
     <div className="group relative bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden">
@@ -33,7 +37,7 @@ export default function Card({
           alt={title}
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           height={200}
-  width={200}
+          width={200}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-4">
@@ -77,7 +81,10 @@ export default function Card({
         </div>
 
         <div className="mt-4 pt-4 border-t border-gray-100">
-          <button className="w-full py-2 px-4 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors duration-200" onClick={handleViewDetails}>
+          <button
+            className="w-full py-2 px-4 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors duration-200"
+            onClick={handleViewDetails}
+          >
             View Details
           </button>
         </div>

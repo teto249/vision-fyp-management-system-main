@@ -21,8 +21,21 @@ const Document = sequelize.define(
       allowNull: false,
     },
     fileContent: {
-      type: DataTypes.TEXT("long"),
+      type: DataTypes.BLOB("long"),
       allowNull: false,
+      get() {
+        const rawValue = this.getDataValue('fileContent');
+        return rawValue ? rawValue.toString('base64') : null;
+      },
+      set(value) {
+        if (value && typeof value === 'string' && value.startsWith('data:')) {
+          // Handle base64 string input
+          const base64Data = value.split(';base64,').pop();
+          this.setDataValue('fileContent', Buffer.from(base64Data, 'base64'));
+        } else {
+          this.setDataValue('fileContent', value);
+        }
+      }
     },
     uploadedBy: {
       type: DataTypes.STRING,

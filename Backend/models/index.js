@@ -5,7 +5,12 @@ const Institution = require("./Institution");
 const UniAdmin = require("./UniAdmin");
 const Student = require("./Student");
 const Supervisor = require("./Supervisor");
-const Document = require("./Document");  // Add this line
+const Document = require("./Document");
+const Project = require("./Project");
+const Milestone = require("./Milestone");
+const Task = require("./Task");
+const Meeting = require("./Meeting");
+const Feedback = require("./Feedback");
 
 // Institution & MainAdmin associations
 Institution.hasMany(MainAdmin, { as: "admins", foreignKey: "institutionId" });
@@ -15,91 +20,152 @@ MainAdmin.belongsTo(Institution, { foreignKey: "institutionId" });
 University.hasMany(User, {
   foreignKey: "universityId",
   onDelete: "CASCADE",
-  as: "users"
+  as: "users",
 });
 User.belongsTo(University, {
   foreignKey: "universityId",
-  as: "university"
+  as: "university",
 });
 
 // University & UniAdmin associations
 University.hasMany(UniAdmin, {
   foreignKey: "universityId",
-  as: "administrators"
+  as: "administrators",
 });
 UniAdmin.belongsTo(University, {
   foreignKey: "universityId",
-  as: "university"
+  as: "university",
 });
 
 // User role-based associations
 University.hasMany(User, {
   foreignKey: "universityId",
   scope: {
-    role: "student"
+    role: "student",
   },
-  as: "students"
+  as: "students",
 });
 
 University.hasMany(User, {
   foreignKey: "universityId",
   scope: {
-    role: "supervisor"
+    role: "supervisor",
   },
-  as: "supervisors"
+  as: "supervisors",
 });
 
-// University & Supervisor associations
+// University & Supervisor/Student associations
 University.hasMany(Supervisor, {
   foreignKey: "universityId",
-  onDelete: "CASCADE"
+  onDelete: "CASCADE",
 });
-
 Supervisor.belongsTo(University, {
-  foreignKey: "universityId"
+  foreignKey: "universityId",
 });
 
-// University & Student associations
 University.hasMany(Student, {
   foreignKey: "universityId",
-  onDelete: "CASCADE"
+  onDelete: "CASCADE",
 });
-
 Student.belongsTo(University, {
-  foreignKey: "universityId"
+  foreignKey: "universityId",
 });
 
 // Supervisor & Student associations
 Supervisor.hasMany(Student, {
   foreignKey: "supervisorId",
-  onDelete: "SET NULL"
+  onDelete: "SET NULL",
 });
-
 Student.belongsTo(Supervisor, {
-  foreignKey: "supervisorId"
+  foreignKey: "supervisorId",
 });
 
 // Document associations
 Supervisor.hasMany(Document, {
   foreignKey: "supervisorId",
   onDelete: "CASCADE",
-  as: "documents"
+  as: "documents",
 });
-
 Document.belongsTo(Supervisor, {
   foreignKey: "supervisorId",
-  as: "supervisor"
+  as: "supervisor",
 });
 
 Student.hasMany(Document, {
   foreignKey: "studentId",
   onDelete: "CASCADE",
-  as: "documents"
+  as: "documents",
 });
-
 Document.belongsTo(Student, {
   foreignKey: "studentId",
-  as: "student"
+  as: "student",
+});
+
+// Project associations
+Student.hasOne(Project, {
+  foreignKey: "studentId",
+  as: "project",
+});
+Project.belongsTo(Student, {
+  foreignKey: "studentId",
+  as: "student",
+});
+
+Supervisor.hasMany(Project, {
+  foreignKey: "supervisorId",
+  onDelete: "CASCADE",
+  as: "projects",
+});
+Project.belongsTo(Supervisor, {
+  foreignKey: "supervisorId",
+  as: "supervisor",
+});
+
+Project.belongsTo(University, {
+  foreignKey: "universityId",
+  as: "university",
+});
+
+Project.hasMany(Milestone, {
+  foreignKey: "projectId",
+  as: "milestones",
+  onDelete: "CASCADE",
+});
+Milestone.belongsTo(Project, {
+  foreignKey: "projectId",
+  as: "project",
+});
+
+// Milestone associations
+Milestone.hasMany(Task, {
+  foreignKey: "milestoneId",
+  as: "tasks",
+  onDelete: "CASCADE",
+});
+Task.belongsTo(Milestone, {
+  foreignKey: "milestoneId",
+  as: "milestone",
+});
+
+Milestone.hasMany(Meeting, {
+  foreignKey: "milestoneId",
+  as: "meetings",
+  onDelete: "CASCADE",
+});
+Meeting.belongsTo(Milestone, {
+  foreignKey: "milestoneId",
+  as: "milestone",
+});
+
+Task.hasMany(Feedback, {
+  foreignKey: "taskId",
+  onDelete: "CASCADE",
+  as: "feedback",
+});
+
+Feedback.belongsTo(Task, {
+  foreignKey: "taskId",
+  as: "task",
 });
 
 // Export all models
@@ -109,7 +175,12 @@ module.exports = {
   MainAdmin,
   Institution,
   UniAdmin,
+  Project,
   Student,
   Supervisor,
-  Document  // Add this line
+  Document,
+  Milestone,
+  Task,
+  Meeting,
+  Feedback,
 };

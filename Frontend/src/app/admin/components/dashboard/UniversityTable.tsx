@@ -1,9 +1,14 @@
 interface University {
   id: string;
-  name: string;
+  title: string;
+  shortName: string;
   users: number;
   capacity: number;
   status: 'normal' | 'warning' | 'critical';
+  adminDetails: {
+    name: string;
+    email: string;
+  };
 }
 
 export default function UniversityTable({ data }: { data: University[] }) {
@@ -14,6 +19,7 @@ export default function UniversityTable({ data }: { data: University[] }) {
       default: return 'bg-status-success';
     }
   };
+  console.log("University data:", data);
 
   return (
     <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 overflow-hidden">
@@ -24,16 +30,17 @@ export default function UniversityTable({ data }: { data: University[] }) {
             <thead>
               <tr className="text-gray-400 border-b border-gray-700">
                 <th className="pb-3 text-left">University</th>
-                <th className="pb-3 text-left">Users</th>
+                <th className="pb-3 text-left">Admin</th>
                 <th className="pb-3 text-left">Capacity</th>
                 <th className="pb-3 text-left">Status</th>
               </tr>
             </thead>
             <tbody className="text-gray-300">
-              {data.map((uni) => (
+              {
+              data.map((uni) => (
                 <tr key={uni.id} className="border-b border-gray-700 last:border-b-0">
-                  <td className="py-4">{uni.name}</td>
-                  <td>{uni.users}</td>
+                  <td className="py-4">{uni.title}</td>
+                  <td>{uni.adminDetails.name}</td>
                   <td>{uni.capacity}%</td>
                   <td>
                     <div className="flex items-center">

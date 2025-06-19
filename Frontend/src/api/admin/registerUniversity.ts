@@ -1,5 +1,6 @@
 import { toast } from "react-toastify";
 
+
 interface UniversityResponse {
   id: string;
   shortName: string;

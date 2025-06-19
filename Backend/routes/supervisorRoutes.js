@@ -9,16 +9,21 @@ const {
   listDocuments, 
   getDocumentContent,
   deleteDocument, 
-  getStudentDocuments 
+  getStudentDocuments,
+  getSupervisedStudents,
+  getStudentProject,
+  getAllProjects,
+  getSupervisedStudentsWithProjects,
+  getStudentProjectDetails,
+  updateProjectStatus,
+  addFeedback
 } = require("../controllers/supervisorController");
+
 
 // Configure multer for file uploads
 const storage = multer.memoryStorage();
 const upload = multer({ 
   storage: storage,
-  limits: {
-    fileSize: 100 * 1024 * 1024 // 100MB limit
-  },
   fileFilter: (req, file, cb) => {
     // Only allow PDF files
     const ext = path.extname(file.originalname).toLowerCase();
@@ -57,15 +62,23 @@ router.post("/documents/upload", (req, res, next) => {
 router.delete("/documents/:documentId", deleteDocument);
 router.get("/students/:studentId/documents", getStudentDocuments);
 
+// Supervisor-student relationship routes
+router.get('/:supervisorId/students', getSupervisedStudents);
+router.get('/:supervisorId/students/:studentId/project', getStudentProject);
+router.get('/:supervisorId/projects', getAllProjects);
+router.get('/:supervisorId/students-with-projects', getSupervisedStudentsWithProjects);
+router.get('/:supervisorId/students/:studentId/project', getStudentProjectDetails);
+router.patch('/:supervisorId/projects/:projectId/status', updateProjectStatus);
+router.post('/:supervisorId/tasks/:taskId/feedback', addFeedback);
+
+
 // Add error handling middleware for multer errors
 router.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
-    if (err.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({
-        success: false,
-        message: 'File size exceeds 100MB limit'
-      });
-    }
+    return res.status(400).json({
+      success: false,
+      message: 'File upload error: ' + err.message
+    });
   }
   next(err);
 });

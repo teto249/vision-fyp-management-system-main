@@ -53,13 +53,15 @@ export default function UniversityPage() {
         <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4">
           <p className="font-bold">Error</p>
           <p>{error}</p>
+
+          <button onClick={router.back()}>Go Back</button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full px-4 sm:px-6 py-12">
+    <div className="w-full px-4 sm:px-6 py-12 h-screen ">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-300 mb-3">
@@ -97,6 +99,14 @@ export default function UniversityPage() {
         {filteredUniversities.length === 0 ? (
           <div className="text-center text-gray-400 py-12">
             No universities found matching your criteria
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <button
+                className=" py-2 px-4 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors duration-200"
+                onClick={router.back}
+              >
+                Go Back
+              </button>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
@@ -116,6 +126,14 @@ export default function UniversityPage() {
             ))}
           </div>
         )}
+        <div className="mt-4 pt-4 border-t border-gray-100 text-center">
+          <button
+            className="py-2 px-4 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors duration-200"
+            onClick={router.back}
+          >
+            Go Back
+          </button>
+        </div>
       </div>
     </div>
   );

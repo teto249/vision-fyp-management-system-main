@@ -145,17 +145,23 @@ const ProjectAnalytics = () => (
 export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [totalStudents, setTotalStudents] = useState(0);
+  const [totalSupervisors, setTotalSupervisors] = useState(0);
   const [totalUsers, setTotalUsers] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [usersData, setUsersData] = useState({ supervisors: [], students: [] });
 
   useEffect(() => {
-    const universityId = "UTHM"; // Replace with actual universityId from auth or props
+    // get the uniadminfo from local storage
+    const uniAdminInfo = JSON.parse(localStorage.getItem("adminInfo"));
+    console.log("University Admin Info:", uniAdminInfo);
+
+    const universityId = uniAdminInfo?.universityId;
     fetchUsersByUniversity(universityId)
       .then((data) => {
         setTotalStudents(data.students.length);
         setTotalUsers(data.students.length + data.supervisors.length);
+        setTotalSupervisors(data.supervisors);
         setUsersData(data);
         setIsLoading(false);
       })
@@ -187,7 +193,7 @@ export default function Dashboard() {
             Dashboard Overview
           </h1>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="bg-gray-800 text-gray-200 p-6 rounded-xl shadow-lg border border-gray-600">
               <h3 className="text-lg font-bold">Total Students</h3>
               {isLoading ? (
@@ -196,6 +202,18 @@ export default function Dashboard() {
                 <p className="text-3xl mt-2 text-red-400">Error: {error}</p>
               ) : (
                 <p className="text-3xl mt-2 text-green-400">{totalStudents}</p>
+              )}
+            </div>
+            <div className="bg-gray-800 text-gray-200 p-6 rounded-xl shadow-lg border border-gray-600">
+              <h3 className="text-lg font-bold">Total Supervisors</h3>
+              {isLoading ? (
+                <p className="text-3xl mt-2 text-green-400">Loading...</p>
+              ) : error ? (
+                <p className="text-3xl mt-2 text-red-400">Error: {error}</p>
+              ) : (
+                <p className="text-3xl mt-2 text-green-400">
+                  {totalSupervisors.length}
+                </p>
               )}
             </div>
             <div className="bg-gray-800 text-gray-200 p-6 rounded-xl shadow-lg border border-gray-600">

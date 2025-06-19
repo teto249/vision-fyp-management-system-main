@@ -4,6 +4,13 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const Document = require('../models/Document');
+const Student = require('../models/Student');
+const Project = require('../models/Project');
+const Milestone = require('../models/Milestone');
+const Task = require('../models/Task');
+const Meeting = require('../models/Meeting');
+const Feedback = require('../models/Feedback');
+const { sequelize } = require('../config/database');
 
 // Configure multer storage
 const storage = multer.diskStorage({
@@ -20,7 +27,7 @@ const storage = multer.diskStorage({
   }
 });
 
-// Update the multer configuration
+// // Update the multer configuration
 const upload = multer({ 
   storage: storage,
   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
@@ -359,3 +366,394 @@ const verifyUpload = async (document) => {
   const filePath = path.join(__dirname, '..', document.filePath);
   return fs.existsSync(filePath);
 };
+
+// Get all students supervised by a supervisor
+exports.getSupervisedStudents = async (req, res) => {
+  try {
+    const { supervisorId } = req.params;
+
+    const students = await Student.findAll({
+      where: { supervisorId },
+      attributes: [
+        'userId',
+        'fullName',
+        'email',
+        'universityEmail',
+        'level',
+        'department'
+      ]
+    });
+
+    return res.status(200).json({
+      success: true,
+      students
+    });
+
+  } catch (error) {
+    console.error('Error fetching supervised students:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch students'
+    });
+  }
+};
+
+// Get project details for a specific student
+exports.getStudentProject = async (req, res) => {
+  try {
+    const { supervisorId, studentId } = req.params;
+
+    // Verify student is supervised by this supervisor
+    const student = await Student.findOne({
+      where: { 
+        userId: studentId,
+        supervisorId 
+      }
+    });
+
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student not found or not supervised by this supervisor'
+      });
+    }
+
+    const project = await Project.findOne({
+      where: { studentId },
+      include: [
+        {
+          model: Student,
+          attributes: ['fullName', 'email', 'level', 'department']
+        }
+      ]
+    });
+
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: 'No project found for this student'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      project
+    });
+
+  } catch (error) {
+    console.error('Error fetching student project:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch project details'
+    });
+  }
+};
+
+// Get all projects for supervised students
+exports.getAllProjects = async (req, res) => {
+  try {
+    const { supervisorId } = req.params;
+
+    const projects = await Project.findAll({
+      where: { supervisorId },
+      include: [
+        {
+          model: Student,
+          attributes: ['userId', 'fullName', 'email', 'level', 'department']
+        }
+      ]
+    });
+
+    return res.status(200).json({
+      success: true,
+      projects
+    });
+
+  } catch (error) {
+    console.error('Error fetching supervised projects:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch projects'
+    });
+  }
+};
+
+exports.getSupervisedStudentsWithProjects = async (req, res) => {
+  try {
+    const { supervisorId } = req.params;
+
+    // Validate supervisorId
+    if (!supervisorId) {
+      return res.status(400).json({
+        success: false,
+        message: "Supervisor ID is required"
+      });
+    }
+
+    // Find all students supervised by this supervisor
+    const students = await Student.findAll({
+      where: { supervisorId },
+      attributes: ['userId', 'fullName', 'email', 'universityEmail', 'level', 'department'],
+      include: [
+        {
+          model: Project,
+          as: 'project',
+          attributes: [
+            'id',
+            'projectTitle',
+            'projectType',
+            'projectDescription',
+            'startDate',
+            'endDate',
+            'status',
+            'progress'
+          ],
+          include: [
+            {
+              model: University,
+              as: "university",
+              attributes: ['id', 'shortName', 'fullName']
+            },
+            {
+              model: Milestone,
+              as: "milestones",
+              separate: true,
+              attributes: ['id', 'title', 'description', 'status', 'startDate', 'endDate'],
+              include: [
+                {
+                  model: Task,
+                  as: "tasks",
+                  separate: true,
+                  attributes: ['id', 'title', 'description', 'status', 'startDate', 'endDate'],
+                  include: [
+                    {
+                      model: Feedback,
+                      as: "feedback",
+                      attributes: ['id', 'title', 'description', 'date']
+                    }
+                  ]
+                },
+                {
+                  model: Meeting,
+                  as: "meetings",
+                  separate: true,
+                  attributes: ['id', 'title', 'date', 'link', 'type']
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    });
+
+    if (!students.length) {
+      return res.status(404).json({
+        success: false,
+        message: "No students found for this supervisor"
+      });
+    }
+
+    // Transform and calculate progress for each project
+    const transformedStudents = students.map(student => {
+      const plainStudent = student.get({ plain: true });
+      
+      if (plainStudent.project) {
+        // Calculate total tasks and completed tasks
+        const totalTasks = plainStudent.project.milestones.reduce(
+          (sum, milestone) => sum + milestone.tasks.length, 0
+        );
+        const completedTasks = plainStudent.project.milestones.reduce(
+          (sum, milestone) => sum + milestone.tasks.filter(task => task.status === 'Completed').length, 0
+        );
+
+        // Calculate progress
+        plainStudent.project.progress = totalTasks > 0 
+          ? Math.round((completedTasks / totalTasks) * 100) 
+          : 0;
+      }
+
+      return {
+        userId: plainStudent.userId,
+        fullName: plainStudent.fullName,
+        email: plainStudent.email,
+        universityEmail: plainStudent.universityEmail,
+        level: plainStudent.level,
+        department: plainStudent.department,
+        project: plainStudent.project ? {
+          id: plainStudent.project.id,
+          title: plainStudent.project.projectTitle,
+          type: plainStudent.project.projectType,
+          description: plainStudent.project.projectDescription,
+          status: plainStudent.project.status,
+          progress: plainStudent.project.progress,
+          startDate: plainStudent.project.startDate,
+          endDate: plainStudent.project.endDate,
+          university: plainStudent.project.university,
+          milestones: plainStudent.project.milestones.map(milestone => ({
+            id: milestone.id,
+            title: milestone.title,
+            description: milestone.description,
+            status: milestone.status,
+            startDate: milestone.startDate,
+            endDate: milestone.endDate,
+            tasks: milestone.tasks,
+            meetings: milestone.meetings
+          }))
+        } : null
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      students: transformedStudents
+    });
+
+  } catch (error) {
+    console.error("Error fetching supervised students:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch students and their projects"
+    });
+  }
+};
+
+exports.getStudentProjectDetails = async (req, res) => {
+  try {
+    const { supervisorId, studentId } = req.params;
+
+    const student = await Student.findOne({
+      where: { 
+        userId: studentId,
+        supervisorId 
+      },
+      include: [
+        {
+          model: Project,
+          include: [
+            {
+              model: Milestone,
+              include: [
+                {
+                  model: Task,
+                  include: [
+                    {
+                      model: Feedback,
+                      attributes: ['id', 'title', 'description', 'date']
+                    }
+                  ]
+                },
+                {
+                  model: Meeting,
+                  attributes: ['id', 'title', 'date', 'time', 'link', 'type']
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    });
+
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student not found or not supervised by this supervisor'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      project: student.Project
+    });
+
+  } catch (error) {
+    console.error('Error fetching project details:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch project details'
+    });
+  }
+};
+
+exports.updateProjectStatus = async (req, res) => {
+  try {
+    const { supervisorId, projectId } = req.params;
+    const { status } = req.body;
+
+    const project = await Project.findOne({
+      where: { 
+        id: projectId,
+        supervisorId
+      }
+    });
+
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: 'Project not found'
+      });
+    }
+
+    await project.update({ status });
+
+    res.status(200).json({
+      success: true,
+      message: 'Project status updated successfully'
+    });
+
+  } catch (error) {
+    console.error('Error updating project status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update project status'
+    });
+  }
+};
+
+exports.addFeedback = async (req, res) => {
+  try {
+    const { supervisorId, taskId } = req.params;
+    const { title, description } = req.body;
+
+    const task = await Task.findOne({
+      where: { id: taskId },
+      include: [
+        {
+          model: Milestone,
+          include: [
+            {
+              model: Project,
+              where: { supervisorId }
+            }
+          ]
+        }
+      ]
+    });
+
+    if (!task) {
+      return res.status(404).json({
+        success: false,
+        message: 'Task not found or not authorized'
+      });
+    }
+
+    const feedback = await Feedback.create({
+      taskId,
+      title,
+      description,
+      date: new Date()
+    });
+
+    res.status(201).json({
+      success: true,
+      feedback
+    });
+
+  } catch (error) {
+    console.error('Error adding feedback:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to add feedback'
+    });
+  }
+};
+

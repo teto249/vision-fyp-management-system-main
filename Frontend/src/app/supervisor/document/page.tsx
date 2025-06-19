@@ -7,9 +7,19 @@ import {
   getDocuments,
   uploadDocument,
 } from "../../../api/SupervisorApi/Documnets";
-import { Modal } from "../../../components/ui/Modal";
-import { DocumentSkeleton } from "../../../components/ui/Skeleton";
+
+// import { DocumentSkeleton } from "../../components/ui/Skeleton";
 import { logger } from '../../../utils/logger';
+// Temporary fallback for missing Skeleton component
+export const DocumentSkeleton = () => (
+  <div className="animate-pulse bg-gray-800 rounded-lg p-6 h-48 flex flex-col gap-4">
+    <div className="h-6 bg-gray-700 rounded w-2/3 mb-2" />
+    <div className="h-4 bg-gray-700 rounded w-1/2 mb-2" />
+    <div className="h-3 bg-gray-700 rounded w-full" />
+    <div className="h-3 bg-gray-700 rounded w-5/6" />
+  </div>
+);
+
 
 interface ErrorState {
   message: string;
@@ -41,6 +51,7 @@ export default function Documents() {
       setError(null);
       const token = localStorage.getItem("authToken");
       const supervisorInfoStr = localStorage.getItem("supervisorInfo");
+      console.log('supervisorInfo:', JSON.parse(supervisorInfoStr));
 
       if (!token || !supervisorInfoStr) {
         setError({
@@ -52,7 +63,7 @@ export default function Documents() {
       }
 
       const supervisorInfo = JSON.parse(supervisorInfoStr);
-      const supervisorId = supervisorInfo.username;
+      const supervisorId = supervisorInfo.username || supervisorInfo.userId;
 
       if (!supervisorId) {
         throw new Error("Invalid supervisor information");
@@ -143,16 +154,14 @@ export default function Documents() {
 
   // Helper functions
   const validateFileUpload = (file: File) => {
-    const maxSize = 100 * 1024 * 1024;
+   
     const fileExt = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
 
     if (fileExt !== '.pdf') {
       throw new Error("Only PDF files are allowed");
     }
 
-    if (file.size > maxSize) {
-      throw new Error("File size exceeds 100MB limit");
-    }
+   
   };
 
   const getSupervisorCredentials = async () => {
@@ -284,84 +293,90 @@ export default function Documents() {
         </div>
 
         {/* Upload Modal */}
-        <Modal
-          isOpen={isUploadOpen}
-          onClose={resetUploadState}
-          title="Upload Document"
-        >
-          <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full">
-            {error && (
-              <div className="bg-red-900/20 border border-red-500 rounded-lg p-3 mb-4">
-                <p className="text-red-500 text-sm">{error.message}</p>
-              </div>
-            )}
-
-            <form onSubmit={handleUpload} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-200 mb-1">
-                  File
-                </label>
-                <input
-                  type="file"
-                  onChange={handleFileSelect}
-                  accept=".pdf"
-                  className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-teal-600 file:text-white hover:file:bg-teal-700"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-200 mb-1">
-                  Title
-                </label>
-                <input
-                  type="text"
-                  value={uploadData.title}
-                  onChange={(e) =>
-                    setUploadData((prev) => ({
-                      ...prev,
-                      title: e.target.value,
-                    }))
-                  }
-                  className="w-full bg-gray-700 text-white rounded-lg px-3 py-2"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-200 mb-1">
-                  Description
-                </label>
-                <textarea
-                  value={uploadData.description}
-                  onChange={(e) =>
-                    setUploadData((prev) => ({
-                      ...prev,
-                      description: e.target.value,
-                    }))
-                  }
-                  className="w-full bg-gray-700 text-white rounded-lg px-3 py-2"
-                  rows={3}
-                />
-              </div>
-
+        {isUploadOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+            <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full relative">
               <button
-                type="submit"
-                disabled={uploadLoading}
-                className="w-full bg-teal-600 hover:bg-teal-700 disabled:bg-gray-600 text-white py-2 rounded-lg flex items-center justify-center gap-2"
+                onClick={resetUploadState}
+                className="absolute top-4 right-4 text-gray-400 hover:text-white"
+                aria-label="Close"
               >
-                {uploadLoading ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <>
-                    <Upload size={20} />
-                    Upload
-                  </>
-                )}
+                <X size={24} />
               </button>
-            </form>
+              <h2 className="text-xl font-semibold text-white mb-4">Upload Document</h2>
+              {error && (
+                <div className="bg-red-900/20 border border-red-500 rounded-lg p-3 mb-4">
+                  <p className="text-red-500 text-sm">{error.message}</p>
+                </div>
+              )}
+
+              <form onSubmit={handleUpload} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-200 mb-1">
+                    File
+                  </label>
+                  <input
+                    type="file"
+                    onChange={handleFileSelect}
+                    accept=".pdf"
+                    className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-teal-600 file:text-white hover:file:bg-teal-700"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-200 mb-1">
+                    Title
+                  </label>
+                  <input
+                    type="text"
+                    value={uploadData.title}
+                    onChange={(e) =>
+                      setUploadData((prev) => ({
+                        ...prev,
+                        title: e.target.value,
+                      }))
+                    }
+                    className="w-full bg-gray-700 text-white rounded-lg px-3 py-2"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-200 mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    value={uploadData.description}
+                    onChange={(e) =>
+                      setUploadData((prev) => ({
+                        ...prev,
+                        description: e.target.value,
+                      }))
+                    }
+                    className="w-full bg-gray-700 text-white rounded-lg px-3 py-2"
+                    rows={3}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={uploadLoading}
+                  className="w-full bg-teal-600 hover:bg-teal-700 disabled:bg-gray-600 text-white py-2 rounded-lg flex items-center justify-center gap-2"
+                >
+                  {uploadLoading ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <>
+                      <Upload size={20} />
+                      Upload
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
           </div>
-        </Modal>
+        )}
       </div>
     </div>
   );

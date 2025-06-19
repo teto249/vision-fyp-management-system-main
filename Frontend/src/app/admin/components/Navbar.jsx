@@ -208,7 +208,7 @@ export default function Navbar({
                   <div>
                     {/* Use dynamic admin info */}
                     <h4 className="font-bold text-gray-200">
-                      {adminInfo.name || "Admin Name"}
+                      {adminInfo.username || "Admin Name"}
                     </h4>
                     <p className="text-sm text-gray-400">
                       {adminInfo.role || "Role"}

@@ -3,19 +3,47 @@ export interface LoginCredentials {
   password: string;
 }
 
-export interface UserInfo {
-  username: string; // This will be userId for students and supervisors
-  email?: string; // For MainAdmin
-  primaryEmail?: string; // For UniAdmin
-  universityEmail?: string; // For Students and Supervisors
+// Base interface with common fields
+export interface BaseUserInfo {
+  username?: string;
+  email?: string;
   role: "MainAdmin" | "UniAdmin" | "Supervisor" | "Student";
   universityId?: string;
-  level?: string; // For Students only
   fullName?: string;
-  phoneNumber?: string;
-  profilePhoto?: string;
 }
 
+// Student-specific interface
+export interface StudentUserInfo extends BaseUserInfo {
+  role: "Student";
+  userId: string;
+  universityEmail: string;
+  phoneNumber: string;
+  address: string;
+  level: string;
+  department: string;
+  supervisorId: string;
+  requirePasswordChange: boolean;
+  createdAt: string;
+  updatedAt: string;
+  university: {
+    id: string;
+    shortName: string;
+    fullName: string;
+  };
+}
+
+// Admin and Supervisor interface
+export interface AdminSupervisorUserInfo extends BaseUserInfo {
+  role: "MainAdmin" | "UniAdmin" | "Supervisor";
+  email?: string;
+  primaryEmail?: string;
+  universityEmail?: string;
+}
+
+// Discriminated union type
+export type UserInfo = StudentUserInfo | AdminSupervisorUserInfo;
+
+// Update the login response type
 export interface LoginResponse {
   token: string;
   message: string;
@@ -89,17 +117,22 @@ export async function login(
 
     // Store auth data securely
     try {
-      // Store token
       localStorage.setItem("authToken", data.token);
 
-      // Determine storage key based on user role
-      const storageKey = getStorageKeyByRole(data.user.role);
+      if (data.user.role === "Student") {
+        // Store complete student data
+        const studentData = {
+          ...data.user,
+          lastLogin: new Date().toISOString(),
+        };
+        localStorage.setItem("studentInfo", JSON.stringify(studentData));
+      } else {
+        // Store other user types as before
+        const storageKey = getStorageKeyByRole(data.user.role);
+        localStorage.setItem(storageKey, JSON.stringify(data.user));
+      }
 
-      // Store user info
-      localStorage.setItem(storageKey, JSON.stringify(data.user));
-
-      // Verify storage
-      if (!verifyStoredData(data.token, storageKey)) {
+      if (!verifyStoredData(data.token, getStorageKeyByRole(data.user.role))) {
         throw new Error("Failed to verify stored authentication data");
       }
     } catch (storageError) {
@@ -143,28 +176,6 @@ function verifyStoredData(token: string, storageKey: string): boolean {
 }
 
 /**
- * Gets the current user's information based on role
- */
-export function getCurrentUser(): UserInfo | null {
-  const token = localStorage.getItem("authToken");
-  if (!token) return null;
-
-  // Try to get user info from different storage keys
-  const storageKeys = ["adminInfo", "studentInfo", "supervisorInfo"];
-  for (const key of storageKeys) {
-    const userInfo = localStorage.getItem(key);
-    if (userInfo) {
-      try {
-        return JSON.parse(userInfo) as UserInfo;
-      } catch {
-        continue;
-      }
-    }
-  }
-  return null;
-}
-
-/**
  * Logs out the user by clearing authentication data
  */
 export async function logout(): Promise<void> {
@@ -195,4 +206,48 @@ export function isAuthenticated(): boolean {
   const token = localStorage.getItem("authToken");
   const userInfo = getCurrentUser();
   return !!(token && userInfo);
+}
+
+export interface StudentInfo extends StudentUserInfo {}
+
+export function getStudentInfo(): StudentInfo | null {
+  const studentData = localStorage.getItem("studentInfo");
+  if (!studentData) return null;
+
+  try {
+    return JSON.parse(studentData) as StudentInfo;
+  } catch {
+    return null;
+  }
+}
+
+// Type guard to check if user is student
+export function isStudentUser(user: UserInfo): user is StudentUserInfo {
+  return user.role === "Student";
+}
+
+// Helper function to get typed user info
+export function getCurrentUser(): UserInfo | null {
+  const token = localStorage.getItem("authToken");
+  if (!token) return null;
+
+  const studentInfo = localStorage.getItem("studentInfo");
+  if (studentInfo) {
+    const parsed = JSON.parse(studentInfo);
+    if (parsed.role === "Student") {
+      return parsed as StudentUserInfo;
+    }
+  }
+
+  const adminInfo = localStorage.getItem("adminInfo");
+  if (adminInfo) {
+    return JSON.parse(adminInfo) as AdminSupervisorUserInfo;
+  }
+
+  const supervisorInfo = localStorage.getItem("supervisorInfo");
+  if (supervisorInfo) {
+    return JSON.parse(supervisorInfo) as AdminSupervisorUserInfo;
+  }
+
+  return null;
 }

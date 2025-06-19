@@ -12,7 +12,9 @@ exports.login = async (req, res) => {
 
   try {
     if (!username || !password) {
-      return res.status(400).json({ message: "Username and password are required" });
+      return res
+        .status(400)
+        .json({ message: "Username and password are required" });
     }
 
     let user = null;
@@ -23,28 +25,32 @@ exports.login = async (req, res) => {
       {
         model: MainAdmin,
         where: { [Op.or]: [{ username }, { email: username }] },
-        defaultRole: "MainAdmin"
+        defaultRole: "MainAdmin",
       },
       {
         model: UniAdmin,
         where: { [Op.or]: [{ username }, { primaryEmail: username }] },
-        defaultRole: "UniAdmin"
+        defaultRole: "UniAdmin",
       },
       {
         model: Student,
         where: { userId: username },
-        defaultRole: "Student"
+        defaultRole: "Student",
+        include: ['University'] // Include university details
       },
       {
         model: Supervisor,
         where: { userId: username },
-        defaultRole: "Supervisor"
-      }
+        defaultRole: "Supervisor",
+      },
     ];
-  
+
     // Find user
     for (const query of userQueries) {
-      const result = await query.model.findOne({ where: query.where });
+      const result = await query.model.findOne({ 
+        where: query.where,
+        include: query.include 
+      });
       if (result) {
         user = result;
         userType = query.defaultRole;
@@ -59,7 +65,7 @@ exports.login = async (req, res) => {
     // Handle different authentication for different roles
     let isValidPassword = false;
 
-    if (userType === 'Student' || userType === 'Supervisor') {
+    if (userType === "Student" || userType === "Supervisor") {
       // For students and supervisors, password should match their ID
       isValidPassword = password === user.userId;
     } else {
@@ -76,53 +82,81 @@ exports.login = async (req, res) => {
       {
         username: user.userId || user.username,
         role: userType,
-        universityId: user.universityId
+        universityId: user.universityId,
       },
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
 
-    // Prepare response
-    const responseUser = {
-      username: user.userId || user.username,
-      fullName: user.fullName,
-      role: userType,
-      email: userType === "MainAdmin" ? user.email :
-             userType === "UniAdmin" ? user.primaryEmail :
-             user.universityEmail,
-      universityId: user.universityId,
-      ...(userType === "Student" && { level: user.level })
-    };
+    // Prepare response based on user type
+    let responseUser;
+
+    if (userType === "Student") {
+      responseUser = {
+        userId: user.userId,
+        fullName: user.fullName,
+        email: user.email,
+        universityEmail: user.universityEmail,
+        phoneNumber: user.phoneNumber,
+        address: user.address,
+        role: userType,
+        level: user.level,
+        universityId: user.universityId,
+        department: user.department,
+        supervisorId: user.supervisorId,
+        requirePasswordChange: user.requirePasswordChange,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        university: user.University ? {
+          id: user.University.id,
+          shortName: user.University.shortName,
+          fullName: user.University.fullName,
+        } : null
+      };
+    } else {
+      responseUser = {
+        username: user.userId || user.username,
+        fullName: user.fullName,
+        role: userType,
+        email:
+          userType === "MainAdmin"
+            ? user.email
+            : userType === "UniAdmin"
+            ? user.primaryEmail
+            : user.universityEmail,
+        universityId: user.universityId,
+        ...(userType === "Student" && { level: user.level }),
+      };
+    }
 
     res.status(200).json({
       message: "Login successful",
       token,
-      user: responseUser
+      user: responseUser,
     });
-
   } catch (error) {
-    res.status(500).json({ 
+    res.status(500).json({
       message: "An unexpected error occurred during login",
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
- 
+
 exports.changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
     const { username, role } = req.user;
 
     // Only allow Students and Supervisors to use this endpoint
-    if (role !== 'Student' && role !== 'Supervisor') {
-      return res.status(403).json({ 
-        message: 'This endpoint is only for Students and Supervisors' 
+    if (role !== "Student" && role !== "Supervisor") {
+      return res.status(403).json({
+        message: "This endpoint is only for Students and Supervisors",
       });
     }
 
-    const UserModel = role === 'Student' ? Student : Supervisor;
+    const UserModel = role === "Student" ? Student : Supervisor;
     const user = await UserModel.findOne({
-      where: { userId: username }
+      where: { userId: username },
     });
 
     if (!user) {
@@ -130,7 +164,10 @@ exports.changePassword = async (req, res) => {
     }
 
     // Check if the current password matches
-    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    const isPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.password
+    );
     if (!isPasswordValid) {
       return res.status(401).json({ message: "Current password is incorrect" });
     }
@@ -142,9 +179,9 @@ exports.changePassword = async (req, res) => {
 
     res.status(200).json({ message: "Password changed successfully" });
   } catch (error) {
-    res.status(500).json({ 
-      message: 'Failed to change password',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    res.status(500).json({
+      message: "Failed to change password",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };

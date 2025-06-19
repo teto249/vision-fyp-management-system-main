@@ -57,6 +57,8 @@ export default function StudentProfile() {
     },
   });
 
+     const studentInfo = JSON.parse(localStorage.getItem("studentInfo"));
+  console.log("Student Info from localStorage:", studentInfo.universityId);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {

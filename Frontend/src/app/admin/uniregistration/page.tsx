@@ -51,7 +51,7 @@ export default function UniversityRegistrationForm() {
   };
 
   return (
-    <div className="flex justify-center min-h-screen py-10 bg-gray-800">
+    <div className="flex justify-center py-10 bg-gray-800">
       <div className="w-full max-w-5xl mx-4 bg-gray-700 rounded-xl shadow-lg overflow-hidden border border-gray-600">
         <div className="my-5 mx-3 flex justify-center items-center text-center">
           <TextDivider>University Registration Form</TextDivider>
