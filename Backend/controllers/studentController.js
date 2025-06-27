@@ -789,10 +789,22 @@ exports.deleteTask = async (req, res) => {
 exports.updateTask = async (req, res) => {
   try {
     const { milestoneId, taskId } = req.params;
-    const { title, description, status, startDate, endDate } = req.body;
+    const { status } = req.body;
+
+    // Validate status
+    const validStatuses = ['Pending', 'In Progress', 'Completed'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status value"
+      });
+    }
 
     const task = await Task.findOne({
-      where: { id: taskId, milestoneId }
+      where: { 
+        id: taskId,
+        milestoneId 
+      }
     });
 
     if (!task) {
@@ -802,19 +814,23 @@ exports.updateTask = async (req, res) => {
       });
     }
 
-    await task.update({
-      title: title?.trim(),
-      description: description?.trim(),
-      status,
-      startDate,
-      endDate
+    await task.update({ status });
+
+    // Recalculate milestone and project progress
+    const milestone = await Milestone.findByPk(milestoneId, {
+      include: [{ model: Task }]
     });
+    
+    // Update project progress
+    await updateProjectProgress(milestone.projectId);
 
     res.status(200).json({
       success: true,
       task
     });
+
   } catch (error) {
+    console.error("Error updating task:", error);
     res.status(500).json({
       success: false,
       message: error.message
@@ -1153,4 +1169,104 @@ exports.getDocumentContent = async (req, res) => {
 //     });
 //   }
 // };
+
+// Update project status
+exports.updateProjectStatus = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { status } = req.body;
+
+    const project = await Project.findByPk(projectId);
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: "Project not found"
+      });
+    }
+
+    await project.update({ status });
+
+    res.status(200).json({
+      success: true,
+      project
+    });
+  } catch (error) {
+    console.error("Error updating project status:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update project status"
+    });
+  }
+};
+
+// Update milestone status
+exports.updateMilestoneStatus = async (req, res) => {
+  try {
+    const { milestoneId } = req.params;
+    const { status } = req.body;
+
+    const milestone = await Milestone.findByPk(milestoneId);
+    if (!milestone) {
+      return res.status(404).json({
+        success: false,
+        message: "Milestone not found"
+      });
+    }
+
+    await milestone.update({ status });
+
+    res.status(200).json({
+      success: true,
+      milestone
+    });
+  } catch (error) {
+    console.error("Error updating milestone status:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update milestone status"
+    });
+  }
+};
+
+// Update task status
+exports.updateTaskStatus = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const { status } = req.body;
+
+    const task = await Task.findByPk(taskId);
+    if (!task) {
+      return res.status(404).json({
+        success: false,
+        message: "Task not found"
+      });
+    }
+
+    await task.update({ status });
+
+    // Recalculate project progress
+    const milestone = await Milestone.findByPk(task.milestoneId, {
+      include: [{
+        model: Task,
+        attributes: ['status']
+      }]
+    });
+
+    if (milestone?.Project) {
+      const progress = calculateProjectProgress(milestone.Project.milestones);
+      await milestone.Project.update({ progress });
+    }
+
+    res.status(200).json({
+      success: true,
+      task
+    });
+  } catch (error) {
+    console.error("Error updating task status:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update task status"
+    });
+  }
+};
 

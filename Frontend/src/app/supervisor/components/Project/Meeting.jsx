@@ -13,6 +13,7 @@ import {
 } from "@heroicons/react/24/outline";
 
 import { addMeeting } from "../../../../api/StudentApi/Projects";
+import { deleteMeeting } from "../../../../api/SupervisorApi/FetchProjects";
 export default function Meeting({ meetings = [], onMeetingUpdate, milestoneId }) {
   const [newMeeting, setNewMeeting] = useState({ 
     date: "", 
@@ -86,13 +87,29 @@ export default function Meeting({ meetings = [], onMeetingUpdate, milestoneId })
       setLoading(false);
     }
   };
-
   const handleDeleteMeeting = async (meetingId) => {
-    if (!confirm("Are you sure you want to delete this meeting?")) {
-      return;
+    try {
+      if (!confirm("Are you sure you want to delete this meeting?")) {
+        return;
+      }
+
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        throw new Error("Authentication required");
+      }
+
+      const result = await deleteMeeting(meetingId, token);
+
+      if (result.success) {
+        const updatedMeetings = meetings.filter((meeting) => meeting.id !== meetingId);
+        onMeetingUpdate(updatedMeetings);
+      } else {
+        throw new Error(result.message || "Failed to delete meeting");
+      }
+    } catch (error) {
+      console.error("Error deleting meeting:", error);
+      alert(error instanceof Error ? error.message : "Failed to delete meeting");
     }
-    const updatedMeetings = meetings.filter((meeting) => meeting.id !== meetingId);
-    onMeetingUpdate(updatedMeetings);
   };
 
   const formatDate = (dateStr) => {
@@ -123,119 +140,175 @@ export default function Meeting({ meetings = [], onMeetingUpdate, milestoneId })
       [meetingId]: !prev[meetingId]
     }));
   };
-
   return (
-    <div className="mt-6 space-y-4">
-      <div className="flex justify-between items-center">
-        <h5 className="text-lg font-semibold text-gray-200">Meetings</h5>
+    <div className="mt-8 space-y-6">
+      {/* Header Section */}
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-2 h-8 bg-gradient-to-b from-green-500 to-blue-600 rounded-full"></div>
+          <div>
+            <h5 className="text-xl font-bold text-gray-100">Meetings</h5>
+            <p className="text-sm text-gray-400">
+              {localMeetings.length === 0 ? 'No meetings scheduled' : `${localMeetings.length} meeting${localMeetings.length > 1 ? 's' : ''} scheduled`}
+            </p>
+          </div>
+        </div>
         {!isAdding && (
           <button
             onClick={() => setIsAdding(true)}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+            className="group flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-700 
+                     hover:from-green-700 hover:to-green-800 text-white px-5 py-2.5 rounded-xl
+                     transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
           >
-            <PlusIcon className="h-5 w-5" />
-            Schedule Meeting
+            <PlusIcon className="h-5 w-5 group-hover:rotate-90 transition-transform duration-300" />
+            <span className="font-medium">Schedule Meeting</span>
           </button>
         )}
       </div>
 
+      {/* Add Meeting Form */}
       {isAdding && (
-        <div className="bg-gray-800/50 backdrop-blur p-6 rounded-xl border border-gray-700 space-y-4">
-          <h6 className="text-gray-200 font-medium mb-4">New Meeting Details</h6>
+        <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 backdrop-blur-xl p-6 
+                      rounded-2xl border border-gray-700/50 shadow-2xl space-y-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
+              <CalendarIcon className="h-5 w-5 text-white" />
+            </div>
+            <h6 className="text-xl font-semibold text-gray-100">Schedule New Meeting</h6>
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="block text-sm text-gray-400">Purpose*</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Meeting Purpose <span className="text-red-400">*</span>
+              </label>
               <input
                 type="text"
-                placeholder="Meeting purpose"
+                placeholder="Enter meeting purpose or agenda..."
                 value={newMeeting.purpose}
                 onChange={(e) => setNewMeeting({ ...newMeeting, purpose: e.target.value })}
-                className="w-full p-2 border border-gray-600 bg-gray-700/50 text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                className="w-full p-3 border border-gray-600/50 bg-gray-700/50 
+                         text-gray-100 rounded-xl focus:ring-2 focus:ring-green-500 
+                         focus:border-transparent transition-all duration-200 
+                         placeholder-gray-400 shadow-inner"
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="block text-sm text-gray-400">Meeting Type</label>
-              <select
-                value={newMeeting.type}
-                onChange={(e) => setNewMeeting({ ...newMeeting, type: e.target.value })}
-                className="w-full p-2 border border-gray-600 bg-gray-700/50 text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="Online">Online</option>
-                <option value="Physical">Physical</option>
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-sm text-gray-400">Date*</label>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Meeting Date <span className="text-red-400">*</span>
+              </label>
               <div className="relative">
-                <CalendarIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <CalendarIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 
+                                    h-5 w-5 text-gray-400" />
                 <input
                   type="date"
                   value={newMeeting.date}
                   onChange={(e) => setNewMeeting({ ...newMeeting, date: e.target.value })}
-                  className="w-full pl-10 p-2 border border-gray-600 bg-gray-700/50 text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 p-3 border border-gray-600/50 bg-gray-700/50 
+                           text-gray-100 rounded-xl focus:ring-2 focus:ring-green-500 
+                           focus:border-transparent transition-all duration-200 shadow-inner"
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="block text-sm text-gray-400">Time*</label>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Meeting Time <span className="text-red-400">*</span>
+              </label>
               <div className="relative">
-                <ClockIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <ClockIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 
+                                  h-5 w-5 text-gray-400" />
                 <input
                   type="time"
                   value={newMeeting.time}
                   onChange={(e) => setNewMeeting({ ...newMeeting, time: e.target.value })}
-                  className="w-full pl-10 p-2 border border-gray-600 bg-gray-700/50 text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 p-3 border border-gray-600/50 bg-gray-700/50 
+                           text-gray-100 rounded-xl focus:ring-2 focus:ring-green-500 
+                           focus:border-transparent transition-all duration-200 shadow-inner"
                 />
               </div>
             </div>
 
-            {newMeeting.type === 'Online' && (
-              <div className="space-y-2 md:col-span-2">
-                <label className="block text-sm text-gray-400">Meeting Link</label>
-                <div className="relative">
-                  <LinkIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input
-                    type="url"
-                    placeholder="https://meet.google.com/..."
-                    value={newMeeting.link}
-                    onChange={(e) => setNewMeeting({ ...newMeeting, link: e.target.value })}
-                    className="w-full pl-10 p-2 border border-gray-600 bg-gray-700/50 text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Meeting Type
+              </label>
+              <select
+                value={newMeeting.type}
+                onChange={(e) => setNewMeeting({ ...newMeeting, type: e.target.value })}
+                className="w-full p-3 border border-gray-600/50 bg-gray-700/50 
+                         text-gray-100 rounded-xl focus:ring-2 focus:ring-green-500 
+                         focus:border-transparent transition-all duration-200 shadow-inner"
+              >
+                <option value="Online">🌐 Online Meeting</option>
+                <option value="Physical">📍 Physical Meeting</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Meeting Link/Location
+              </label>
+              <div className="relative">
+                {newMeeting.type === 'Online' ? (
+                  <LinkIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 
+                                    h-5 w-5 text-gray-400" />
+                ) : (
+                  <MapPinIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 
+                                      h-5 w-5 text-gray-400" />
+                )}
+                <input
+                  type="text"
+                  placeholder={newMeeting.type === 'Online' ? "Enter meeting link (Zoom, Teams, etc.)" : "Enter meeting location"}
+                  value={newMeeting.link}
+                  onChange={(e) => setNewMeeting({ ...newMeeting, link: e.target.value })}
+                  className="w-full pl-10 p-3 border border-gray-600/50 bg-gray-700/50 
+                           text-gray-100 rounded-xl focus:ring-2 focus:ring-green-500 
+                           focus:border-transparent transition-all duration-200 
+                           placeholder-gray-400 shadow-inner"
+                />
               </div>
-            )}
+            </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-700/50">
             <button
-              onClick={() => setIsAdding(false)}
-              className="px-4 py-2 text-gray-300 hover:text-white transition-colors duration-200"
+              onClick={() => {
+                setIsAdding(false);
+                setNewMeeting({ date: "", time: "", link: "", purpose: "", type: "Online" });
+              }}
+              className="px-6 py-2.5 text-gray-300 hover:text-white bg-gray-700/50 
+                       hover:bg-gray-600/50 rounded-xl transition-all duration-200 
+                       font-medium border border-gray-600/50"
             >
               Cancel
             </button>
             <button
               onClick={handleAddMeeting}
               disabled={loading}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 
-                       text-white px-6 py-2 rounded-lg transition-colors duration-200"
+              className="flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-700 
+                       hover:from-green-700 hover:to-green-800 disabled:from-gray-600 
+                       disabled:to-gray-700 text-white px-6 py-2.5 rounded-xl 
+                       transition-all duration-200 font-medium shadow-lg 
+                       disabled:shadow-none transform hover:scale-105 disabled:scale-100"
             >
               {loading ? (
                 <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  <circle className="opacity-25" cx="12" cy="12" r="10" 
+                          stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" 
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
               ) : (
-                <PlusIcon className="h-5 w-5" />
-              )}
-              Schedule Meeting
+                <CalendarIcon className="h-5 w-5" />
+              )}              <span>{loading ? 'Scheduling...' : 'Schedule Meeting'}</span>
             </button>
           </div>
         </div>
       )}
+
+      {/* Meeting List */}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {meetings.map((meeting) => (

@@ -16,7 +16,6 @@ async function createDatabase() {
       user: DB_USER,
       password: DB_PASSWORD
     });
-
     // Create database if it doesn't exist
     await connection.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;`);
     console.log("Database checked/created successfully");
@@ -51,14 +50,17 @@ const sequelize = new Sequelize(
 
 const connectDB = async () => {
   try {
+    console.log("=== Database Connection Process Started ===");
+    
     // First create database if it doesn't exist
     await createDatabase();
 
     // Test database connection
     await sequelize.authenticate();
-    console.log("MySQL connected successfully");
+    console.log("✅ MySQL connected successfully");
 
-    // Import all models
+    // Import all models BEFORE checking tables
+    console.log("📦 Loading models...");
     const Institution = require("../models/Institution");
     const MainAdmin = require("../models/MainAdmin");
     const University = require("../models/University");
@@ -69,24 +71,28 @@ const connectDB = async () => {
 
     // Import and initialize model associations
     require("../models/index");
+    console.log("✅ Models loaded and associations initialized");
 
-    // Check if database is already initialized by looking for Institution table
-    const [results] = await sequelize.query(
-      "SELECT table_name FROM information_schema.tables WHERE table_schema = :schema AND table_name = 'Institutions'",
+    // Check if any tables exist in the database
+    const [tableResults] = await sequelize.query(
+      "SELECT COUNT(*) as table_count FROM information_schema.tables WHERE table_schema = :schema",
       {
         replacements: { schema: DB_NAME },
         type: sequelize.QueryTypes.SELECT
       }
     );
 
-    // Only initialize if tables don't exist
-    if (!results) {
-      console.log("First time initialization - creating tables...");
+    const tableCount = tableResults.table_count;
+    console.log(`📊 Found ${tableCount} existing tables in database`);
+
+    if (tableCount === 0) {
+      // No tables exist - fresh installation
+      console.log("🚀 Fresh installation detected - creating all tables...");
       await sequelize.sync({ force: true });
-      console.log("All tables created successfully");
+      console.log("✅ All tables created successfully");
 
       // Create default institution
-      console.log("Creating default institution...");
+      console.log("🏢 Creating default institution...");
       const institution = await Institution.create({
         shortName: "GreenTel Agriculture",
         fullName: "GreenTel For Agriculture and Technology",
@@ -95,10 +101,10 @@ const connectDB = async () => {
         phone: "+1234567890",
         logoPath: "https://ui-avatars.com/api/?name=GA&size=256&background=random",
       });
-      console.log("Default institution created:", institution.shortName);
+      console.log("✅ Default institution created:", institution.shortName);
 
       // Create default admin
-      console.log("Creating default admin account...");
+      console.log("👤 Creating default admin account...");
       const bcrypt = require("bcryptjs");
       const hashedPassword = await bcrypt.hash("admin123", 10);
 
@@ -116,20 +122,42 @@ const connectDB = async () => {
       });
 
       if (process.env.NODE_ENV === "development") {
-        console.log("Default admin credentials:");
-        console.log("Email:", newAdmin.email);
-        console.log("Password: admin123");
+        console.log("🔐 Default admin credentials:");
+        console.log("   Email:", newAdmin.email);
+        console.log("   Password: admin123");
       }
+      console.log("✅ Default admin created successfully");
+
     } else {
-      // If tables exist, just sync models without force
-      await sequelize.sync();
-      console.log("Database already initialized - syncing models only");
+      // Tables exist - just sync without force to update any schema changes
+      console.log("🔄 Existing database detected - syncing models...");
+      await sequelize.sync({ alter: false });
+      console.log("✅ Database schema synchronized");
     }
 
-    console.log("Database initialization completed successfully");
+    console.log("🎉 Database initialization completed successfully");
+    console.log("=== Database Connection Process Completed ===");
+    
   } catch (error) {
-    console.error("Database initialization failed:", error);
-    console.error("Error details:", error.stack);
+    console.error("❌ Database initialization failed:", error.message);
+    
+    if (error.name === 'SequelizeDatabaseError') {
+      console.error("💡 Database Error Details:");
+      console.error("   SQL Error:", error.parent?.sqlMessage || error.message);
+      console.error("   Error Code:", error.parent?.errno);
+      console.error("   SQL State:", error.parent?.sqlState);
+      
+      if (error.parent?.errno === 1932) {
+        console.error("🔧 Fix: This error suggests table structure mismatch.");
+        console.error("   Try dropping the database and restarting the application:");
+        console.error("   1. Open phpMyAdmin (http://localhost/phpmyadmin)");
+        console.error("   2. Drop the 'vision-fyp-management-system' database");
+        console.error("   3. Restart the Node.js application");
+      }
+    } else {
+      console.error("📋 Full error details:", error.stack);
+    }
+    
     process.exit(1);
   }
 };

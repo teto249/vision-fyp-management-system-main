@@ -92,11 +92,9 @@ export default function ProjectDetails({ project }: ProjectDetailsProps) {
 
       <div className="flex items-center justify-between gap-4 mt-4 pt-4 border-t border-gray-700">
         <div className="flex items-center gap-3 min-w-0">
-          <span className="px-3 py-1 rounded-full text-sm bg-blue-500/10 text-blue-400 shrink-0">
-            {project.type}
-          </span>
+         
           <h3 className="text-sm font-medium text-gray-300 truncate">
-            {project.title}
+            {project.projectTitle}
           </h3>
         </div>
         <span className="text-sm text-gray-400 shrink-0">

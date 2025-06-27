@@ -32,7 +32,7 @@
     "**/*.tsx",
     "next-env.d.ts",
     ".next/types/**/*.ts"
-  ],
+, "src/app/supervisor/components/Project/Project.jsx"  ],
   "exclude": [
     "node_modules"
   ]

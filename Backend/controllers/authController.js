@@ -5,7 +5,7 @@ const MainAdmin = require("../models/MainAdmin");
 const UniAdmin = require("../models/UniAdmin");
 const Student = require("../models/Student");
 const Supervisor = require("../models/Supervisor");
-
+ 
 
 exports.login = async (req, res) => {
   const { username, password } = req.body;
@@ -112,10 +112,10 @@ exports.login = async (req, res) => {
           shortName: user.University.shortName,
           fullName: user.University.fullName,
         } : null
-      };
-    } else {
+      };    } else {
       responseUser = {
         username: user.userId || user.username,
+        userId: user.userId || user.username, // Add userId for consistency
         fullName: user.fullName,
         role: userType,
         email:

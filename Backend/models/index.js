@@ -168,6 +168,17 @@ Feedback.belongsTo(Task, {
   as: "task",
 });
 
+Supervisor.hasMany(Feedback, {
+  foreignKey: "supervisorId",
+  onDelete: "CASCADE",
+  as: "feedbacks",
+});
+
+Feedback.belongsTo(Supervisor, {
+  foreignKey: "supervisorId",
+  as: "supervisor",
+});
+
 // Export all models
 module.exports = {
   User,

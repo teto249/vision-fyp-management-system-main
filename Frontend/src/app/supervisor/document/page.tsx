@@ -10,8 +10,9 @@ import {
 
 // import { DocumentSkeleton } from "../../components/ui/Skeleton";
 import { logger } from '../../../utils/logger';
+
 // Temporary fallback for missing Skeleton component
-export const DocumentSkeleton = () => (
+const DocumentSkeleton = () => (
   <div className="animate-pulse bg-gray-800 rounded-lg p-6 h-48 flex flex-col gap-4">
     <div className="h-6 bg-gray-700 rounded w-2/3 mb-2" />
     <div className="h-4 bg-gray-700 rounded w-1/2 mb-2" />
@@ -63,7 +64,7 @@ export default function Documents() {
       }
 
       const supervisorInfo = JSON.parse(supervisorInfoStr);
-      const supervisorId = supervisorInfo.username || supervisorInfo.userId;
+      const supervisorId = supervisorInfo.userId || supervisorInfo.username;
 
       if (!supervisorId) {
         throw new Error("Invalid supervisor information");
@@ -151,17 +152,18 @@ export default function Documents() {
       setUploadLoading(false);
     }
   };
-
   // Helper functions
   const validateFileUpload = (file: File) => {
-   
+    const maxSize = 50 * 1024 * 1024; // 50MB
     const fileExt = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
 
     if (fileExt !== '.pdf') {
       throw new Error("Only PDF files are allowed");
     }
 
-   
+    if (file.size > maxSize) {
+      throw new Error("File size must be less than 50MB");
+    }
   };
 
   const getSupervisorCredentials = async () => {
@@ -173,7 +175,7 @@ export default function Documents() {
     }
 
     const supervisorInfo = JSON.parse(supervisorInfoStr);
-    const supervisorId = supervisorInfo.username;
+    const supervisorId = supervisorInfo.userId || supervisorInfo.username;
 
     if (!supervisorId) {
       throw new Error("Invalid supervisor information");
@@ -310,10 +312,9 @@ export default function Documents() {
                 </div>
               )}
 
-              <form onSubmit={handleUpload} className="space-y-4">
-                <div>
+              <form onSubmit={handleUpload} className="space-y-4">                <div>
                   <label className="block text-sm font-medium text-gray-200 mb-1">
-                    File
+                    File (Max 50MB)
                   </label>
                   <input
                     type="file"
@@ -322,6 +323,11 @@ export default function Documents() {
                     className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-teal-600 file:text-white hover:file:bg-teal-700"
                     required
                   />
+                  {selectedFile && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+                    </p>
+                  )}
                 </div>
 
                 <div>

@@ -82,9 +82,7 @@ export const getSupervisionStudents = async () => {
     const token = localStorage.getItem("authToken");
     const supervisorInfo = JSON.parse(
       localStorage.getItem("supervisorInfo") || "{}"
-    );
-
-    if (!token || !supervisorInfo?.username) {
+    );    if (!token || !supervisorInfo?.userId) {
       throw new Error("Authentication required");
     }
 
@@ -125,14 +123,12 @@ export const getStudentProject = async (studentId: string) => {
     const token = localStorage.getItem("authToken");
     const supervisorInfo = JSON.parse(
       localStorage.getItem("supervisorInfo") || "{}"
-    );
-
-    if (!token || !supervisorInfo?.username) {
+    );    if (!token || !supervisorInfo?.userId) {
       throw new Error("Authentication required");
     }
 
     const response = await fetch(
-      `${API_BASE_URL}/${supervisorInfo.username}/students/${studentId}/project`,
+      `${API_BASE_URL}/${supervisorInfo.userId}/students/${studentId}/project`,
       {
         method: "GET",
         headers: {
@@ -213,14 +209,12 @@ export const getSupervisedProjects = async () => {
     const supervisorInfo = JSON.parse(
       localStorage.getItem("supervisorInfo") || "{}"
     );
-    const token = localStorage.getItem("authToken");
-
-    if (!supervisorInfo?.username) {
+    const token = localStorage.getItem("authToken");    if (!supervisorInfo?.userId) {
       throw new Error("Authentication required");
     }
 
     const response = await fetch(
-      `${API_BASE_URL}/${supervisorInfo.username}/projects`,
+      `${API_BASE_URL}/${supervisorInfo.userId}/projects`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -299,6 +293,27 @@ export const getSupervisedProjects = async () => {
       milestones?: ApiMilestone[];
     }
 
+    const transformTask = (task: ApiTask): Task => ({
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      status: task.status,
+      startDate: task.startDate,
+      endDate: task.endDate,
+      feedback: task.feedback || [],
+    });
+
+    const transformMilestone = (milestone: ApiMilestone): Milestone => ({
+      id: milestone.id,
+      title: milestone.title,
+      description: milestone.description,
+      status: milestone.status,
+      startDate: milestone.startDate,
+      endDate: milestone.endDate,
+      tasks: milestone.tasks?.map(transformTask) || [],
+      meetings: milestone.meetings || [],
+    });
+
     const projects: Project[] = (data.projects as ApiProject[]).map(
       (project): Project => ({
         id: project.id,
@@ -321,19 +336,7 @@ export const getSupervisedProjects = async () => {
           shortName: project.university.shortName,
           fullName: project.university.fullName,
         },
-        milestones:
-          project.milestones?.map(
-            (milestone): Milestone => ({
-              id: milestone.id,
-              title: milestone.title,
-              description: milestone.description,
-              status: milestone.status,
-              startDate: milestone.startDate,
-              endDate: milestone.endDate,
-              tasks: milestone.tasks || [],
-              meetings: milestone.meetings || [],
-            })
-          ) || [],
+        milestones: project.milestones?.map(transformMilestone) || [],
       })
     );
 
@@ -355,77 +358,428 @@ interface StudentWithProject extends Student {
   project?: Project;
 }
 
-export const getSupervisedStudents = async (): Promise<SupervisedStudentsResponse> => {
-  try {
-    const supervisorInfo = JSON.parse(localStorage.getItem('supervisorInfo') || '{}');
-    const token = localStorage.getItem('authToken');
+export const getSupervisedStudents =
+  async (): Promise<SupervisedStudentsResponse> => {
+    try {
+      const supervisorInfo = JSON.parse(
+        localStorage.getItem("supervisorInfo") || "{}"
+      );
+      const token = localStorage.getItem("authToken");      if (!token || !supervisorInfo?.userId) {
+        throw new Error("Authentication required");
+      }
 
-    if (!token) {
-      throw new Error('Authentication required');
+      // First fetch students
+      const response = await fetch(
+        `${API_BASE_URL}/${supervisorInfo.userId}/students-with-projects`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to fetch students");
+      }
+
+      // Transform the data to include projects and related data
+      const students: StudentWithProject[] = data.students.map(
+        (student: any) => ({
+          userId: student.userId,
+          fullName: student.fullName,
+          email: student.email,
+          universityEmail: student.universityEmail,
+          level: student.level,
+          department: student.department,
+          phoneNumber: student.phoneNumber,
+          address: student.address,
+          project: student.project
+            ? {
+                id: student.project.id,
+                title: student.project.title,
+                type: student.project.type,
+                description: student.project.description,
+                status: student.project.status,
+                progress: student.project.progress || 0,
+                startDate: student.project.startDate,
+                endDate: student.project.endDate,
+                student: {
+                  id: student.userId,
+                  name: student.fullName,
+                  email: student.email,
+                  level: student.level,
+                  department: student.department,
+                },
+                university: student.project.university,
+                milestones: (student.project.milestones || []).map(
+                  (milestone: any) => ({
+                    id: milestone.id || "",
+                    title: milestone.title || "",
+                    description: milestone.description || "",
+                    status: milestone.status || "Pending",
+                    startDate: milestone.startDate || "",
+                    endDate: milestone.endDate || "",
+                    tasks: Array.isArray(milestone?.tasks)
+                      ? milestone.tasks.map((task: any) => ({
+                          id: task?.id || "",
+                          title: task?.title || "",
+                          description: task?.description || "",
+                          status: task?.status || "Pending",
+                          startDate: task?.startDate || "",
+                          endDate: task?.endDate || "",
+                          feedback: task?.feedback || [],
+                        }))
+                      : [],
+                    meetings: Array.isArray(milestone?.meetings)
+                      ? milestone.meetings.map((meeting: any) => ({
+                          id: meeting?.id || "",
+                          title: meeting?.title || "",
+                          date: meeting?.date || "",
+                          time: meeting?.time || "",
+                          link: meeting?.link || "",
+                          type: meeting?.type || "Online",
+                        }))
+                      : [],
+                  })
+                ),
+              }
+            : undefined,
+        })
+      );
+
+      return {
+        success: true,
+        students,
+      };
+    } catch (error) {
+      console.error("Error fetching supervised students:", error);
+      return {
+        success: false,
+        message:
+          error instanceof Error ? error.message : "Failed to fetch students",
+      };
+    }
+  };
+
+// Add Feedback API Function
+export const addFeedback = async (
+  taskId: string,
+  feedbackData: {
+    title: string;
+    description: string;
+  }
+) => {
+  try {
+    const token = localStorage.getItem("authToken");
+    const supervisorInfo = JSON.parse(
+      localStorage.getItem("supervisorInfo") || "{}"
+    );
+
+    if (!token || !supervisorInfo?.userId) {
+      throw new Error("Authentication required");
     }
 
-    // First fetch students
     const response = await fetch(
-      `${API_BASE_URL}/${supervisorInfo.username}/students-with-projects`,
+      `${API_BASE_URL}/${supervisorInfo.userId}/tasks/${taskId}/feedback`,
       {
-        method: 'GET',
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(feedbackData),
       }
     );
 
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.message || 'Failed to fetch students');
+      throw new Error(data.message || "Failed to add feedback");
     }
-
-    // Transform the data to include projects and related data
-    const students: StudentWithProject[] = data.students.map((student: any) => ({
-      userId: student.userId,
-      fullName: student.fullName,
-      email: student.email,
-      universityEmail: student.universityEmail,
-      level: student.level,
-      department: student.department,
-      phoneNumber: student.phoneNumber,
-      address: student.address,
-      project: student.project ? {
-        id: student.project.id,
-        title: student.project.title, // fixed field name
-        type: student.project.type,   // fixed field name
-        description: student.project.description, // fixed field name
-        status: student.project.status,
-        progress: student.project.progress || 0,
-        startDate: student.project.startDate,
-        endDate: student.project.endDate,
-        university: student.project.university,
-        milestones: (student.project.milestones || []).map((milestone: any) => ({
-          id: milestone.id || '',
-          title: milestone.title || '',
-          description: milestone.description || '',
-          status: milestone.status || 'Pending',
-          startDate: milestone.startDate || '',
-          endDate: milestone.endDate || '',
-          tasks: [],  // Initialize as empty array since no task data in source
-          meetings: [] // Initialize as empty array since no meeting data in source
-        }))
-      } : undefined
-    }));
-
 
     return {
       success: true,
-      students
+      feedback: data.feedback,
     };
-
   } catch (error) {
-    console.error('Error fetching supervised students:', error);
+    console.error("Error adding feedback:", error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'Failed to fetch students'
+      message:
+        error instanceof Error ? error.message : "Failed to add feedback",
+    };
+  }
+};
+
+// Update Task Status API Function
+export const updateTaskStatus = async (
+  taskId: string,
+  status: "Pending" | "In Progress" | "Completed"
+) => {
+  try {
+    const token = localStorage.getItem("authToken");
+    const supervisorInfo = JSON.parse(
+      localStorage.getItem("supervisorInfo") || "{}"
+    );
+
+    if (!token || !supervisorInfo?.userId) {
+      throw new Error("Authentication required");
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/${supervisorInfo.userId}/tasks/${taskId}/status`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to update task status");
+    }
+
+    return {
+      success: true,
+      task: data.task,
+    };
+  } catch (error) {
+    console.error("Error updating task status:", error);
+    return {
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Failed to update task status",
+    };
+  }
+};
+
+// Add Task API Function (for supervisors to add tasks to milestones)
+export const addTask = async (
+  milestoneId: string,
+  taskData: {
+    title: string;
+    description: string;
+    startDate: string;
+    endDate: string;
+  }
+) => {
+  try {
+    const token = localStorage.getItem("authToken");
+    const supervisorInfo = JSON.parse(
+      localStorage.getItem("supervisorInfo") || "{}"
+    );
+
+    if (!token || !supervisorInfo?.userId) {
+      throw new Error("Authentication required");
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/${supervisorInfo.userId}/milestones/${milestoneId}/tasks`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(taskData),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to add task");
+    }
+
+    return {
+      success: true,
+      task: data.task,
+    };
+  } catch (error) {
+    console.error("Error adding task:", error);
+    return {
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Failed to add task",
+    };
+  }
+};
+
+// Delete a task
+export const deleteTask = async (taskId: string, token: string) => {
+  try {
+    const supervisorInfo = JSON.parse(
+      localStorage.getItem("supervisorInfo") || "{}"
+    );
+
+    if (!token || !supervisorInfo?.userId) {
+      throw new Error("Authentication required");
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/${supervisorInfo.userId}/tasks/${taskId}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to delete task");
+    }
+
+    return {
+      success: true,
+      message: data.message,
+    };
+  } catch (error) {
+    console.error("Error deleting task:", error);
+    return {
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Failed to delete task",
+    };
+  }
+};
+
+// Delete a meeting
+export const deleteMeeting = async (meetingId: string, token: string) => {
+  try {
+    const supervisorInfo = JSON.parse(
+      localStorage.getItem("supervisorInfo") || "{}"
+    );
+
+    if (!token || !supervisorInfo?.userId) {
+      throw new Error("Authentication required");
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/${supervisorInfo.userId}/meetings/${meetingId}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to delete meeting");
+    }
+
+    return {
+      success: true,
+      message: data.message,
+    };
+  } catch (error) {
+    console.error("Error deleting meeting:", error);
+    return {
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Failed to delete meeting",
+    };
+  }
+};
+
+// Delete a milestone
+export const deleteMilestone = async (projectId: string, milestoneId: string, token: string) => {
+  try {
+    const supervisorInfo = JSON.parse(
+      localStorage.getItem("supervisorInfo") || "{}"
+    );
+
+    if (!token || !supervisorInfo?.userId) {
+      throw new Error("Authentication required");
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/${supervisorInfo.userId}/milestones/${milestoneId}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to delete milestone");
+    }
+
+    return {
+      success: true,
+      message: data.message,
+    };
+  } catch (error) {
+    console.error("Error deleting milestone:", error);
+    return {
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Failed to delete milestone",
+    };
+  }
+};
+
+// Update a milestone
+export const updateMilestone = async (projectId: string, milestoneId: string, milestoneData: any, token: string) => {
+  try {
+    const supervisorInfo = JSON.parse(
+      localStorage.getItem("supervisorInfo") || "{}"
+    );
+
+    if (!token || !supervisorInfo?.userId) {
+      throw new Error("Authentication required");
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/${supervisorInfo.userId}/milestones/${milestoneId}`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(milestoneData),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to update milestone");
+    }
+
+    return {
+      success: true,
+      milestone: data.milestone,
+      message: data.message,
+    };
+  } catch (error) {
+    console.error("Error updating milestone:", error);
+    return {
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Failed to update milestone",
     };
   }
 };

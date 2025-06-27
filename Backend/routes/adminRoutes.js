@@ -12,6 +12,11 @@ const {
   getUniversityById,
   getAllUniversitiesWithDetails,
   registerUniversity,
+  getUniversityStatistics,
+  getUniversityMembers,
+  
+  // Dashboard
+  getDashboardStats,
 } = require("../controllers/adminController");
 
 const router = express.Router();
@@ -30,5 +35,10 @@ router.get("/universities", getAllUniversitiesWithDetails);
 
 // University management routes
 router.post("/registerUniversity", registerUniversity); // Make sure this matches frontend
+router.get("/universities/:id/statistics", getUniversityStatistics);
+router.get("/universities/:id/members", getUniversityMembers);
+
+// Dashboard routes
+router.get("/dashboard/stats", getDashboardStats);
 
 module.exports = router;

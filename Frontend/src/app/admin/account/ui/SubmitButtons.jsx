@@ -1,17 +1,50 @@
-export default function SubmitButtons({ toggleEditMode }) {
+import { Save, X, Loader2, Check } from "lucide-react";
+
+export default function SubmitButtons({ toggleEditMode, isSubmitting, saveStatus }) {
   return (
-    <div className="justify-center flex gap-4 mt-6">
+    <div className="flex justify-center gap-4 pt-6 border-t border-slate-600">
       <button
         type="submit"
-        className="bg-primary-500 hover:text-black text-gray-200 hover:bg-teal-400 border border-primary-600 rounded-md px-4 py-2 font-medium transition-colors"
+        disabled={isSubmitting}
+        className={`
+          flex items-center gap-2 px-8 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105
+          ${isSubmitting 
+            ? "bg-slate-600 text-slate-400 cursor-not-allowed" 
+            : "bg-gradient-to-r from-teal-500 to-blue-500 text-white shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40"
+          }
+        `}
       >
-        Save Changes
+        {isSubmitting ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Saving...
+          </>
+        ) : saveStatus === 'success' ? (
+          <>
+            <Check className="w-4 h-4" />
+            Saved!
+          </>
+        ) : (
+          <>
+            <Save className="w-4 h-4" />
+            Save Changes
+          </>
+        )}
       </button>
+      
       <button
         type="button"
-        className="bg-gray-600 text-gray-200 hover:bg-gray-500 border border-gray-500 rounded-md px-4 py-2 font-medium transition-colors"
         onClick={toggleEditMode}
+        disabled={isSubmitting}
+        className={`
+          flex items-center gap-2 px-8 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105
+          ${isSubmitting 
+            ? "bg-slate-700 text-slate-500 cursor-not-allowed" 
+            : "bg-slate-700 text-slate-300 border border-slate-600 hover:bg-slate-600 hover:border-slate-500"
+          }
+        `}
       >
+        <X className="w-4 h-4" />
         Cancel
       </button>
     </div>

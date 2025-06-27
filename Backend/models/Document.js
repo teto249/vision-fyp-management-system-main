@@ -15,14 +15,21 @@ const Document = sequelize.define(
     },
     description: {
       type: DataTypes.TEXT,
-    },
-    fileType: {
+    },    fileType: {
       type: DataTypes.STRING,
       allowNull: false,
     },
+    fileName: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    filePath: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     fileContent: {
       type: DataTypes.BLOB("long"),
-      allowNull: false,
+      allowNull: true, // Make this optional for file-based storage
       get() {
         const rawValue = this.getDataValue('fileContent');
         return rawValue ? rawValue.toString('base64') : null;

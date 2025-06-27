@@ -1,144 +1,162 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import Task from "./Task";
 import Meeting from "./Meeting";
 import {
   addMilestone,
-  updateMilestone,
-  deleteMilestone,
 } from "../../../../api/StudentApi/Projects";
+import {
+  deleteMilestone,
+  deleteMeeting,
+  updateMilestone,
+} from "../../../../api/SupervisorApi/FetchProjects";
 import {
   PlusIcon,
   TrashIcon,
   PencilIcon,
   XMarkIcon,
-  CheckIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
   CalendarIcon,
   ClockIcon,
   ExclamationCircleIcon,
+  ChevronUpIcon,
+  ChevronDownIcon,
 } from "@heroicons/react/24/outline";
+
+// Helper functions
+const getMilestoneProgress = (milestone) => {
+  const totalTasks = milestone.tasks?.length || 0;
+  if (totalTasks === 0) return 0;
+  const completedTasks = milestone.tasks.filter(
+    (task) => task.status === "Completed"
+  ).length;
+  return Math.round((completedTasks / totalTasks) * 100);
+};
+
+const getMilestoneStatus = (milestone) => {
+  const progress = getMilestoneProgress(milestone);
+  if (progress === 100) return "Completed";
+  if (progress === 0) return "Not Started";
+  return "In Progress";
+};
+
+const formatDate = (dateString) => {
+  return dateString ? new Date(dateString).toLocaleDateString() : "Not set";
+};
+
+// Enhanced UI utility functions
+const getProgressColor = (progress) => {
+  if (progress === 100) return "from-green-500 to-emerald-600";
+  if (progress >= 70) return "from-blue-500 to-cyan-600";
+  if (progress >= 40) return "from-yellow-500 to-orange-600";
+  return "from-red-500 to-pink-600";
+};
+
+const getStatusColor = (status) => {
+  switch (status) {
+    case "Completed":
+      return "bg-green-500/10 text-green-400 border-green-500/20";
+    case "In Progress":
+      return "bg-blue-500/10 text-blue-400 border-blue-500/20";
+    case "Not Started":
+      return "bg-gray-500/10 text-gray-400 border-gray-500/20";
+    default:
+      return "bg-gray-500/10 text-gray-400 border-gray-500/20";
+  }
+};
+
+const getDaysRemaining = (endDate) => {
+  if (!endDate) return null;
+  const today = new Date();
+  const end = new Date(endDate);
+  const diffTime = end - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays;
+};
 
 export default function Milestone({
   projectData,
   projectId,
   onMilestoneUpdate,
   userRole,
-}) {
-  // Initialize with empty arrays if undefined
-  const [milestones, setMilestones] = useState(
-    projectData?.milestones?.map((milestone) => ({
-      id: milestone.id || '',
-      title: milestone.title || '',
-      description: milestone.description || '',
-      status: milestone.status || 'Pending',
-      startDate: milestone.startDate || new Date().toISOString(),
-      endDate: milestone.endDate || milestone.dueDate || '', // Fallback to dueDate if available
-      tasks: Array.isArray(milestone.tasks) ? milestone.tasks.map(task => ({
-        id: task.id || '',
-        title: task.title || '',
-        description: task.description || '',
-        status: task.status || 'Pending',
-        dueDate: task.dueDate || ''
-      })) : [],
-      meetings: Array.isArray(milestone.meetings) ? milestone.meetings : []
-    })) || []
-  );
+}) {  // State management
+  const [milestones, setMilestones] = useState(projectData?.milestones || []);
   const [newMilestone, setNewMilestone] = useState({
     title: "",
     description: "",
     dueDate: "",
   });
+  const [expandedMilestoneId, setExpandedMilestoneId] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [filter, setFilter] = useState("all");
+  const [showAddMilestone, setShowAddMilestone] = useState(false);
   const [editingMilestone, setEditingMilestone] = useState(null);
   const [editForm, setEditForm] = useState({
     title: "",
     description: "",
     dueDate: "",
   });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [expandedMilestoneId, setExpandedMilestoneId] = useState(null);
-  const [filter, setFilter] = useState("all"); // "all", "pending", "completed"
-  const [isAdding, setIsAdding] = useState(false);
-  const [showMilestones, setShowMilestones] = useState(true);
-  const [showAddMilestone, setShowAddMilestone] = useState(false);
 
   const canEdit = userRole === "Supervisor";
 
+  // Effects
   useEffect(() => {
-    if (JSON.stringify(projectData.milestones) !== JSON.stringify(milestones)) {
-      setMilestones(projectData.milestones || []);
+    if (
+      JSON.stringify(projectData?.milestones) !== JSON.stringify(milestones)
+    ) {
+      setMilestones(projectData?.milestones || []);
     }
-  }, [projectData.milestones]);
+  }, [projectData?.milestones]);
 
-  useEffect(() => {
-    console.log('Current milestones state:', milestones);
-    console.log('Project data milestones:', projectData?.milestones);
-  }, [milestones, projectData]);
-
+  // Event handlers
   const handleAddMilestone = async () => {
     try {
-      // Validate required fields
-      if (!newMilestone.title?.trim()) {
-        alert("Title is required");
-        return;
-      }
-      if (!newMilestone.description?.trim()) {
-        alert("Description is required");
-        return;
-      }
-      if (!newMilestone.dueDate) {
-        alert("Due date is required");
-        return;
-      }
+      setLoading(true);
+      setError("");
+
+      // Validation
+      if (!newMilestone.title?.trim()) throw new Error("Title is required");
+      if (!newMilestone.description?.trim())
+        throw new Error("Description is required");
+      if (!newMilestone.dueDate) throw new Error("Due date is required");
 
       const token = localStorage.getItem("authToken");
-      if (!token) {
-        throw new Error("Authentication required");
-      }
+      if (!token) throw new Error("Authentication required");
 
-      // Format the milestone data
       const milestoneData = {
         title: newMilestone.title.trim(),
         description: newMilestone.description.trim(),
-        startDate: new Date().toISOString(), // Add start date
-        endDate: new Date(newMilestone.dueDate).toISOString(), // Convert dueDate to endDate
+        startDate: new Date().toISOString(),
+        endDate: new Date(newMilestone.dueDate).toISOString(),
         status: "Pending",
       };
 
       const result = await addMilestone(projectId, milestoneData, token);
 
       if (result.success && result.milestone) {
-        // Ensure proper data structure
         const newMilestoneData = {
           ...result.milestone,
-          id: result.milestone.id,
-          title: result.milestone.title,
-          description: result.milestone.description,
-          status: result.milestone.status || "Pending",
-          startDate: result.milestone.startDate,
-          endDate: result.milestone.endDate,
           tasks: [],
-          meetings: []
+          meetings: [],
         };
 
-        const updatedMilestones = [...milestones, newMilestoneData];
-        setMilestones(updatedMilestones);
+        setMilestones((prev) => [...prev, newMilestoneData]);
         setNewMilestone({ title: "", description: "", dueDate: "" });
-        onMilestoneUpdate(updatedMilestones);
+        setShowAddMilestone(false);
+        onMilestoneUpdate([...milestones, newMilestoneData]);
+      } else {
+        throw new Error(result.message || "Failed to add milestone");
       }
     } catch (error) {
-      console.error("Error adding milestone:", error);
-      alert(error.message || "Failed to add milestone");
+      setError(error.message);
+    } finally {
+      setLoading(false);
     }
   };
-
   const handleDeleteMilestone = async (milestoneId) => {
     try {
-      if (!confirm("Are you sure you want to delete this milestone?")) {
-        return;
-      }
+      if (!confirm("Are you sure you want to delete this milestone?")) return;
 
       const token = localStorage.getItem("authToken");
       const result = await deleteMilestone(projectId, milestoneId, token);
@@ -150,78 +168,10 @@ export default function Milestone({
         setMilestones(updatedMilestones);
         onMilestoneUpdate(updatedMilestones);
       } else {
-        throw new Error(result.message);
+        throw new Error(result.message || "Failed to delete milestone");
       }
     } catch (error) {
-      console.error("Error deleting milestone:", error);
-      alert(error.message || "Failed to delete milestone");
-    }
-  };
-
-  const handleMilestoneUpdate = (milestoneId, updateData) => {
-    const currentMilestones = JSON.parse(JSON.stringify(milestones));
-
-    try {
-      // Update local state first
-      const updatedMilestones = milestones.map((milestone) =>
-        milestone.id === milestoneId
-          ? { ...milestone, ...updateData }
-          : milestone
-      );
-
-      setMilestones(updatedMilestones);
-
-      // Notify parent with debounce to avoid race conditions
-      if (onMilestoneUpdate) {
-        setTimeout(() => {
-          onMilestoneUpdate(updatedMilestones);
-        }, 0);
-      }
-    } catch (error) {
-      // Revert on error
-      setMilestones(currentMilestones);
-      console.error("Error updating milestone:", error);
-      alert(error.message);
-    }
-  };
-
-  // Update the meeting handler
-  const handleMeetingUpdate = (milestoneId, updatedMeetings) => {
-    const currentMilestones = JSON.parse(JSON.stringify(milestones));
-
-    try {
-      const updatedMilestones = milestones.map((milestone) =>
-        milestone.id === milestoneId
-          ? { ...milestone, meetings: updatedMeetings }
-          : milestone
-      );
-
-      setMilestones(updatedMilestones);
-      onMilestoneUpdate(updatedMilestones);
-    } catch (error) {
-      setMilestones(currentMilestones);
-      console.error("Error updating meetings:", error);
-      alert(error.message);
-    }
-  };
-
-  // Update the task handler similarly
-  const handleTaskUpdate = (milestoneId, updatedTasks) => {
-    const currentMilestones = JSON.parse(JSON.stringify(milestones));
-
-    try {
-      const updatedMilestones = milestones.map((milestone) =>
-        milestone.id === milestoneId
-          ? { ...milestone, tasks: updatedTasks }
-          : milestone
-      );
-
-      setMilestones(updatedMilestones);
-      onMilestoneUpdate(updatedMilestones);
-    } catch (error) {
-      setMilestones(currentMilestones);
-      console.error("Error updating tasks:", error);
-      alert(error.message);
+      setError(error.message);
     }
   };
 
@@ -230,16 +180,27 @@ export default function Milestone({
     setEditForm({
       title: milestone.title,
       description: milestone.description,
-      dueDate: milestone.dueDate.split("T")[0],
+      dueDate: milestone.endDate ? milestone.endDate.split("T")[0] : "",
     });
   };
 
   const handleUpdateMilestone = async (id) => {
     try {
+      setLoading(true);
+      setError("");
+
+      // Validation
+      if (!editForm.title?.trim()) throw new Error("Title is required");
+      if (!editForm.description?.trim())
+        throw new Error("Description is required");
+      if (!editForm.dueDate) throw new Error("Due date is required");
+
       const token = localStorage.getItem("authToken");
+      if (!token) throw new Error("Authentication required");
 
       const updateData = {
-        ...editForm,
+        title: editForm.title.trim(),
+        description: editForm.description.trim(),
         startDate: new Date().toISOString(),
         endDate: new Date(editForm.dueDate).toISOString(),
       };
@@ -257,11 +218,12 @@ export default function Milestone({
         setEditingMilestone(null);
         setEditForm({ title: "", description: "", dueDate: "" });
       } else {
-        throw new Error(result.message);
+        throw new Error(result.message || "Failed to update milestone");
       }
     } catch (error) {
-      console.error("Error updating milestone:", error);
-      alert(error.message || "Failed to update milestone");
+      setError(error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -270,105 +232,68 @@ export default function Milestone({
     setEditForm({ title: "", description: "", dueDate: "" });
   };
 
-  const handleAddTask = async (milestoneId, taskData) => {
-    try {
-      const token = localStorage.getItem("authToken");
-      const result = await addTask(milestoneId, taskData, token);
-
-      if (result.success) {
-        const updatedMilestones = milestones.map((milestone) =>
-          milestone.id === milestoneId
-            ? { ...milestone, tasks: [...milestone.tasks, result.task] }
-            : milestone
-        );
-        setMilestones(updatedMilestones);
-        onMilestoneUpdate(updatedMilestones);
-      } else {
-        throw new Error(result.message);
-      }
-    } catch (error) {
-      alert(error.message);
-    }
-  };
-  function toggleShowAddMilestone() {
-    setShowAddMilestone((prev) => !prev);
-  }
-
-  // const handleAddMeeting = async (milestoneId, meetingData) => {
-  //   try {
-  //     const token = localStorage.getItem("authToken");
-  //     const result = await addMeeting(milestoneId, meetingData, token);
-
-  //     if (result.success) {
-  //       const updatedMilestones = milestones.map((milestone) =>
-  //         milestone.id === milestoneId
-  //           ? { ...milestone, meetings: [...milestone.meetings, result.meeting] }
-  //           : milestone
-  //       );
-  //       setMilestones(updatedMilestones);
-  //       onMilestoneUpdate(updatedMilestones);
-  //     } else {
-  //       throw new Error(result.message);
-  //     }
-  //   } catch (error) {
-  //     alert(error.message);
-  //   }
-  // };
-
-  const getMilestoneProgress = (milestone) => {
-    const totalTasks = milestone.tasks.length;
-    if (totalTasks === 0) return 0;
-
-    const completedTasks = milestone.tasks.filter(
-      (task) => task.status === "Completed"
-    ).length;
-
-    return Math.round((completedTasks / totalTasks) * 100);
+  const handleTaskUpdate = (milestoneId, updatedTasks) => {
+    const updatedMilestones = milestones.map((milestone) =>
+      milestone.id === milestoneId
+        ? { ...milestone, tasks: updatedTasks }
+        : milestone
+    );
+    setMilestones(updatedMilestones);
+    onMilestoneUpdate(updatedMilestones);
   };
 
-  const getMilestoneStatus = (milestone) => {
-    const progress = getMilestoneProgress(milestone);
-    if (progress === 100) return "Completed";
-    if (progress === 0) return "Not Started";
-    return "In Progress";
+  const handleMeetingUpdate = (milestoneId, updatedMeetings) => {
+    const updatedMilestones = milestones.map((milestone) =>
+      milestone.id === milestoneId
+        ? { ...milestone, meetings: updatedMeetings }
+        : milestone
+    );
+    setMilestones(updatedMilestones);
+    onMilestoneUpdate(updatedMilestones);
   };
 
   const getFilteredMilestones = () => {
     if (filter === "all") return milestones;
-
     return milestones.filter((milestone) => {
       const status = getMilestoneStatus(milestone);
-      if (filter === "completed") return status === "Completed";
-      if (filter === "pending") return status !== "Completed";
-      return true;
+      return filter === "completed"
+        ? status === "Completed"
+        : status !== "Completed";
     });
   };
 
-  // Add these new styles and animations
+  // Styles
   const styles = {
     container: `max-w-7xl mx-auto`,
     header: `sticky top-0 z-10 backdrop-blur-md bg-gray-900/80 p-4 rounded-lg mb-6`,
     milestoneCard: `
-    group hover:shadow-lg hover:shadow-blue-500/10 
-    transform transition-all duration-300 ease-in-out
-    hover:-translate-y-1
-  `,
-    progressBar: `
-    h-2 rounded-full bg-gray-700 overflow-hidden 
-    transition-all duration-500 ease-out
-  `,
+      group hover:shadow-lg hover:shadow-blue-500/10 
+      transform transition-all duration-300 ease-in-out
+      hover:-translate-y-1 bg-gray-800/50 backdrop-blur rounded-xl p-6 
+      border border-gray-700
+    `,
+    progressBar: `h-2 rounded-full bg-gray-700 overflow-hidden transition-all duration-500 ease-out`,
     addButton: `
-    group relative inline-flex items-center gap-2 
-    bg-gradient-to-r from-blue-600 to-blue-700
-    hover:from-blue-500 hover:to-blue-600
-    text-white px-6 py-2.5 rounded-lg
-    transition-all duration-300 ease-in-out
-    shadow-lg hover:shadow-blue-500/25
-  `,
+      group relative inline-flex items-center gap-2 
+      bg-gradient-to-r from-blue-600 to-blue-700
+      hover:from-blue-500 hover:to-blue-600
+      text-white px-6 py-2.5 rounded-lg
+      transition-all duration-300 ease-in-out
+      shadow-lg hover:shadow-blue-500/25
+    `,
   };
-
   return (
     <section className={styles.container}>
+      {/* Error Display */}
+      {error && (
+        <div className="mb-4 p-4 bg-red-900/20 border border-red-500/50 rounded-lg">
+          <div className="flex items-center gap-2 text-red-400">
+            <ExclamationCircleIcon className="h-5 w-5" />
+            <span>{error}</span>
+          </div>
+        </div>
+      )}
+
       {/* Enhanced Header */}
       <div className={styles.header}>
         <div className="flex justify-between items-center">
@@ -404,26 +329,28 @@ export default function Milestone({
               <option value="completed">Completed</option>
             </select>
 
-          
-              <button
-                onClick={toggleShowAddMilestone}
-                className={styles.addButton}
-              >
-                <PlusIcon className="h-5 w-5" />
-                <span>Add Milestone</span>
-                <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-blue-400 
-                           scale-x-0 group-hover:scale-x-100 transition-transform duration-300" />
-              </button>
-           
+            <button
+              onClick={() => setShowAddMilestone((prev) => !prev)}
+              className={styles.addButton}
+            >
+              <PlusIcon className="h-5 w-5" />
+              <span>Add Milestone</span>
+              <span
+                className="absolute -bottom-1 left-0 w-full h-0.5 bg-blue-400 
+                           scale-x-0 group-hover:scale-x-100 transition-transform duration-300"
+              />
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Add this form section after your header controls */}
+      {/* Add Milestone Form */}
       {showAddMilestone && (
-        <div className="bg-gray-800/50 backdrop-blur p-6 rounded-xl border border-gray-700 mb-6 animate-fadeIn">
+        <div className="bg-gray-800/50 backdrop-blur p-6 rounded-xl border border-gray-700 mb-6">
           <div className="flex justify-between items-center mb-4">
-            <h4 className="text-lg font-medium text-white">Create New Milestone</h4>
+            <h4 className="text-lg font-medium text-white">
+              Create New Milestone
+            </h4>
             <button
               onClick={() => setShowAddMilestone(false)}
               className="text-gray-400 hover:text-gray-200"
@@ -455,7 +382,10 @@ export default function Milestone({
                   type="date"
                   value={newMilestone.dueDate}
                   onChange={(e) =>
-                    setNewMilestone({ ...newMilestone, dueDate: e.target.value })
+                    setNewMilestone({
+                      ...newMilestone,
+                      dueDate: e.target.value,
+                    })
                   }
                   className="w-full pl-10 p-2 bg-gray-700/50 border border-gray-600 
                            text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -464,12 +394,17 @@ export default function Milestone({
             </div>
 
             <div className="md:col-span-2 space-y-2">
-              <label className="block text-sm text-gray-400">Description*</label>
+              <label className="block text-sm text-gray-400">
+                Description*
+              </label>
               <textarea
                 placeholder="Milestone Description"
                 value={newMilestone.description}
                 onChange={(e) =>
-                  setNewMilestone({ ...newMilestone, description: e.target.value })
+                  setNewMilestone({
+                    ...newMilestone,
+                    description: e.target.value,
+                  })
                 }
                 rows="3"
                 className="w-full p-2 bg-gray-700/50 border border-gray-600 
@@ -523,11 +458,7 @@ export default function Milestone({
       {/* Enhanced Milestone Cards */}
       <div className="space-y-6">
         {getFilteredMilestones().map((milestone) => (
-          <div
-            key={milestone.id}
-            className={`${styles.milestoneCard} bg-gray-800/50 backdrop-blur rounded-xl p-6 
-                    border border-gray-700`}
-          >
+          <div key={milestone.id} className={`${styles.milestoneCard}`}>
             {/* Progress Bar */}
             <div className={styles.progressBar}>
               <div
@@ -546,9 +477,10 @@ export default function Milestone({
                   <div className="flex items-center gap-2">
                     <CalendarIcon className="h-4 w-4" />
                     <span>
-                      Due: {milestone.endDate 
+                      Due:{" "}
+                      {milestone.endDate
                         ? new Date(milestone.endDate).toLocaleDateString()
-                        : 'Not set'}
+                        : "Not set"}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -575,14 +507,113 @@ export default function Milestone({
                   <ChevronDownIcon className="h-6 w-6" />
                 )}
               </button>
-            </div>
-
-            <div
+            </div>            <div
               className={
                 expandedMilestoneId === milestone.id ? "block" : "hidden"
               }
             >
-              <p className="text-gray-400 mb-6">{milestone.description}</p>
+              {editingMilestone === milestone.id ? (
+                // Edit Form
+                <div className="bg-gray-700/30 rounded-lg p-4 mb-6">
+                  <h4 className="text-lg font-medium text-white mb-4">
+                    Edit Milestone
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="block text-sm text-gray-400">
+                        Title*
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.title}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, title: e.target.value })
+                        }
+                        className="w-full p-2 bg-gray-700/50 border border-gray-600 
+                                 text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm text-gray-400">
+                        Due Date*
+                      </label>
+                      <div className="relative">
+                        <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                        <input
+                          type="date"
+                          value={editForm.dueDate}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              dueDate: e.target.value,
+                            })
+                          }
+                          className="w-full pl-10 p-2 bg-gray-700/50 border border-gray-600 
+                                   text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="md:col-span-2 space-y-2">
+                      <label className="block text-sm text-gray-400">
+                        Description*
+                      </label>
+                      <textarea
+                        value={editForm.description}
+                        onChange={(e) =>
+                          setEditForm({
+                            ...editForm,
+                            description: e.target.value,
+                          })
+                        }
+                        rows="3"
+                        className="w-full p-2 bg-gray-700/50 border border-gray-600 
+                                 text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-3 mt-4">
+                    <button
+                      onClick={handleCancelEdit}
+                      className="px-4 py-2 text-gray-400 hover:text-white transition-colors duration-200"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => handleUpdateMilestone(milestone.id)}
+                      disabled={loading}
+                      className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 
+                               disabled:bg-gray-600 text-white px-6 py-2 rounded-lg"
+                    >
+                      {loading ? (
+                        <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                            fill="none"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          />
+                        </svg>
+                      ) : (
+                        <PencilIcon className="h-5 w-5" />
+                      )}
+                      Update Milestone
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-gray-400 mb-6">{milestone.description}</p>
+              )}
 
               <div className="space-y-6">
                 <Task
@@ -591,6 +622,7 @@ export default function Milestone({
                   onTaskUpdate={(updatedTasks) =>
                     handleTaskUpdate(milestone.id, updatedTasks)
                   }
+                  userRole="Supervisor"
                 />
                 <Meeting
                   meetings={milestone.meetings}

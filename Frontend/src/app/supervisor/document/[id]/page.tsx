@@ -9,6 +9,8 @@ import {
   Download,
   Trash2,
   AlertTriangle,
+  Calendar,
+  User,
 } from "lucide-react";
 import {
   getDocumentById,
@@ -40,12 +42,10 @@ export default function DocumentViewPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const router = useRouter();
-  const [doc, setDoc] = useState<DocumentType | null>(null);
+  const router = useRouter();  const [doc, setDoc] = useState<DocumentType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Unwrap params using React.use()
   const unwrappedParams = use(params);
@@ -98,39 +98,50 @@ export default function DocumentViewPage({
       setShowDeleteConfirm(false);
     }
   };
-
   const handleDownload = () => {
-    if (!doc?.fileUrl) return;
+    if (!doc?.id) return;
 
-    const link = doc.fileUrl;
+    // Create direct PDF download link
+    const downloadUrl = `http://localhost:3000/api/supervisor/documents/${doc.id}/pdf`;
     const fileName = `${doc.title}${doc.fileType}`;
 
     // Create an anchor element and trigger download
     const a = window.document.createElement("a");
-    a.href = link;
+    a.href = downloadUrl;
     a.download = fileName;
+    a.target = "_blank";
     window.document.body.appendChild(a);
     a.click();
     window.document.body.removeChild(a);
-  };
+  };  const renderDocumentInfo = () => {
+    if (!doc?.id) return null;
 
-  const renderDocumentPreview = () => {
-    if (!doc?.fileUrl) return null;
-
-    if (doc.fileType.toLowerCase() === ".pdf") {
-      return (
-        <iframe
-          src={doc.fileUrl}
-          className="w-full h-[600px] rounded-lg mt-6"
-          title={doc.title}
-        />
-      );
-    }
-
-    // For other file types, show a preview card
     return (
-      <div className="mt-6 p-8 bg-gray-700 rounded-lg flex items-center justify-center">
-        <FileText size={48} className="text-gray-400" />
+      <div className="mt-6 space-y-4">
+        {/* Document Info Card */}
+        <div className="bg-gray-700 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-white mb-4">Document Information</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div className="flex items-center gap-2 text-gray-300">
+              <FileText size={16} />
+              <span>Type: {doc.fileType.toUpperCase().replace('.', '')}</span>
+            </div>
+            <div className="flex items-center gap-2 text-gray-300">
+              <Calendar size={16} />
+              <span>Uploaded: {doc.createdAt ? formatDate(doc.createdAt) : 'Unknown'}</span>
+            </div>
+            <div className="flex items-center gap-2 text-gray-300">
+              <User size={16} />
+              <span>Document ID: {doc.id}</span>
+            </div>
+          </div>
+          
+          <div className="mt-4 p-3 bg-gray-600 rounded-lg">
+            <p className="text-gray-300 text-sm">
+              <strong>Note:</strong> To view this document, please download it and open with your preferred PDF viewer.
+            </p>
+          </div>
+        </div>
       </div>
     );
   };
@@ -193,7 +204,7 @@ export default function DocumentViewPage({
           </div>
         </div>
 
-        {renderDocumentPreview()}
+        {renderDocumentInfo()}
 
         <div className="mt-6 flex gap-2">
           <button

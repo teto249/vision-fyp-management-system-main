@@ -4,60 +4,91 @@ import LineChart from "./components/dashboard/LineChart";
 import DonutChart from "./components/dashboard/DountChart";
 import UniversityTable from "./components/dashboard/UniversityTable";
 import PerformancePanel from "./components/dashboard/PerformancePanel";
-import { fetchUniversities } from "../../api/admin/fetchUniversities";
-import { use, useState, useEffect } from "react";
-
-const mockUniversities = [
-  {
-    id: "1",
-    name: "University A",
-    users: 250,
-    capacity: 75,
-    status: "warning",
-  },
-  { id: "2", name: "University B", users: 180, capacity: 60, status: "normal" },
-  {
-    id: "3",
-    name: "University C",
-    users: 420,
-    capacity: 95,
-    status: "critical",
-  },
-];
+import { fetchDashboardStats } from "../../api/admin/dashboard";
+import { useState, useEffect } from "react";
 
 export default function Dashboard() {
-  const [universities, setUniversities] = useState([]);
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const loadUniversities = async () => {
+    const loadDashboardData = async () => {
       try {
-        const data = await fetchUniversities();
-        setUniversities(data);
+        setLoading(true);
+        const data = await fetchDashboardStats();
+        setDashboardData(data);
+        setError(null);
       } catch (err) {
-        console.error("Failed to load universities", err);
+        console.error("Failed to load dashboard data", err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
       }
     };
 
-    loadUniversities();
+    loadDashboardData();
   }, []);
+
+  if (loading || !dashboardData) {
+    return (
+      <div className="p-12 bg-gray-800 min-h-screen flex justify-center items-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-green-500 mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-12 bg-gray-800 min-h-screen flex justify-center items-center">
+        <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-8 max-w-md">
+          <div className="flex items-center mb-4">
+            <svg className="w-6 h-6 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+            <h3 className="text-lg font-semibold text-red-400">Error Loading Dashboard</h3>
+          </div>
+          <p className="text-red-300">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-12 bg-gray-800 min-h-screen">
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
-        <SummaryCard title="Total Users" value={850} change={12} />
-        <SummaryCard title="Total Universities" value={universities.length} />
-        <SummaryCard title="Capacity Usage" value="850/1,000" />
-        <SummaryCard title="Active Projects" value={427} change={-2} />
+        <SummaryCard 
+          title="Total Users" 
+          value={dashboardData.totalUsers} 
+          change={Math.floor(Math.random() * 20 - 10)} // Random change for demo
+        />
+        <SummaryCard 
+          title="Total Universities" 
+          value={dashboardData.totalUniversities} 
+        />
+        <SummaryCard 
+          title="Capacity Usage" 
+          value={`${dashboardData.capacityUsage.used}/${dashboardData.capacityUsage.total}`}
+          subtitle={`${dashboardData.capacityUsage.percentage}% utilized`}
+        />
+        <SummaryCard 
+          title="Active Projects" 
+          value={dashboardData.activeProjects} 
+          change={Math.floor(Math.random() * 10 - 5)} // Random change for demo
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <LineChart />
-        <DonutChart />
+        <LineChart data={dashboardData} />
+        <DonutChart data={dashboardData} />
       </div>
 
       <div className="grid grid-cols-1 gap-6">
-        <UniversityTable data={universities} />
-        <PerformancePanel />
+        <UniversityTable data={dashboardData.universityStats} />
+        <PerformancePanel data={dashboardData} />
       </div>
     </div>
   );

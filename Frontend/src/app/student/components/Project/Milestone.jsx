@@ -584,13 +584,13 @@ export default function Milestone({
             >
               <p className="text-gray-400 mb-6">{milestone.description}</p>
 
-              <div className="space-y-6">
-                <Task
+              <div className="space-y-6">                <Task
                   tasks={milestone.tasks}
                   milestoneId={milestone.id}
                   onTaskUpdate={(updatedTasks) =>
                     handleTaskUpdate(milestone.id, updatedTasks)
                   }
+                  userRole="Student"
                 />
                 <Meeting
                   meetings={milestone.meetings}

@@ -350,6 +350,39 @@ export const addMeeting = async (
   }
 };
 
+// Add this function to handle task updates
+export const updateTask = async (taskId: string, taskData: {
+  status: "Pending" | "In Progress" | "Completed";
+}, token: string) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(taskData),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to update task');
+    }
+
+    return {
+      success: true,
+      task: data.task
+    };
+  } catch (error) {
+    console.error('Error updating task:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to update task'
+    };
+  }
+};
+
 // Check authentication status
 export const checkAuth = () => {
   const token = localStorage.getItem("authToken");

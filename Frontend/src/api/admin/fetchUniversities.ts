@@ -39,6 +39,64 @@ export interface University {
   adminDetails: UniversityAdmin;
 }
 
+export interface UniversityStatistics {
+  totalStudents: number;
+  totalSupervisors: number;
+  totalAdmins: number;
+  activeProjects: number;
+  completedProjects: number;
+  inProgressProjects: number;
+  pendingProjects: number;
+  totalProjects: number;
+  utilizationRate: number;
+  studentUtilization: number;
+  supervisorUtilization: number;
+  capacity: {
+    maxStudents: number;
+    maxSupervisors: number;
+    remainingStudentSlots: number;
+    remainingSupervisorSlots: number;
+  };
+}
+
+export interface UniversityMember {
+  id: string;
+  name: string;
+  email: string;
+  universityEmail?: string;
+  phone?: string;
+  department?: string;
+  level?: string; // For students
+  officeAddress?: string; // For supervisors
+  profilePhoto?: string;
+  joinedAt: string;
+  role: 'Student' | 'Supervisor' | 'University Admin';
+}
+
+export interface UniversityMembers {
+  students?: {
+    data: UniversityMember[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+  supervisors?: {
+    data: UniversityMember[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+  admins?: {
+    data: UniversityMember[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
 export async function fetchUniversities(): Promise<University[]> {
   try {
     const response = await fetch(`${API_BASE_URL}/admin/universities`, {
@@ -98,6 +156,57 @@ export async function fetchUniversityById(
     };
   } catch (error) {
     console.error("Error fetching university details:", error);
+    throw error;
+  }
+}
+
+export async function fetchUniversityStatistics(id: string): Promise<UniversityStatistics> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/admin/universities/${id}/statistics`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch university statistics: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching university statistics:", error);
+    throw error;
+  }
+}
+
+export async function fetchUniversityMembers(
+  id: string, 
+  type: 'all' | 'students' | 'supervisors' | 'admins' = 'all',
+  page: number = 1,
+  limit: number = 10
+): Promise<UniversityMembers> {
+  try {
+    const params = new URLSearchParams({
+      type,
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+
+    const response = await fetch(`${API_BASE_URL}/admin/universities/${id}/members?${params}`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch university members: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching university members:", error);
     throw error;
   }
 }

@@ -12,6 +12,9 @@ const Meeting = require('../models/Meeting');
 const Feedback = require('../models/Feedback');
 const { sequelize } = require('../config/database');
 
+// Define uploads directory
+const uploadsDir = path.join(__dirname, '..', 'uploads');
+
 // Configure multer storage
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -206,14 +209,27 @@ exports.uploadDocument = async (req, res) => {
 
     const { title, description, supervisorId } = req.body;
 
-    // Convert file to Base64
-    const fileContent = req.file.buffer.toString('base64');
+    // Ensure documents directory exists
+    const documentsDir = path.join(uploadsDir, 'documents');
+    if (!fs.existsSync(documentsDir)) {
+      fs.mkdirSync(documentsDir, { recursive: true });
+    }
+
+    // Create unique filename
+    const timestamp = Date.now();
+    const fileExtension = path.extname(req.file.originalname);
+    const filename = `${timestamp}-${supervisorId}${fileExtension}`;
+    const filePath = path.join(documentsDir, filename);
+
+    // Save file to disk
+    await fs.promises.writeFile(filePath, req.file.buffer);
     
     const document = await Document.create({
       title,
       description,
-      fileType: path.extname(req.file.originalname),
-      fileContent: fileContent,
+      fileType: fileExtension,
+      fileName: filename,
+      filePath: filePath,
       uploadedBy: supervisorId,
       supervisorId,
       studentId: null
@@ -226,6 +242,7 @@ exports.uploadDocument = async (req, res) => {
         title: document.title,
         description: document.description,
         fileType: document.fileType,
+        fileName: document.fileName,
         uploadedBy: document.uploadedBy,
         supervisorId: document.supervisorId,
         createdAt: document.createdAt
@@ -351,12 +368,56 @@ exports.getDocumentContent = async (req, res) => {
       document: {
         ...document.toJSON(),
         fileUrl: document.fileContent ? 
-          `data:application/${document.fileType.replace('.', '')};base64,${document.fileContent}` : 
+          `${process.env.BACKEND_URL || 'http://localhost:3000'}/api/supervisor/documents/${id}/pdf` : 
           null
       }
     });
   } catch (error) {
     console.error('Get document error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Serve PDF files directly with proper headers
+exports.getDocumentPDF = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const document = await Document.findByPk(id);
+
+    if (!document) {
+      return res.status(404).json({ message: 'Document not found' });
+    }
+
+    // Check if we have a file path (new file-based storage)
+    if (document.filePath && fs.existsSync(document.filePath)) {
+      // Set appropriate headers for PDF
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="${document.title}${document.fileType}"`);
+      
+      // Stream the file directly from disk
+      const fileStream = fs.createReadStream(document.filePath);
+      fileStream.pipe(res);
+      return;
+    }
+
+    // Fallback to base64 content (legacy support)
+    if (document.fileContent) {
+      // Convert base64 back to buffer
+      const fileBuffer = Buffer.from(document.fileContent, 'base64');
+      
+      // Set appropriate headers for PDF
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="${document.title}${document.fileType}"`);
+      res.setHeader('Content-Length', fileBuffer.length);
+      
+      // Send the file buffer
+      res.send(fileBuffer);
+      return;
+    }
+
+    return res.status(404).json({ message: 'File content not found' });
+  } catch (error) {
+    console.error('Get PDF error:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -524,7 +585,14 @@ exports.getSupervisedStudentsWithProjects = async (req, res) => {
                   model: Task,
                   as: "tasks",
                   separate: true,
-                  attributes: ['id', 'title', 'description', 'status', 'startDate', 'endDate'],
+                  attributes: [
+                    'id', 
+                    'title', 
+                    'description', 
+                    'status', 
+                    'startDate', 
+                    'endDate'
+                  ],
                   include: [
                     {
                       model: Feedback,
@@ -651,6 +719,7 @@ exports.getStudentProjectDetails = async (req, res) => {
           ]
         }
       ]
+
     });
 
     if (!student) {
@@ -660,69 +729,232 @@ exports.getStudentProjectDetails = async (req, res) => {
       });
     }
 
+    const plainStudent = student.get({ plain: true });
+
+    // Calculate project progress
+    if (plainStudent.project) {
+      const totalTasks = plainStudent.project.milestones.reduce(
+        (sum, milestone) => sum + milestone.tasks.length, 0
+      );
+      const completedTasks = plainStudent.project.milestones.reduce(
+        (sum, milestone) => sum + milestone.tasks.filter(task => task.status === 'Completed').length, 0
+      );
+
+      plainStudent.project.progress = totalTasks > 0 
+        ? Math.round((completedTasks / totalTasks) * 100) 
+        : 0;
+    }
+
     res.status(200).json({
       success: true,
-      project: student.Project
+      student: plainStudent
     });
 
   } catch (error) {
-    console.error('Error fetching project details:', error);
+    console.error('Error fetching student project details:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch project details'
+      message: 'Failed to fetch student project details'
     });
   }
 };
 
-exports.updateProjectStatus = async (req, res) => {
+const calculateProjectProgress = (milestones) => {
+  const allTasks = milestones.flatMap(milestone => milestone.tasks);
+  const totalTasks = allTasks.length;
+  
+  if (totalTasks === 0) return 0;
+  
+  const completedTasks = allTasks.filter(task => task.status === 'Completed').length;
+  return Math.round((completedTasks / totalTasks) * 100);
+};
+
+// Add these new controller functions
+
+// Update project details
+exports.updateProject = async (req, res) => {
   try {
-    const { supervisorId, projectId } = req.params;
-    const { status } = req.body;
+    const { projectId } = req.params;
+    const { projectTitle, projectType, projectDescription, startDate, endDate, status } = req.body;
 
-    const project = await Project.findOne({
-      where: { 
-        id: projectId,
-        supervisorId
-      }
-    });
-
+    const project = await Project.findByPk(projectId);
     if (!project) {
       return res.status(404).json({
         success: false,
-        message: 'Project not found'
+        message: "Project not found"
       });
     }
 
-    await project.update({ status });
+    await project.update({
+      projectTitle,
+      projectType,
+      projectDescription,
+      startDate,
+      endDate,
+      status
+    });
 
     res.status(200).json({
       success: true,
-      message: 'Project status updated successfully'
+      project
     });
-
   } catch (error) {
-    console.error('Error updating project status:', error);
+    console.error("Error updating project:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to update project status'
+      message: "Failed to update project"
     });
   }
 };
 
-exports.addFeedback = async (req, res) => {
+// Update milestone
+exports.updateMilestone = async (req, res) => {
   try {
-    const { supervisorId, taskId } = req.params;
-    const { title, description } = req.body;
+    const { milestoneId } = req.params;
+    const { title, description, startDate, endDate, status } = req.body;
 
+    const milestone = await Milestone.findByPk(milestoneId);
+    if (!milestone) {
+      return res.status(404).json({
+        success: false,
+        message: "Milestone not found"
+      });
+    }
+
+    await milestone.update({
+      title,
+      description,
+      startDate,
+      endDate,
+      status
+    });
+
+    res.status(200).json({
+      success: true,
+      milestone
+    });
+  } catch (error) {
+    console.error("Error updating milestone:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update milestone"
+    });
+  }
+};
+
+// Add Task to Milestone
+exports.addTask = async (req, res) => {
+  try {
+    const { supervisorUsername, milestoneId } = req.params;
+    const { title, description, startDate, endDate } = req.body;
+
+    // Validate required fields
+    if (!title || !startDate || !endDate) {
+      return res.status(400).json({
+        success: false,
+        message: "Title, start date, and end date are required"
+      });
+    }    // Find supervisor by userId (which is used as username)
+    const supervisor = await Supervisor.findOne({
+      where: { userId: supervisorUsername }
+    });
+
+    if (!supervisor) {
+      return res.status(404).json({
+        success: false,
+        message: "Supervisor not found"
+      });
+    }
+
+    // Check if milestone exists and belongs to supervisor's student
+    const milestone = await Milestone.findOne({
+      where: { id: milestoneId },      include: [
+        {
+          model: Project,
+          as: 'project',
+          include: [
+            {
+              model: Student,
+              as: 'student',
+              where: { supervisorId: supervisor.userId }
+            }
+          ]
+        }
+      ]
+    });
+
+    if (!milestone) {
+      return res.status(404).json({
+        success: false,
+        message: "Milestone not found or access denied"
+      });
+    }
+
+    // Create new task
+    const task = await Task.create({
+      title,
+      description: description || '',
+      startDate,
+      endDate,
+      status: 'Pending',
+      milestoneId
+    });
+
+    res.status(201).json({
+      success: true,
+      task
+    });
+  } catch (error) {
+    console.error("Error adding task:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to add task"
+    });
+  }
+};
+
+// Update Task Status
+exports.updateTaskStatus = async (req, res) => {
+  try {
+    const { supervisorUsername, taskId } = req.params;
+    const { status } = req.body;    // Validate status
+    const validStatuses = ['Pending', 'In Progress', 'Completed'];
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status. Must be one of: " + validStatuses.join(', ')
+      });
+    }
+
+    // Find supervisor by userId (which is used as username)
+    const supervisor = await Supervisor.findOne({
+      where: { userId: supervisorUsername }
+    });
+
+    if (!supervisor) {      return res.status(404).json({
+        success: false,
+        message: "Supervisor not found"
+      });
+    }
+
+    // Check if task exists and belongs to supervisor's student
     const task = await Task.findOne({
       where: { id: taskId },
       include: [
         {
           model: Milestone,
+          as: 'milestone',
           include: [
             {
               model: Project,
-              where: { supervisorId }
+              as: 'project',
+              include: [
+                {
+                  model: Student,
+                  as: 'student',
+                  where: { supervisorId: supervisor.userId }
+                }
+              ]
             }
           ]
         }
@@ -732,28 +964,465 @@ exports.addFeedback = async (req, res) => {
     if (!task) {
       return res.status(404).json({
         success: false,
-        message: 'Task not found or not authorized'
+        message: "Task not found or access denied"
       });
     }
 
+    // Update task status
+    await task.update({ status });
+
+    res.status(200).json({
+      success: true,
+      task
+    });
+  } catch (error) {
+    console.error("Error updating task status:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update task status"
+    });
+  }
+};
+
+// Add Feedback to Task
+exports.addFeedback = async (req, res) => {
+  try {
+    const { supervisorUsername, taskId } = req.params;
+    const { title, description } = req.body;    // Validate required fields
+    if (!title || !description) {
+      return res.status(400).json({
+        success: false,
+        message: "Title and description are required"
+      });
+    }
+
+    // Find supervisor by userId (which is used as username)
+    const supervisor = await Supervisor.findOne({
+      where: { userId: supervisorUsername }
+    });
+
+    if (!supervisor) {
+      return res.status(404).json({
+        success: false,
+        message: "Supervisor not found"
+      });
+    }    // Check if task exists and belongs to supervisor's student
+    const task = await Task.findOne({
+      where: { id: taskId },
+      include: [
+        {
+          model: Milestone,
+          as: 'milestone',
+          include: [
+            {
+              model: Project,
+              as: 'project',
+              include: [
+                {
+                  model: Student,
+                  as: 'student',
+                  where: { supervisorId: supervisor.userId }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    });
+
+    if (!task) {
+      return res.status(404).json({
+        success: false,
+        message: "Task not found or access denied"
+      });
+    }
+
+    // Create feedback
     const feedback = await Feedback.create({
-      taskId,
       title,
       description,
-      date: new Date()
+      date: new Date(),
+      taskId,
+      supervisorId: supervisor.userId
     });
 
     res.status(201).json({
       success: true,
       feedback
     });
-
   } catch (error) {
-    console.error('Error adding feedback:', error);
+    console.error("Error adding feedback:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to add feedback'
+      message: "Failed to add feedback"
     });
   }
 };
 
+// Delete Task
+exports.deleteTask = async (req, res) => {
+  try {
+    const { supervisorUsername, taskId } = req.params;
+
+    // Find supervisor by userId (which is used as username)
+    const supervisor = await Supervisor.findOne({
+      where: { userId: supervisorUsername }
+    });
+
+    if (!supervisor) {
+      return res.status(404).json({
+        success: false,
+        message: "Supervisor not found"
+      });
+    }
+
+    // Check if task exists and belongs to supervisor's student
+    const task = await Task.findOne({
+      where: { id: taskId },
+      include: [
+        {
+          model: Milestone,
+          as: 'milestone',
+          include: [
+            {
+              model: Project,
+              as: 'project',
+              include: [
+                {
+                  model: Student,
+                  as: 'student',
+                  where: { supervisorId: supervisor.userId }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    });
+
+    if (!task) {
+      return res.status(404).json({
+        success: false,
+        message: "Task not found or access denied"
+      });
+    }
+
+    // Delete associated feedback first (cascade should handle this, but being explicit)
+    await Feedback.destroy({
+      where: { taskId }
+    });
+
+    // Delete the task
+    await task.destroy();
+
+    res.status(200).json({
+      success: true,
+      message: "Task deleted successfully"
+    });
+  } catch (error) {
+    console.error("Error deleting task:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete task"
+    });
+  }
+};
+
+// Delete Meeting
+exports.deleteMeeting = async (req, res) => {
+  try {
+    const { supervisorUsername, meetingId } = req.params;
+
+    // Find supervisor by userId (which is used as username)
+    const supervisor = await Supervisor.findOne({
+      where: { userId: supervisorUsername }
+    });
+
+    if (!supervisor) {
+      return res.status(404).json({
+        success: false,
+        message: "Supervisor not found"
+      });
+    }
+
+    // Check if meeting exists and belongs to supervisor's student
+    const meeting = await Meeting.findOne({
+      where: { id: meetingId },
+      include: [
+        {
+          model: Milestone,
+          as: 'milestone',
+          include: [
+            {
+              model: Project,
+              as: 'project',
+              include: [
+                {
+                  model: Student,
+                  as: 'student',
+                  where: { supervisorId: supervisor.userId }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    });
+
+    if (!meeting) {
+      return res.status(404).json({
+        success: false,
+        message: "Meeting not found or access denied"
+      });
+    }
+
+    // Delete the meeting
+    await meeting.destroy();
+
+    res.status(200).json({
+      success: true,
+      message: "Meeting deleted successfully"
+    });
+  } catch (error) {
+    console.error("Error deleting meeting:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete meeting"
+    });
+  }
+};
+
+// Delete Milestone
+exports.deleteMilestone = async (req, res) => {
+  try {
+    const { supervisorUsername, milestoneId } = req.params;
+
+    // Find supervisor by userId (which is used as username)
+    const supervisor = await Supervisor.findOne({
+      where: { userId: supervisorUsername }
+    });
+
+    if (!supervisor) {
+      return res.status(404).json({
+        success: false,
+        message: "Supervisor not found"
+      });
+    }
+
+    // Check if milestone exists and belongs to supervisor's student
+    const milestone = await Milestone.findOne({
+      where: { id: milestoneId },
+      include: [
+        {
+          model: Project,
+          as: 'project',
+          include: [
+            {
+              model: Student,
+              as: 'student',
+              where: { supervisorId: supervisor.userId }
+            }
+          ]
+        }
+      ]
+    });
+
+    if (!milestone) {
+      return res.status(404).json({
+        success: false,
+        message: "Milestone not found or access denied"
+      });
+    }
+
+    // Use transaction to ensure data integrity
+    const transaction = await sequelize.transaction();
+
+    try {
+      // Delete all feedback associated with tasks in this milestone
+      await Feedback.destroy({
+        where: {
+          taskId: {
+            [require('sequelize').Op.in]: await Task.findAll({
+              where: { milestoneId },
+              attributes: ['id'],
+              raw: true
+            }).then(tasks => tasks.map(t => t.id))
+          }
+        },
+        transaction
+      });
+
+      // Delete all tasks in this milestone
+      await Task.destroy({
+        where: { milestoneId },
+        transaction
+      });
+
+      // Delete all meetings in this milestone
+      await Meeting.destroy({
+        where: { milestoneId },
+        transaction
+      });
+
+      // Delete the milestone
+      await milestone.destroy({ transaction });
+
+      await transaction.commit();
+
+      res.status(200).json({
+        success: true,
+        message: "Milestone and all associated data deleted successfully"
+      });
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  } catch (error) {
+    console.error("Error deleting milestone:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete milestone"
+    });
+  }
+};
+
+// Generate AI-powered report for student progress
+exports.generateAIReport = async (req, res) => {
+  try {
+    const { supervisorId } = req.params;
+    const { students } = req.body;
+
+    if (!students || !Array.isArray(students)) {
+      return res.status(400).json({
+        success: false,
+        message: "Students data is required for report generation"
+      });
+    }
+
+    // Calculate overall statistics
+    const totalStudents = students.length;
+    const averageProgress = totalStudents > 0 
+      ? Math.round(students.reduce((sum, student) => sum + student.progress, 0) / totalStudents)
+      : 0;
+    const completedTasks = students.reduce((sum, student) => sum + student.completedTasks, 0);
+    const totalTasks = students.reduce((sum, student) => sum + student.totalTasks, 0);
+
+    // Generate AI-like analysis
+    let analysis = `STUDENT SUPERVISION ANALYSIS REPORT\n`;
+    analysis += `Generated on: ${new Date().toLocaleDateString()}\n\n`;
+
+    // Overall Performance Analysis
+    analysis += `OVERALL PERFORMANCE INSIGHTS:\n`;
+    if (averageProgress >= 80) {
+      analysis += `✅ Exceptional Performance: Your students are demonstrating outstanding progress with an average completion rate of ${averageProgress}%.\n`;
+    } else if (averageProgress >= 60) {
+      analysis += `📈 Good Progress: Students are making solid progress at ${averageProgress}% average completion. There's room for improvement.\n`;
+    } else if (averageProgress >= 40) {
+      analysis += `⚠️ Moderate Concerns: Average progress of ${averageProgress}% indicates students may need additional support.\n`;
+    } else {
+      analysis += `🚨 Immediate Attention Required: Low average progress of ${averageProgress}% suggests significant intervention is needed.\n`;
+    }
+
+    // Task Completion Analysis
+    const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+    analysis += `\nTASK COMPLETION ANALYSIS:\n`;
+    analysis += `• Total Tasks Assigned: ${totalTasks}\n`;
+    analysis += `• Tasks Completed: ${completedTasks}\n`;
+    analysis += `• Completion Rate: ${completionRate}%\n`;
+
+    if (completionRate >= 85) {
+      analysis += `• Assessment: Excellent task management and student engagement.\n`;
+    } else if (completionRate >= 70) {
+      analysis += `• Assessment: Good task completion rate with minor areas for improvement.\n`;
+    } else if (completionRate >= 50) {
+      analysis += `• Assessment: Moderate completion rate suggests need for better deadline management.\n`;
+    } else {
+      analysis += `• Assessment: Low completion rate indicates potential issues with task clarity or student support.\n`;
+    }
+
+    // Individual Student Analysis
+    analysis += `\nINDIVIDUAL STUDENT INSIGHTS:\n`;
+    students.forEach(student => {
+      analysis += `\n${student.name} (${student.course} - ${student.level}):\n`;
+      analysis += `  • Progress: ${student.progress}%\n`;
+      analysis += `  • Tasks: ${student.completedTasks}/${student.totalTasks} completed\n`;
+      
+      if (student.progress >= 80) {
+        analysis += `  • Status: High performer - consider providing advanced challenges\n`;
+      } else if (student.progress >= 60) {
+        analysis += `  • Status: On track - maintain current support level\n`;
+      } else if (student.progress >= 40) {
+        analysis += `  • Status: Needs attention - schedule one-on-one meetings\n`;
+      } else {
+        analysis += `  • Status: At risk - immediate intervention recommended\n`;
+      }
+
+      if (student.overdueTasks > 0) {
+        analysis += `  • Alert: ${student.overdueTasks} overdue tasks require immediate attention\n`;
+      }
+    });
+
+    // Recommendations
+    analysis += `\nSTRATEGIC RECOMMENDATIONS:\n`;
+    
+    const strugglingStudents = students.filter(s => s.progress < 40);
+    const highPerformers = students.filter(s => s.progress >= 80);
+    const overdueTasksTotal = students.reduce((sum, s) => sum + (s.overdueTasks || 0), 0);
+
+    if (strugglingStudents.length > 0) {
+      analysis += `• Priority Action: Schedule immediate meetings with ${strugglingStudents.length} struggling student(s)\n`;
+    }
+    
+    if (highPerformers.length > 0) {
+      analysis += `• Opportunity: Leverage ${highPerformers.length} high performer(s) as peer mentors\n`;
+    }
+    
+    if (overdueTasksTotal > 0) {
+      analysis += `• Urgent: Address ${overdueTasksTotal} overdue tasks across all students\n`;
+    }
+    
+    if (averageProgress < 60) {
+      analysis += `• Suggestion: Consider revising project timelines or providing additional resources\n`;
+    }
+    
+    analysis += `• Best Practice: Schedule regular check-ins to maintain momentum\n`;
+    analysis += `• Growth: Implement peer review sessions to enhance learning\n`;
+
+    // Generate summary for frontend
+    const recommendations = [];
+    if (strugglingStudents.length > 0) {
+      recommendations.push(`${strugglingStudents.length} student(s) need immediate attention`);
+    }
+    if (averageProgress < 60) {
+      recommendations.push("Consider providing additional support resources");
+    }
+    if (completionRate < 70) {
+      recommendations.push("Review task deadlines and provide clearer guidelines");
+    }
+    if (highPerformers.length > 0) {
+      recommendations.push(`Recognize and challenge ${highPerformers.length} high performer(s)`);
+    }
+    recommendations.push("Schedule regular progress review meetings");
+
+    const summary = {
+      totalStudents,
+      averageProgress,
+      completedTasks,
+      totalTasks,
+      recommendations
+    };
+
+    res.status(200).json({
+      success: true,
+      report: analysis,
+      summary
+    });
+
+  } catch (error) {
+    console.error("Error generating AI report:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to generate AI report"
+    });
+  }
+};

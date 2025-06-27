@@ -1,50 +1,77 @@
+interface Feedback {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  userId?: string;
+}
+
 interface Task {
   id: string;
   title: string;
   description: string;
-  status: string;
+  status: "Pending" | "In Progress" | "Completed";
   startDate: string;
   endDate: string;
-  feedback: any[];
+  feedback?: Feedback[];
 }
 
 interface Meeting {
   id: string;
   title: string;
   date: string;
-  time: string;
+  time?: string;
   link?: string;
-  type: string;
+  type: "Online" | "Physical";
 }
 
 interface Milestone {
   id: string;
   title: string;
   description: string;
-  status: string;
+  status: "Pending" | "In Progress" | "Completed";
   startDate: string;
   endDate: string;
   tasks: Task[];
   meetings: Meeting[];
 }
 
+interface University {
+  id: string;
+  shortName: string;
+  fullName: string;
+}
+
+interface StudentInfo {
+  id: string;
+  name: string;
+  email: string;
+  level: "PSM-1" | "PSM-2";
+  department: string;
+}
+
 interface Project {
   id: string;
-  title: string;
-  type: string;
-  description: string;
-  status: string;
+  projectTitle: string;
+  projectType: string;
+  projectDescription: string;
+  status: "Pending" | "In Progress" | "Completed";
   progress: number;
   startDate: string;
   endDate: string;
   student: {
     id: string;
     name: string;
+    fullName: string; // Add this
     email: string;
     level: string;
     department: string;
   };
-  university: any;
+  university?: {
+    id: string;
+    shortName: string;
+    fullName: string;
+  };
   milestones: Milestone[];
 }
 
@@ -57,7 +84,33 @@ interface Student {
   department: string;
   phoneNumber?: string;
   address?: string;
-  project?: Project;
+  project?: Project | null; // Allow project to be null if not assigned
 }
 
-export type { Student, Project, Milestone, Task, Meeting };
+interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  message?: string;
+}
+
+export type {
+  Student,
+  Project,
+  Milestone,
+  Task,
+  Meeting,
+  Feedback,
+  University,
+  StudentInfo,
+  ApiResponse,
+};
+
+export interface ProjectUpdate {
+  projectTitle?: string;
+  projectType?: string;
+  projectDescription?: string;
+  status?: "Pending" | "In Progress" | "Completed";
+  progress?: number;
+  startDate?: string;
+  endDate?: string;
+}

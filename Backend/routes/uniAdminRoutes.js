@@ -7,6 +7,7 @@ const {
   getUsersByUniversityId,
 } = require("../controllers/uniAdminController");
 
+
 const router = express.Router();
 
 // UniAdmin account routes
@@ -18,3 +19,4 @@ router.post("/registration/single", registerSingleUser);
 router.post("/registration/bulk", registerBulkUsers);
 
 module.exports = router;
+

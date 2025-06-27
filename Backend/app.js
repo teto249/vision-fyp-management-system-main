@@ -23,9 +23,9 @@ app.use(
   })
 );
 
-// Configure body parser with increased limits
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+// Configure body parser with increased limits for file uploads
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 
 // Configure static file serving for different upload types
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
@@ -72,6 +72,11 @@ app.get("/health", (req, res) => {
       profiles: fs.existsSync(path.join(__dirname, "uploads", "profiles")),
     },
   });
+});
+
+// Handle favicon requests
+app.get("/favicon.ico", (req, res) => {
+  res.status(204).end();
 });
 
 // 404 Error handler
