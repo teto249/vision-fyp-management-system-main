@@ -6,19 +6,22 @@ import {
   addMilestone,
   updateMilestone,
   deleteMilestone,
+  addTask,
+ 
 } from "../../../../api/StudentApi/Projects";
 import {
   PlusIcon,
   TrashIcon,
   PencilIcon,
   XMarkIcon,
-  CheckIcon,
+
   ChevronDownIcon,
   ChevronUpIcon,
   CalendarIcon,
   ClockIcon,
   ExclamationCircleIcon,
 } from "@heroicons/react/24/outline";
+
 
 export default function Milestone({
   projectData,
@@ -64,35 +67,52 @@ export default function Milestone({
   const [showMilestones, setShowMilestones] = useState(true);
   const [showAddMilestone, setShowAddMilestone] = useState(false);
 
-  const canEdit = userRole === "Supervisor";
+  const canEdit = true; // Allow students to edit their own milestones
 
   useEffect(() => {
     if (JSON.stringify(projectData.milestones) !== JSON.stringify(milestones)) {
       setMilestones(projectData.milestones || []);
     }
-  }, [projectData.milestones]);
-
-  useEffect(() => {
-    console.log('Current milestones state:', milestones);
-    console.log('Project data milestones:', projectData?.milestones);
-  }, [milestones, projectData]);
-
+  }, [projectData.milestones, milestones]);
+  
+  // Async handler for adding a milestone
   const handleAddMilestone = async () => {
     try {
-      // Validate required fields
+      setError(""); // Clear any previous errors
+      
+      // Validate required fields with better error messages
       if (!newMilestone.title?.trim()) {
-        alert("Title is required");
+        setError("Milestone title is required");
+        return;
+      }
+      if (newMilestone.title.trim().length < 3) {
+        setError("Milestone title must be at least 3 characters long");
         return;
       }
       if (!newMilestone.description?.trim()) {
-        alert("Description is required");
+        setError("Milestone description is required");
+        return;
+      }
+      if (newMilestone.description.trim().length < 10) {
+        setError("Milestone description must be at least 10 characters long");
         return;
       }
       if (!newMilestone.dueDate) {
-        alert("Due date is required");
+        setError("Due date is required");
         return;
       }
 
+      // Validate due date is not in the past
+      const selectedDate = new Date(newMilestone.dueDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (selectedDate < today) {
+        setError("Due date cannot be in the past");
+        return;
+      }
+
+      setLoading(true);
       const token = localStorage.getItem("authToken");
       if (!token) {
         throw new Error("Authentication required");
@@ -102,10 +122,11 @@ export default function Milestone({
       const milestoneData = {
         title: newMilestone.title.trim(),
         description: newMilestone.description.trim(),
-        startDate: new Date().toISOString(), // Add start date
-        endDate: new Date(newMilestone.dueDate).toISOString(), // Convert dueDate to endDate
+        dueDate: new Date(newMilestone.dueDate).toISOString().split('T')[0], // Use dueDate and format as date only
         status: "Pending",
       };
+
+      console.log("Creating milestone with data:", milestoneData);
 
       const result = await addMilestone(projectId, milestoneData, token);
 
@@ -127,10 +148,16 @@ export default function Milestone({
         setMilestones(updatedMilestones);
         setNewMilestone({ title: "", description: "", dueDate: "" });
         onMilestoneUpdate(updatedMilestones);
+        setShowAddMilestone(false);
+        setError(""); // Clear any errors on success
+      } else {
+        throw new Error(result.message || "Failed to create milestone");
       }
     } catch (error) {
       console.error("Error adding milestone:", error);
-      alert(error.message || "Failed to add milestone");
+      setError(error.message || "Failed to add milestone");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -425,26 +452,54 @@ export default function Milestone({
           <div className="flex justify-between items-center mb-4">
             <h4 className="text-lg font-medium text-white">Create New Milestone</h4>
             <button
-              onClick={() => setShowAddMilestone(false)}
+              onClick={() => {
+                setShowAddMilestone(false);
+                setNewMilestone({ title: "", description: "", dueDate: "" });
+                setError(""); // Clear errors when closing
+              }}
               className="text-gray-400 hover:text-gray-200"
             >
               <XMarkIcon className="h-5 w-5" />
             </button>
           </div>
 
+          {/* Error Display */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+              <div className="flex items-center gap-2 text-red-400">
+                <ExclamationCircleIcon className="h-5 w-5" />
+                <span className="text-sm">{error}</span>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="block text-sm text-gray-400">Title*</label>
+              <label className="block text-sm text-gray-400">
+                Title* <span className="text-xs text-gray-500">(min 3 chars)</span>
+              </label>
               <input
                 type="text"
-                placeholder="Milestone Title"
+                placeholder="e.g., Literature Review"
                 value={newMilestone.title}
-                onChange={(e) =>
-                  setNewMilestone({ ...newMilestone, title: e.target.value })
-                }
-                className="w-full p-2 bg-gray-700/50 border border-gray-600 
-                         text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500"
+                onChange={(e) => {
+                  setNewMilestone({ ...newMilestone, title: e.target.value });
+                  if (error && e.target.value.trim().length >= 3) {
+                    setError(""); // Clear error when valid input is entered
+                  }
+                }}
+                className={`w-full p-3 bg-gray-700/50 border rounded-lg text-gray-100 
+                         focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                         transition-all duration-200 ${
+                           error && error.includes("title") 
+                             ? "border-red-500" 
+                             : "border-gray-600"
+                         }`}
+                maxLength={100}
               />
+              <div className="text-xs text-gray-500 text-right">
+                {newMilestone.title.length}/100
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -454,67 +509,98 @@ export default function Milestone({
                 <input
                   type="date"
                   value={newMilestone.dueDate}
-                  onChange={(e) =>
-                    setNewMilestone({ ...newMilestone, dueDate: e.target.value })
-                  }
-                  className="w-full pl-10 p-2 bg-gray-700/50 border border-gray-600 
-                           text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  min={new Date().toISOString().split('T')[0]} // Prevent past dates
+                  onChange={(e) => {
+                    setNewMilestone({ ...newMilestone, dueDate: e.target.value });
+                    if (error && e.target.value) {
+                      setError(""); // Clear error when date is selected
+                    }
+                  }}
+                  className={`w-full pl-10 p-3 bg-gray-700/50 border rounded-lg 
+                           text-gray-100 focus:ring-2 focus:ring-blue-500 
+                           focus:border-transparent transition-all duration-200 ${
+                             error && error.includes("date") 
+                               ? "border-red-500" 
+                               : "border-gray-600"
+                           }`}
                 />
               </div>
             </div>
 
             <div className="md:col-span-2 space-y-2">
-              <label className="block text-sm text-gray-400">Description*</label>
+              <label className="block text-sm text-gray-400">
+                Description* <span className="text-xs text-gray-500">(min 10 chars)</span>
+              </label>
               <textarea
-                placeholder="Milestone Description"
+                placeholder="Describe the milestone objectives and deliverables..."
                 value={newMilestone.description}
-                onChange={(e) =>
-                  setNewMilestone({ ...newMilestone, description: e.target.value })
-                }
+                onChange={(e) => {
+                  setNewMilestone({ ...newMilestone, description: e.target.value });
+                  if (error && e.target.value.trim().length >= 10) {
+                    setError(""); // Clear error when valid input is entered
+                  }
+                }}
                 rows="3"
-                className="w-full p-2 bg-gray-700/50 border border-gray-600 
-                         text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500"
+                maxLength={500}
+                className={`w-full p-3 bg-gray-700/50 border rounded-lg 
+                         text-gray-100 focus:ring-2 focus:ring-blue-500 
+                         focus:border-transparent transition-all duration-200 resize-none ${
+                           error && error.includes("description") 
+                             ? "border-red-500" 
+                             : "border-gray-600"
+                         }`}
               />
+              <div className="text-xs text-gray-500 text-right">
+                {newMilestone.description.length}/500
+              </div>
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 mt-4">
+          <div className="flex justify-end gap-3 mt-6">
             <button
               onClick={() => {
                 setShowAddMilestone(false);
                 setNewMilestone({ title: "", description: "", dueDate: "" });
+                setError("");
               }}
               className="px-4 py-2 text-gray-400 hover:text-white transition-colors duration-200"
+              disabled={loading}
             >
               Cancel
             </button>
             <button
               onClick={handleAddMilestone}
-              disabled={loading}
+              disabled={loading || !newMilestone.title.trim() || !newMilestone.description.trim() || !newMilestone.dueDate}
               className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 
-                       disabled:bg-gray-600 text-white px-6 py-2 rounded-lg"
+                       disabled:bg-gray-600 disabled:cursor-not-allowed text-white 
+                       px-6 py-2 rounded-lg transition-all duration-200"
             >
               {loading ? (
-                <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    fill="none"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  />
-                </svg>
+                <>
+                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                  Creating...
+                </>
               ) : (
-                <PlusIcon className="h-5 w-5" />
+                <>
+                  <PlusIcon className="h-5 w-5" />
+                  Create Milestone
+                </>
               )}
-              Create Milestone
             </button>
           </div>
         </div>

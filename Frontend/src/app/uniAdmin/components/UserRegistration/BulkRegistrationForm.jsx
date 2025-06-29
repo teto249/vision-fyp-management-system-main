@@ -1,3 +1,5 @@
+import { Upload, FileText, Users, GraduationCap, UserCheck, AlertCircle } from "lucide-react";
+
 export default function BulkRegistrationForm({
   role,
   handleRoleChange,
@@ -6,111 +8,156 @@ export default function BulkRegistrationForm({
   uploadStatus,
 }) {
   return (
-    <div className="space-y-6">
-      <div className="border-l-4 border-teal-400 pl-4 bg-gray-700 rounded-tr-3xl rounded-br-3xl py-3">
-        <h3 className="text-xl font-semibold text-gray-100">Bulk User Registration</h3>
-        <p className="text-sm text-gray-400 mt-1">
-          Upload an Excel or CSV file with user data. The file should include columns for:
-          Full Name, University Email, Phone Number, ID Number, Address, Department
-          {role === "Student" ? ", Level (PSM-1 or PSM-2)" : ""}
-          {role === "Supervisor" ? ", Contact Email, Office Address" : ""}.
-        </p>
+    <div className="space-y-8">
+      {/* Instructions Section */}
+      <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6">
+        <div className="flex items-center space-x-3 mb-6">
+          <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+            <FileText className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold text-white">Bulk User Registration</h3>
+            <p className="text-sm text-slate-400">Upload an Excel or CSV file with user data</p>
+          </div>
+        </div>
+
+        <div className="bg-blue-900/20 border border-blue-500/30 rounded-xl p-4">
+          <div className="flex items-start space-x-3">
+            <AlertCircle className="w-5 h-5 text-blue-400 mt-0.5" />
+            <div>
+              <h4 className="text-blue-300 font-medium mb-2">Required Columns:</h4>
+              <p className="text-blue-200 text-sm leading-relaxed">
+                Full Name, University Email, Phone Number, ID Number, Address, Department
+                {role === "Student" && ", Level (PSM-1 or PSM-2)"}
+                {role === "Supervisor" && ", Contact Email, Office Address"}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-300">Select Role for all users</label>
-          <div className="flex gap-4">
-            <button
-              type="button"
-              className={`px-4 py-2 rounded-full transition-colors ${
-                role === "Student"
-                  ? "bg-teal-400 text-gray-900 font-semibold"
-                  : "bg-gray-700 text-gray-300"
-              }`}
-              onClick={() => handleRoleChange("Student")}
-            >
-              Student
-            </button>
-            <button
-              type="button"
-              className={`px-4 py-2 rounded-full transition-colors ${
-                role === "Supervisor"
-                  ? "bg-teal-400 text-gray-900 font-semibold"
-                  : "bg-gray-700 text-gray-300"
-              }`}
-              onClick={() => handleRoleChange("Supervisor")}
-            >
-              Supervisor
-            </button>
+      {/* Role Selection */}
+      <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-3">Select Role for All Users</label>
+            <div className="flex justify-center">
+              <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-2 inline-flex">
+                <button
+                  type="button"
+                  className={`group flex items-center space-x-2 px-6 py-3 rounded-xl transition-all duration-300 ${
+                    role === "Student"
+                      ? "bg-gradient-to-r from-teal-600 to-blue-600 text-white shadow-lg shadow-teal-500/25"
+                      : "text-slate-300 hover:text-white hover:bg-slate-700/50"
+                  }`}
+                  onClick={() => handleRoleChange("Student")}
+                >
+                  <GraduationCap className="w-5 h-5" />
+                  <span className="font-medium">Student</span>
+                </button>
+                <button
+                  type="button"
+                  className={`group flex items-center space-x-2 px-6 py-3 rounded-xl transition-all duration-300 ${
+                    role === "Supervisor"
+                      ? "bg-gradient-to-r from-teal-600 to-blue-600 text-white shadow-lg shadow-teal-500/25"
+                      : "text-slate-300 hover:text-white hover:bg-slate-700/50"
+                  }`}
+                  onClick={() => handleRoleChange("Supervisor")}
+                >
+                  <UserCheck className="w-5 h-5" />
+                  <span className="font-medium">Supervisor</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
+      </div>
 
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-300">Upload File</label>
-          <div className="flex items-center justify-center w-full">
-            <label className="flex flex-col items-center px-4 py-6 bg-gray-700 text-teal-400 rounded-lg border-2 border-dashed border-gray-600 cursor-pointer hover:border-teal-400 transition-colors w-full">
-              <svg className="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-              </svg>
-              <span className="text-sm">Click to upload file (Excel/CSV)</span>
-              <input 
-                type="file" 
-                accept=".xlsx,.xls,.csv" 
-                onChange={handleFileUpload} 
-                className="hidden" 
-              />
-            </label>
+      {/* File Upload */}
+      <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6">
+        <div className="space-y-4">
+          <label className="block text-sm font-medium text-slate-300">Upload File</label>
+          <div className="relative">
+            <input
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              onChange={handleFileUpload}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+            />
+            <div className="flex flex-col items-center justify-center px-6 py-12 border-2 border-dashed border-slate-600/50 rounded-xl bg-slate-800/30 hover:border-teal-500/50 hover:bg-slate-700/30 transition-all duration-300 group">
+              <div className="w-16 h-16 bg-gradient-to-r from-teal-500 to-blue-500 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <Upload className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2">Upload Your File</h3>
+              <p className="text-slate-400 text-center max-w-md">
+                Drag and drop your Excel or CSV file here, or click to browse
+              </p>
+              <p className="text-xs text-slate-500 mt-2">
+                Supported formats: .xlsx, .xls, .csv
+              </p>
+            </div>
           </div>
+
+          {uploadStatus && (
+            <div className={`p-4 rounded-xl border ${
+              uploadStatus.includes("Success") || uploadStatus.includes("Loaded")
+                ? "bg-emerald-900/20 border-emerald-500/30 text-emerald-300"
+                : "bg-blue-900/20 border-blue-500/30 text-blue-300"
+            }`}>
+              <p className="font-medium">{uploadStatus}</p>
+            </div>
+          )}
         </div>
+      </div>
 
-        {uploadStatus && (
-          <div
-            className={`p-3 rounded ${
-              uploadStatus.includes("Success")
-                ? "bg-green-800 text-green-100"
-                : "bg-blue-800 text-blue-100"
-            }`}
-          >
-            {uploadStatus}
+      {/* Preview Table */}
+      {bulkUploadData.length > 0 && (
+        <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6">
+          <div className="flex items-center space-x-3 mb-6">
+            <div className="w-8 h-8 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg flex items-center justify-center">
+              <Users className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h4 className="text-lg font-semibold text-white">Preview ({bulkUploadData.length} users)</h4>
+              <p className="text-sm text-slate-400">Review the data before registration</p>
+            </div>
           </div>
-        )}
 
-        {bulkUploadData.length > 0 && (
-          <div className="space-y-4">
-            <h4 className="text-lg font-medium text-gray-300">Users to be registered ({bulkUploadData.length} total):</h4>
-            <div className="max-h-60 overflow-y-auto">
-              <table className="w-full bg-gray-700 rounded-lg overflow-hidden">
-                <thead className="bg-gray-600">
+          <div className="overflow-hidden rounded-xl border border-slate-700/50">
+            <div className="overflow-x-auto max-h-80">
+              <table className="w-full">
+                <thead className="bg-slate-800/50">
                   <tr>
-                    <th className="p-3 text-left text-sm font-medium text-gray-300">Name</th>
-                    <th className="p-3 text-left text-sm font-medium text-gray-300">Email</th>
-                    <th className="p-3 text-left text-sm font-medium text-gray-300">Phone</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">Name</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">Email</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">Phone</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">Department</th>
                     {role === "Student" && (
-                      <th className="p-3 text-left text-sm font-medium text-gray-300">Level</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">Level</th>
                     )}
                     {role === "Supervisor" && (
-                      <th className="p-3 text-left text-sm font-medium text-gray-300">Contact Email</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">Contact Email</th>
                     )}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-600">
+                <tbody className="divide-y divide-slate-700/50">
                   {bulkUploadData.slice(0, 10).map((user, index) => (
-                    <tr key={index} className="hover:bg-gray-600">
-                      <td className="p-3 text-sm text-gray-300">{user.fullName}</td>
-                      <td className="p-3 text-sm text-gray-300">{user.universityEmail}</td>
-                      <td className="p-3 text-sm text-gray-300">{user.phoneNumber}</td>
+                    <tr key={index} className="hover:bg-slate-700/30 transition-colors">
+                      <td className="px-4 py-3 text-sm text-slate-300">{user.fullName}</td>
+                      <td className="px-4 py-3 text-sm text-slate-300">{user.universityEmail}</td>
+                      <td className="px-4 py-3 text-sm text-slate-300">{user.phoneNumber}</td>
+                      <td className="px-4 py-3 text-sm text-slate-300">{user.department}</td>
                       {role === "Student" && (
-                        <td className="p-3 text-sm text-gray-300">{user.level}</td>
+                        <td className="px-4 py-3 text-sm text-slate-300">{user.level}</td>
                       )}
                       {role === "Supervisor" && (
-                        <td className="p-3 text-sm text-gray-300">{user.contactEmail}</td>
+                        <td className="px-4 py-3 text-sm text-slate-300">{user.contactEmail}</td>
                       )}
                     </tr>
                   ))}
                   {bulkUploadData.length > 10 && (
                     <tr>
-                      <td colSpan={role === "Student" || role === "Supervisor" ? 4 : 3} className="p-3 text-center text-sm text-gray-400">
+                      <td colSpan={role === "Student" || role === "Supervisor" ? 5 : 4} className="px-4 py-3 text-center text-sm text-slate-400">
                         + {bulkUploadData.length - 10} more users
                       </td>
                     </tr>
@@ -119,8 +166,8 @@ export default function BulkRegistrationForm({
               </table>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

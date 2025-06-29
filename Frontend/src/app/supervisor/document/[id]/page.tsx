@@ -16,7 +16,7 @@ import {
   getDocumentById,
   deleteDocument,
 } from "../../../../api/SupervisorApi/Documnets";
-import { logger } from "../../../../utils/logger";
+
 
 const formatDate = (dateString: string): string => {
   try {
@@ -32,7 +32,7 @@ const formatDate = (dateString: string): string => {
       minute: "2-digit",
     });
   } catch (error) {
-    logger.error("Date formatting error:", error);
+    
     return "Date not available";
   }
 };
@@ -59,13 +59,13 @@ export default function DocumentViewPage({
           return;
         }
 
-        logger.info("Fetching document:", unwrappedParams.id);
+      
         const document = await getDocumentById(unwrappedParams.id, token);
-        logger.info("Document fetched successfully");
+       
 
         setDoc(document);
       } catch (err) {
-        logger.error("Failed to fetch document:", err);
+    
         setError(
           err instanceof Error ? err.message : "Failed to load document"
         );
@@ -89,7 +89,7 @@ export default function DocumentViewPage({
       await deleteDocument(unwrappedParams.id, token);
       router.push("/supervisor/document");
     } catch (err) {
-      logger.error("Failed to delete document:", err);
+    
       setError(
         err instanceof Error ? err.message : "Failed to delete document"
       );
@@ -116,30 +116,112 @@ export default function DocumentViewPage({
   };  const renderDocumentInfo = () => {
     if (!doc?.id) return null;
 
+    const fileSize = doc.fileSize ? `${(doc.fileSize / 1024 / 1024).toFixed(2)} MB` : 'Unknown size';
+    const fileExtension = doc.fileType.toUpperCase().replace('.', '');
+
     return (
-      <div className="mt-6 space-y-4">
-        {/* Document Info Card */}
-        <div className="bg-gray-700 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Document Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div className="flex items-center gap-2 text-gray-300">
-              <FileText size={16} />
-              <span>Type: {doc.fileType.toUpperCase().replace('.', '')}</span>
+      <div className="mt-8 space-y-6">
+        {/* Enhanced Document Preview Card */}
+        <div className="bg-gradient-to-br from-gray-700 to-gray-800 rounded-xl p-6 border border-gray-600 shadow-lg">
+          <div className="flex items-start justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <div className="bg-teal-600 rounded-xl p-3">
+                <FileText size={24} className="text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-white mb-1">Document Preview</h3>
+                <p className="text-gray-400 text-sm">View document details and metadata</p>
+              </div>
             </div>
-            <div className="flex items-center gap-2 text-gray-300">
-              <Calendar size={16} />
-              <span>Uploaded: {doc.createdAt ? formatDate(doc.createdAt) : 'Unknown'}</span>
-            </div>
-            <div className="flex items-center gap-2 text-gray-300">
-              <User size={16} />
-              <span>Document ID: {doc.id}</span>
+            <div className="bg-teal-100 text-teal-800 px-3 py-1 rounded-full text-xs font-medium">
+              {fileExtension}
             </div>
           </div>
+
+          {/* Document Metadata Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="bg-gray-600 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Calendar size={16} className="text-teal-400" />
+                <span className="text-xs font-medium text-gray-300 uppercase tracking-wide">Upload Date</span>
+              </div>
+              <p className="text-white font-medium">
+                {doc.createdAt ? formatDate(doc.createdAt) : 'Unknown'}
+              </p>
+            </div>
+            
+            <div className="bg-gray-600 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <FileText size={16} className="text-teal-400" />
+                <span className="text-xs font-medium text-gray-300 uppercase tracking-wide">File Type</span>
+              </div>
+              <p className="text-white font-medium">{fileExtension} Document</p>
+            </div>
+
+            <div className="bg-gray-600 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <User size={16} className="text-teal-400" />
+                <span className="text-xs font-medium text-gray-300 uppercase tracking-wide">Document ID</span>
+              </div>
+              <p className="text-white font-medium text-sm font-mono">#{doc.id}</p>
+            </div>
+          </div>
+
+          {/* Document Actions */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-4">
+            <button
+              onClick={handleDownload}
+              className="flex-1 bg-teal-600 hover:bg-teal-700 text-white px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-colors font-medium"
+            >
+              <Download size={18} />
+              Download Document
+            </button>
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-colors font-medium"
+            >
+              <Trash2 size={18} />
+              Delete Document
+            </button>
+          </div>
           
-          <div className="mt-4 p-3 bg-gray-600 rounded-lg">
-            <p className="text-gray-300 text-sm">
-              <strong>Note:</strong> To view this document, please download it and open with your preferred PDF viewer.
-            </p>
+          {/* Information Banner */}
+          <div className="bg-blue-900/30 border border-blue-800/50 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <div className="bg-blue-600 rounded-full p-1">
+                <AlertTriangle size={14} className="text-white" />
+              </div>
+              <div>
+                <h4 className="text-blue-300 font-medium text-sm mb-1">Viewing Instructions</h4>
+                <p className="text-blue-200 text-sm leading-relaxed">
+                  To view this document, please download it and open with your preferred PDF viewer. 
+                  The document will open in a new tab for easy access.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Stats Card */}
+        <div className="bg-gray-700 rounded-xl p-6 border border-gray-600">
+          <h4 className="text-lg font-semibold text-white mb-4">Document Statistics</h4>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-teal-400">1</div>
+              <div className="text-xs text-gray-400 uppercase tracking-wide">Files</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-teal-400">{fileExtension}</div>
+              <div className="text-xs text-gray-400 uppercase tracking-wide">Format</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-teal-400">{fileSize}</div>
+              <div className="text-xs text-gray-400 uppercase tracking-wide">Size</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-400">Active</div>
+              <div className="text-xs text-gray-400 uppercase tracking-wide">Status</div>
+            </div>
           </div>
         </div>
       </div>
@@ -148,7 +230,7 @@ export default function DocumentViewPage({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+      <div className=" flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-teal-500" />
       </div>
     );
@@ -156,7 +238,7 @@ export default function DocumentViewPage({
 
   if (error || !doc) {
     return (
-      <div className="min-h-screen bg-gray-900 py-12 px-4">
+      <div className=" py-12 px-4">
         <div className="max-w-4xl mx-auto bg-gray-800 rounded-xl p-8">
           <h1 className="text-2xl font-bold text-red-500">Error</h1>
           <p className="text-gray-400 mt-2">{error || "Document not found"}</p>
@@ -172,7 +254,7 @@ export default function DocumentViewPage({
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+    <div className=" py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto bg-gray-800 rounded-xl p-8">
         <div className="flex justify-between items-start">
           <div>

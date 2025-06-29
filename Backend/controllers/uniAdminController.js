@@ -337,7 +337,7 @@ exports.getUsersByUniversityId = async (req, res) => {
     const students = await Student.findAll({
       where: { universityId },
       attributes: [
-        'userId', 'fullName', 'universityEmail', 'department', 'level'
+        'userId', 'fullName', 'universityEmail', 'department', 'level', 'supervisorId'
       ]
     });
 
@@ -351,6 +351,281 @@ exports.getUsersByUniversityId = async (req, res) => {
     res.status(500).json({ 
       success: false,
       message: 'Failed to fetch users',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Delete user (Student or Supervisor)
+exports.deleteUser = async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ 
+        success: false,
+        message: 'Authentication required' 
+      });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Get the university ID from the authenticated UniAdmin
+    const uniAdmin = await UniAdmin.findOne({
+      where: { username: decoded.username, role: 'UniAdmin' }
+    });
+
+    if (!uniAdmin) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'UniAdmin not found' 
+      });
+    }
+
+    const { userId, userType } = req.params;
+
+    if (!userId || !userType) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'User ID and user type are required' 
+      });
+    }
+
+    if (!['student', 'supervisor'].includes(userType.toLowerCase())) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Invalid user type. Must be either "student" or "supervisor"' 
+      });
+    }
+
+    let deletedUser = null;
+    const normalizedUserType = userType.toLowerCase();
+
+    if (normalizedUserType === 'student') {
+      // Find student first
+      deletedUser = await Student.findOne({
+        where: { 
+          userId: userId,
+          universityId: uniAdmin.universityId 
+        }
+      });
+      
+      if (!deletedUser) {
+        return res.status(404).json({ 
+          success: false,
+          message: 'Student not found or not belonging to your university' 
+        });
+      }
+
+      // Delete the student
+      await Student.destroy({
+        where: { 
+          userId: userId,
+          universityId: uniAdmin.universityId 
+        }
+      });
+
+    } else if (normalizedUserType === 'supervisor') {
+      // Find supervisor first
+      deletedUser = await Supervisor.findOne({
+        where: { 
+          userId: userId,
+          universityId: uniAdmin.universityId 
+        }
+      });
+      
+      if (!deletedUser) {
+        return res.status(404).json({ 
+          success: false,
+          message: 'Supervisor not found or not belonging to your university' 
+        });
+      }
+
+      // Update any students assigned to this supervisor
+      await Student.update(
+        { supervisorId: null },
+        { 
+          where: { 
+            supervisorId: userId,
+            universityId: uniAdmin.universityId 
+          }
+        }
+      );
+
+      // Delete the supervisor
+      await Supervisor.destroy({
+        where: { 
+          userId: userId,
+          universityId: uniAdmin.universityId 
+        }
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `${normalizedUserType.charAt(0).toUpperCase() + normalizedUserType.slice(1)} deleted successfully`,
+      deletedUser: {
+        userId: deletedUser.userId,
+        fullName: deletedUser.fullName,
+        universityEmail: deletedUser.universityEmail
+      }
+    });
+
+  } catch (error) {
+    console.error('Delete user error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to delete user',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Bulk delete users
+exports.bulkDeleteUsers = async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Get the university ID from the authenticated UniAdmin
+    const uniAdmin = await UniAdmin.findOne({
+      where: { username: decoded.username, role: 'UniAdmin' }
+    });
+
+    if (!uniAdmin) {
+      return res.status(404).json({ message: 'UniAdmin not found' });
+    }
+
+    const { users } = req.body; // Array of { userId, userType }
+
+    if (!Array.isArray(users) || users.length === 0) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Users array is required and cannot be empty' 
+      });
+    }
+
+    const results = [];
+
+    for (const user of users) {
+      try {
+        const { userId, userType } = user;
+
+        if (!userId || !userType) {
+          results.push({
+            success: false,
+            userId: userId || 'unknown',
+            error: 'User ID and user type are required'
+          });
+          continue;
+        }
+
+        if (!['student', 'supervisor'].includes(userType.toLowerCase())) {
+          results.push({
+            success: false,
+            userId: userId,
+            error: 'Invalid user type'
+          });
+          continue;
+        }
+
+        let deletedUser = null;
+
+        if (userType.toLowerCase() === 'student') {
+          deletedUser = await Student.findOne({
+            where: { 
+              userId: userId,
+              universityId: uniAdmin.universityId 
+            }
+          });
+          
+          if (!deletedUser) {
+            results.push({
+              success: false,
+              userId: userId,
+              error: 'Student not found'
+            });
+            continue;
+          }
+
+          await Student.destroy({
+            where: { 
+              userId: userId,
+              universityId: uniAdmin.universityId 
+            }
+          });
+
+        } else if (userType.toLowerCase() === 'supervisor') {
+          deletedUser = await Supervisor.findOne({
+            where: { 
+              userId: userId,
+              universityId: uniAdmin.universityId 
+            }
+          });
+          
+          if (!deletedUser) {
+            results.push({
+              success: false,
+              userId: userId,
+              error: 'Supervisor not found'
+            });
+            continue;
+          }
+
+          // Update students to remove supervisor assignment
+          await Student.update(
+            { supervisorId: null },
+            { 
+              where: { 
+                supervisorId: userId,
+                universityId: uniAdmin.universityId 
+              }
+            }
+          );
+
+          await Supervisor.destroy({
+            where: { 
+              userId: userId,
+              universityId: uniAdmin.universityId 
+            }
+          });
+        }
+
+        results.push({
+          success: true,
+          userId: userId,
+          userType: userType,
+          fullName: deletedUser.fullName,
+          message: `${userType.charAt(0).toUpperCase() + userType.slice(1)} deleted successfully`
+        });
+
+      } catch (error) {
+        results.push({
+          success: false,
+          userId: user.userId || 'unknown',
+          error: process.env.NODE_ENV === 'development' ? error.message : 'Deletion failed'
+        });
+      }
+    }
+
+    const successCount = results.filter(r => r.success).length;
+    const failCount = results.filter(r => !r.success).length;
+
+    res.status(200).json({
+      success: true,
+      message: `Bulk deletion completed. ${successCount} users deleted, ${failCount} failed`,
+      results
+    });
+
+  } catch (error) {
+    res.status(500).json({ 
+      success: false,
+      message: 'Bulk deletion failed',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }

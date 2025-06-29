@@ -20,20 +20,34 @@ exports.getStudentAccount = async (req, res) => {
 
     const student = await Student.findOne({
       where: { userId: userid, role: "Student" }, // Changed from userid to userId
-      include: {
-        model: University,
-        as: "University",
-        attributes: [
-          "id",
-          "shortName",
-          "fullName",
-          "address",
-          "email",
-          "phone",
-          "logoPath",
-          "status",
-        ],
-      },
+      include: [
+        {
+          model: University,
+          as: "University",
+          attributes: [
+            "id",
+            "shortName",
+            "fullName",
+            "address",
+            "email",
+            "phone",
+            "logoPath",
+            "status",
+          ],
+        },
+        {
+          model: Supervisor,
+          attributes: [
+            "userId",
+            "fullName",
+            "email",
+            "phoneNumber",
+            "department",
+            "officeAddress"
+          ],
+          required: false // Include supervisor if exists, but don't exclude students without supervisors
+        }
+      ],
     });
 
     if (!student) {
@@ -52,6 +66,14 @@ exports.getStudentAccount = async (req, res) => {
       level: student.level,
       role: student.role,
       profilePhoto: null, // Add this if you want to support it later
+      supervisor: student.Supervisor ? {
+        userId: student.Supervisor.userId,
+        fullName: student.Supervisor.fullName,
+        email: student.Supervisor.email,
+        phoneNumber: student.Supervisor.phoneNumber,
+        department: student.Supervisor.department,
+        officeAddress: student.Supervisor.officeAddress,
+      } : null,
       university: {
         id: student.University?.id || "",
         shortName: student.University?.shortName || "",
@@ -210,6 +232,8 @@ exports.getSupervisorsByUniversity = async (req, res) => {
 // Create Project
 exports.createProject = async (req, res) => {
   try {
+    console.log("Received project data:", req.body); // Add logging
+    
     const {
       projectTitle,
       projectType,
@@ -233,6 +257,7 @@ exports.createProject = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "All fields are required",
+        received: req.body
       });
     }
 
@@ -240,6 +265,7 @@ exports.createProject = async (req, res) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time for accurate comparison
 
     if (start < today) {
       return res.status(400).json({
@@ -255,11 +281,19 @@ exports.createProject = async (req, res) => {
       });
     }
 
-    // Check if student exists and get university ID
-    const student = await Student.findOne({
+    // Check if student exists - try both userId and userid fields
+    let student = await Student.findOne({
       where: { userId: studentId, role: "Student" },
       attributes: ["userId", "universityId", "role", "supervisorId"],
     });
+
+    // If not found with userId, try with userid field
+    if (!student) {
+      student = await Student.findOne({
+        where: { userid: studentId, role: "Student" },
+        attributes: ["userid as userId", "universityId", "role", "supervisorId"],
+      });
+    }
 
     if (!student) {
       return res.status(404).json({
@@ -267,6 +301,8 @@ exports.createProject = async (req, res) => {
         message: "Student not found",
       });
     }
+
+    console.log("Found student:", student); // Add logging
 
     // Check if supervisor exists and belongs to student's university
     const supervisor = await Supervisor.findOne({
@@ -280,9 +316,11 @@ exports.createProject = async (req, res) => {
     if (!supervisor) {
       return res.status(404).json({
         success: false,
-        message: "Invalid supervisor selected",
+        message: "Invalid supervisor selected for your university",
       });
     }
+
+    console.log("Found supervisor:", supervisor); // Add logging
 
     // Start a transaction
     const t = await sequelize.transaction();
@@ -291,7 +329,6 @@ exports.createProject = async (req, res) => {
       // Create project with university ID from student record
       const project = await Project.create(
         {
-          // Remove explicit id field - it will be auto-generated
           projectTitle,
           projectType,
           projectDescription,
@@ -306,11 +343,16 @@ exports.createProject = async (req, res) => {
         { transaction: t }
       );
 
-      // Update student's supervisorId
+      console.log("Created project:", project); // Add logging
+
+      // Update student's supervisorId - use the correct field name
+      const updateField = student.userid ? { supervisorId: supervisorId } : { supervisorId: supervisorId };
+      const whereClause = student.userid ? { userid: studentId } : { userId: studentId };
+      
       await Student.update(
-        { supervisorId: supervisorId },
+        updateField,
         {
-          where: { userId: studentId },
+          where: whereClause,
           transaction: t,
         }
       );
@@ -558,7 +600,7 @@ exports.getProjectById = async (req, res) => {
 exports.addMilestone = async (req, res) => {
   try {
     const { projectId } = req.params;
-    const { title, description, startDate, endDate } = req.body;
+    const { title, description, startDate, endDate, dueDate } = req.body;
 
     // Validate projectId
     if (!projectId) {
@@ -577,11 +619,15 @@ exports.addMilestone = async (req, res) => {
       });
     }
 
+    // Use dueDate if provided, otherwise fallback to endDate
+    const finalEndDate = dueDate || endDate;
+    const finalStartDate = startDate || new Date().toISOString().split('T')[0];
+
     // Validate input
-    if (!title || !description || !startDate || !endDate) {
+    if (!title || !description || !finalEndDate) {
       return res.status(400).json({
         success: false,
-        message: "All fields are required"
+        message: "Title, description, and due date are required"
       });
     }
 
@@ -589,8 +635,8 @@ exports.addMilestone = async (req, res) => {
       projectId,
       title: title.trim(),
       description: description.trim(),
-      startDate: new Date(startDate),
-      endDate: new Date(endDate),
+      startDate: new Date(finalStartDate),
+      endDate: new Date(finalEndDate),
       status: 'Pending'
     });
 
@@ -638,22 +684,26 @@ exports.addMilestone = async (req, res) => {
 exports.addTask = async (req, res) => {
   try {
     const { milestoneId } = req.params;
-    const { title, description, startDate, endDate } = req.body;
+    const { title, description, startDate, endDate, dueDate } = req.body;
 
-    // Validate input
-    if (!title || !description || !startDate || !endDate) {
+    // Use dueDate if provided, otherwise fallback to endDate
+    const finalEndDate = dueDate || endDate;
+    const finalStartDate = startDate || new Date().toISOString().split('T')[0];
+
+    // Validate input - only title and dueDate/endDate are required
+    if (!title || !finalEndDate) {
       return res.status(400).json({
         success: false,
-        message: "All fields are required"
+        message: "Title and due date are required"
       });
     }
 
     const task = await Task.create({
       milestoneId,
       title,
-      description,
-      startDate,
-      endDate,
+      description: description || '',
+      startDate: finalStartDate,
+      endDate: finalEndDate,
       status: 'Pending'
     });
 
@@ -1234,7 +1284,17 @@ exports.updateTaskStatus = async (req, res) => {
     const { taskId } = req.params;
     const { status } = req.body;
 
+    // Validate status
+    const validStatuses = ['Pending', 'In Progress', 'Completed'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status value"
+      });
+    }
+
     const task = await Task.findByPk(taskId);
+
     if (!task) {
       return res.status(404).json({
         success: false,
@@ -1244,28 +1304,147 @@ exports.updateTaskStatus = async (req, res) => {
 
     await task.update({ status });
 
-    // Recalculate project progress
-    const milestone = await Milestone.findByPk(task.milestoneId, {
-      include: [{
-        model: Task,
-        attributes: ['status']
-      }]
-    });
-
-    if (milestone?.Project) {
-      const progress = calculateProjectProgress(milestone.Project.milestones);
-      await milestone.Project.update({ progress });
-    }
-
     res.status(200).json({
       success: true,
       task
     });
+
   } catch (error) {
     console.error("Error updating task status:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to update task status"
+      message: error.message
+    });
+  }
+};
+
+// Delete milestone
+exports.deleteMilestone = async (req, res) => {
+  try {
+    const { projectId, milestoneId } = req.params;
+
+    // Check if milestone exists and belongs to the project
+    const milestone = await Milestone.findOne({
+      where: { id: milestoneId, projectId }
+    });
+
+    if (!milestone) {
+      return res.status(404).json({
+        success: false,
+        message: "Milestone not found"
+      });
+    }
+
+    // Start transaction
+    const t = await sequelize.transaction();
+
+    try {
+      // Delete all feedback associated with tasks in this milestone
+      const taskIds = await Task.findAll({
+        where: { milestoneId },
+        attributes: ['id'],
+        raw: true
+      }).then(tasks => tasks.map(t => t.id));
+
+      if (taskIds.length > 0) {
+        await Feedback.destroy({
+          where: {
+            taskId: {
+              [Op.in]: taskIds
+            }
+          },
+          transaction: t
+        });
+      }
+
+      // Delete all tasks in this milestone
+      await Task.destroy({
+        where: { milestoneId },
+        transaction: t
+      });
+
+      // Delete all meetings in this milestone
+      await Meeting.destroy({
+        where: { milestoneId },
+        transaction: t
+      });
+
+      // Delete the milestone
+      await milestone.destroy({ transaction: t });
+
+      await t.commit();
+
+      res.status(200).json({
+        success: true,
+        message: "Milestone and all associated data deleted successfully"
+      });
+    } catch (error) {
+      await t.rollback();
+      throw error;
+    }
+  } catch (error) {
+    console.error("Error deleting milestone:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete milestone",
+      error: error.message
+    });
+  }
+};
+
+// Update milestone
+exports.updateMilestone = async (req, res) => {
+  try {
+    const { projectId, milestoneId } = req.params;
+    const { title, description, startDate, endDate, status } = req.body;
+
+    // Check if milestone exists and belongs to the project
+    const milestone = await Milestone.findOne({
+      where: { id: milestoneId, projectId }
+    });
+
+    if (!milestone) {
+      return res.status(404).json({
+        success: false,
+        message: "Milestone not found"
+      });
+    }
+
+    // Update milestone
+    await milestone.update({
+      title: title?.trim(),
+      description: description?.trim(),
+      startDate,
+      endDate,
+      status
+    });
+
+    // Fetch updated milestone with relations
+    const updatedMilestone = await Milestone.findByPk(milestoneId, {
+      include: [
+        {
+          model: Task,
+          as: 'tasks',
+          attributes: ['id', 'title', 'description', 'status', 'startDate', 'endDate']
+        },
+        {
+          model: Meeting,
+          as: 'meetings',
+          attributes: ['id', 'title', 'date', 'time', 'link', 'type']
+        }
+      ]
+    });
+
+    res.status(200).json({
+      success: true,
+      milestone: updatedMilestone
+    });
+  } catch (error) {
+    console.error("Error updating milestone:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update milestone",
+      error: error.message
     });
   }
 };

@@ -1,4 +1,6 @@
+"use client";
 import Image from "next/image";
+import { User, Mail, Phone, Building, Upload } from "lucide-react";
 import SubmitButtons from "./SubmitButtons";
 import TextDivider from "./TextDivider";
 import LabelInput from "./LabelInput";
@@ -15,12 +17,12 @@ interface University {
 }
 
 interface FormData {
-  username: string; // Changed from id
+  username: string;
   fullName: string;
   primaryEmail: string;
   phoneNumber: string;
-  profilePhoto: string | null;
   role: string;
+  profilePhoto: string | null;
   university: University;
 }
 
@@ -29,11 +31,12 @@ interface ProfileProps {
   fileInputRef: React.RefObject<HTMLInputElement>;
   handlePhotoChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   triggerFileInput: () => void;
-  handleSubmit: (e: React.FormEvent) => Promise<void>;
+  handleSubmit: (e: React.FormEvent) => void;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   isEditMode: boolean;
   toggleEditMode: () => void;
   isSubmitting: boolean;
+  saveStatus?: "saving" | "success" | "error" | null;
 }
 
 export default function Profile({
@@ -46,188 +49,208 @@ export default function Profile({
   isEditMode,
   toggleEditMode,
   isSubmitting,
+  saveStatus,
 }: ProfileProps) {
   return (
-    <>
-      <div className="mt-4 flex justify-center">
-        <div className="relative">
-          {formData.profilePhoto ? (
-            <Image
-              src={formData.profilePhoto}
-              alt={`${formData.fullName}'s profile`}
-              width={128}
-              height={128}
-              className="rounded-full object-cover"
-              priority
-            />
-          ) : (
-            <div className="w-32 h-32 rounded-full bg-primary flex items-center justify-center">
-              <span className="text-3xl font-semibold text-white">
-                {getInitials(formData.fullName)}
-              </span>
+    <div className="relative p-8">
+      <form onSubmit={handleSubmit} className="space-y-8">
+        {/* Profile Photo Section */}
+        <div className="flex flex-col items-center space-y-6">
+          <div className="relative group">
+            <div className="absolute inset-0 bg-gradient-to-r from-teal-500 to-blue-500 rounded-full blur-xl opacity-30 group-hover:opacity-50 transition-opacity" />
+            <div className="relative w-32 h-32 bg-gradient-to-r from-slate-700 to-slate-600 rounded-full 
+                           flex items-center justify-center overflow-hidden ring-4 ring-slate-700/50 
+                           group-hover:ring-teal-500/50 transition-all duration-300">
+              {formData.profilePhoto ? (
+                <img
+                  src={formData.profilePhoto}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <User className="w-16 h-16 text-slate-400" />
+              )}
+
+              {isEditMode && (
+                <div
+                  className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 
+                               transition-opacity duration-300 flex items-center justify-center cursor-pointer"
+                  onClick={triggerFileInput}
+                >
+                  <Upload className="w-8 h-8 text-white" />
+                </div>
+              )}
             </div>
-          )}
-          {isEditMode && (
-            <>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handlePhotoChange}
-                accept="image/*"
-                className="hidden"
-                aria-label="Upload profile photo"
-              />
+
+            {isEditMode && (
               <button
                 type="button"
                 onClick={triggerFileInput}
-                className="absolute bottom-0 right-0 bg-gray-700 p-2 rounded-full hover:bg-gray-600 transition-colors"
-                aria-label="Change profile photo"
+                className="absolute -bottom-2 -right-2 w-10 h-10 bg-gradient-to-r from-teal-600 to-blue-600 
+                          rounded-full flex items-center justify-center shadow-lg hover:scale-110 
+                          transition-transform duration-200"
               >
-                <svg
-                  className="w-5 h-5 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
+                <Upload className="w-5 h-5 text-white" />
               </button>
-            </>
-          )}
+            )}
+          </div>
+
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-white mb-1">
+              {formData.fullName || "University Admin"}
+            </h2>
+            <p className="text-slate-400 mb-2">
+              {formData.role || "University Administrator"}
+            </p>
+            <p className="text-sm text-slate-500">@{formData.username}</p>
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handlePhotoChange}
+            className="hidden"
+          />
         </div>
-      </div>
 
-      <div className="p-6">
-        <form onSubmit={handleSubmit} className="grid gap-y-2">
-          {/* Admin Section */}
-          <TextDivider>Admin Details</TextDivider>
-          <LabelInput
-            id="username"
-            type="text"
-            value={formData.username}
-            disabled={true} // Username should never be editable
-            htmlFor="username"
-            placeholder="Username"
-            onChange={handleInputChange}
-          >
-            Username
-          </LabelInput>
-          <LabelInput
-            id="fullName"
-            type="text"
-            value={formData.fullName}
-            onChange={handleInputChange}
-            disabled={!isEditMode}
-            htmlFor="fullName"
-            placeholder="Enter your full name"
-            required
-          >
-            Full Name
-          </LabelInput>
-          <LabelInput
-            id="primaryEmail"
-            type="email"
-            value={formData.primaryEmail}
-            onChange={handleInputChange}
-            disabled={!isEditMode}
-            htmlFor="primaryEmail"
-            placeholder="Enter your email address"
-          >
-            Email
-          </LabelInput>
-          <LabelInput
-            id="phoneNumber"
-            type="tel"
-            value={formData.phoneNumber}
-            onChange={handleInputChange}
-            disabled={!isEditMode}
-            htmlFor="phoneNumber"
-            placeholder="Enter your phone number"
-          >
-            Phone Number
-          </LabelInput>
+        {/* Personal Information Section */}
+        <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6">
+          <TextDivider>
+            <span className="flex items-center gap-2">
+              <User className="w-5 h-5" />
+              Personal Information
+            </span>
+          </TextDivider>
 
-          {/* University Section */}
-          <TextDivider>University Details</TextDivider>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
             <LabelInput
-              id="uniShortName"
+              id="fullName"
+              label="Full Name"
               type="text"
-              value={formData.university.shortName}
+              value={formData.fullName}
               onChange={handleInputChange}
               disabled={!isEditMode}
-              htmlFor="uniShortName"
-              placeholder="Enter university short name"
-            >
-              Short Name
-            </LabelInput>
-            <LabelInput
-              id="uniFullName"
-              type="text"
-              value={formData.university.fullName}
-              onChange={handleInputChange}
-              disabled={!isEditMode}
-              htmlFor="uniFullName"
-              placeholder="Enter full university name"
-            >
-              Full University Name
-            </LabelInput>
-          </div>
-          <LabelInput
-            id="uniAddress"
-            type="text"
-            value={formData.university.address}
-            onChange={handleInputChange}
-            disabled={!isEditMode}
-            htmlFor="uniAddress"
-            placeholder="Enter university address"
-          >
-            Address
-          </LabelInput>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <LabelInput
-              id="uniEmail"
-              type="email"
-              value={formData.university.email}
-              onChange={handleInputChange}
-              disabled={!isEditMode}
-              htmlFor="uniEmail"
-              placeholder="Enter university email"
-            >
-              University Email
-            </LabelInput>
-            <LabelInput
-              id="uniPhone"
-              type="tel"
-              value={formData.university.phone}
-              onChange={handleInputChange}
-              disabled={!isEditMode}
-              htmlFor="uniPhone"
-              placeholder="Enter university phone number"
-            >
-              University Phone
-            </LabelInput>
-          </div>
-
-          {isEditMode && (
-            <SubmitButtons
-              toggleEditMode={toggleEditMode}
-              disabled={isSubmitting}
+              icon={<User className="w-5 h-5" />}
+              placeholder="Enter your full name"
             />
-          )}
-        </form>
-      </div>
-    </>
+
+            <LabelInput
+              id="username"
+              label="Username"
+              type="text"
+              value={formData.username}
+              onChange={handleInputChange}
+              disabled={true}
+              icon={<User className="w-5 h-5" />}
+              placeholder="Username"
+            />
+
+            <LabelInput
+              id="primaryEmail"
+              label="Primary Email"
+              type="email"
+              value={formData.primaryEmail}
+              onChange={handleInputChange}
+              disabled={!isEditMode}
+              icon={<Mail className="w-5 h-5" />}
+              placeholder="Enter your email address"
+            />
+
+            <LabelInput
+              id="phoneNumber"
+              label="Phone Number"
+              type="tel"
+              value={formData.phoneNumber}
+              onChange={handleInputChange}
+              disabled={!isEditMode}
+              icon={<Phone className="w-5 h-5" />}
+              placeholder="Enter your phone number"
+            />
+          </div>
+        </div>
+
+        {/* University Information Section */}
+        <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6">
+          <TextDivider>
+            <span className="flex items-center gap-2">
+              <Building className="w-5 h-5" />
+              University Information
+            </span>
+          </TextDivider>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+            <LabelInput
+              id="university.shortName"
+              label="University Short Name"
+              type="text"
+              value={formData.university?.shortName || ""}
+              onChange={handleInputChange}
+              disabled={!isEditMode}
+              icon={<Building className="w-5 h-5" />}
+              placeholder="e.g., MIT"
+            />
+
+            <LabelInput
+              id="university.fullName"
+              label="University Full Name"
+              type="text"
+              value={formData.university?.fullName || ""}
+              onChange={handleInputChange}
+              disabled={!isEditMode}
+              icon={<Building className="w-5 h-5" />}
+              placeholder="Full university name"
+            />
+
+            <LabelInput
+              id="university.email"
+              label="University Email"
+              type="email"
+              value={formData.university?.email || ""}
+              onChange={handleInputChange}
+              disabled={!isEditMode}
+              icon={<Mail className="w-5 h-5" />}
+              placeholder="University contact email"
+            />
+
+            <LabelInput
+              id="university.phone"
+              label="University Phone"
+              type="tel"
+              value={formData.university?.phone || ""}
+              onChange={handleInputChange}
+              disabled={!isEditMode}
+              icon={<Phone className="w-5 h-5" />}
+              placeholder="University contact number"
+            />
+
+            <div className="lg:col-span-2">
+              <LabelInput
+                id="university.address"
+                label="University Address"
+                type="text"
+                value={formData.university?.address || ""}
+                onChange={handleInputChange}
+                disabled={!isEditMode}
+                icon={<Building className="w-5 h-5" />}
+                placeholder="Full university address"
+              >
+                {/* No children content needed */}
+                {/* Provide empty children to satisfy the type */}
+              </LabelInput>
+            </div>
+          </div>
+        </div>
+
+        {/* Submit Buttons */}
+        {isEditMode && (
+          <SubmitButtons
+            isSubmitting={isSubmitting}
+            onCancel={toggleEditMode}
+            saveStatus={saveStatus}
+          />
+        )}
+      </form>
+    </div>
   );
 }

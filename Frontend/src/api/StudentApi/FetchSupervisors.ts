@@ -53,12 +53,23 @@ export const useSupervisors = async () => {
   const token = localStorage.getItem("authToken");
   const studentInfo = JSON.parse(localStorage.getItem("studentInfo") || "{}");
 
-  if (!token || !studentInfo?.universityId) {
+  if (!token) {
     throw new Error("Authentication required");
   }
 
+  // Try to get university ID from multiple possible sources
+  const universityId = studentInfo?.universityId || 
+                     studentInfo?.university?.id || 
+                     studentInfo?.university?.shortName;
+
+
+
+  if (!universityId) {
+    throw new Error("University information not found. Please re-login and try again.");
+  }
+
   return fetchSupervisorsForUniversity({
-    universityId: studentInfo.universityId,
+    universityId,
     token,
   });
 };

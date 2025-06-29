@@ -16,6 +16,7 @@ export interface Student {
   universityEmail: string;
   department: string;
   level: string;
+  supervisorId?: string;
   role?: "Student";
 }
 
@@ -43,9 +44,9 @@ function isUsersResponse(data: any): data is UsersResponse {
 async function fetchWithAuth(url: string, options: RequestInit = {}) {
   const authToken = localStorage.getItem("authToken");
 
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...options.headers,
+    ...(options.headers as Record<string, string>),
   };
 
   if (authToken) {
@@ -86,6 +87,65 @@ export async function fetchUsersByUniversity(universityId: string): Promise<User
     if (error instanceof ApiError) throw error;
     throw new ApiError(
       error instanceof Error ? error.message : "Failed to fetch users"
+    );
+  }
+}
+
+export async function deleteUser(userId: string, userType: 'student' | 'supervisor'): Promise<{ success: boolean; message: string }> {
+  try {
+    if (!userId || !userType) {
+      throw new ApiError("User ID and user type are required");
+    }
+
+    const url = `http://localhost:3000/api/uniAdmin/users/${encodeURIComponent(userType)}/${encodeURIComponent(userId)}`;
+    const data = await fetchWithAuth(url, {
+      method: 'DELETE'
+    });
+
+    return {
+      success: true,
+      message: data?.message || `${userType.charAt(0).toUpperCase() + userType.slice(1)} deleted successfully`
+    };
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(
+      error instanceof Error ? error.message : "Failed to delete user"
+    );
+  }
+}
+
+export async function bulkDeleteUsers(users: Array<{ userId: string; userType: 'student' | 'supervisor' }>): Promise<{
+  success: boolean;
+  message: string;
+  results: Array<{
+    success: boolean;
+    userId: string;
+    userType?: string;
+    fullName?: string;
+    message?: string;
+    error?: string;
+  }>;
+}> {
+  try {
+    if (!Array.isArray(users) || users.length === 0) {
+      throw new ApiError("Users array is required and cannot be empty");
+    }
+
+    const url = `http://localhost:3000/api/uniAdmin/users/bulk`;
+    const data = await fetchWithAuth(url, {
+      method: 'DELETE',
+      body: JSON.stringify({ users })
+    });
+
+    return {
+      success: data?.success || false,
+      message: data?.message || "Bulk deletion completed",
+      results: data?.results || []
+    };
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(
+      error instanceof Error ? error.message : "Failed to delete users"
     );
   }
 }

@@ -15,7 +15,7 @@ export default function Profile({
   isEditMode,
   toggleEditMode,
 }) {
-  console.log("Profile formData:", formData);
+
   const [studentInfo, setStudentInfo] = useState({});
 
   useEffect(() => {
@@ -210,6 +210,74 @@ export default function Profile({
           >
             University Address
           </LabelInput>
+
+          {/* Supervisor Section */}
+          <TextDivider>Supervisor Details</TextDivider>
+          {formData.supervisor ? (
+            <>
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <LabelInput
+                  id="supervisor.fullName"
+                  type="text"
+                  value={formData.supervisor.fullName}
+                  onChange={handleInputChange}
+                  disabled
+                  htmlFor="supervisor.fullName"
+                >
+                  Supervisor Name
+                </LabelInput>
+                <LabelInput
+                  id="supervisor.email"
+                  type="email"
+                  value={formData.supervisor.email}
+                  onChange={handleInputChange}
+                  disabled
+                  htmlFor="supervisor.email"
+                >
+                  Email
+                </LabelInput>
+              </div>
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <LabelInput
+                  id="supervisor.phoneNumber"
+                  type="tel"
+                  value={formData.supervisor.phoneNumber}
+                  onChange={handleInputChange}
+                  disabled
+                  htmlFor="supervisor.phoneNumber"
+                >
+                  Phone Number
+                </LabelInput>
+                <LabelInput
+                  id="supervisor.department"
+                  type="text"
+                  value={formData.supervisor.department}
+                  onChange={handleInputChange}
+                  disabled
+                  htmlFor="supervisor.department"
+                >
+                  Department
+                </LabelInput>
+              </div>
+              <LabelInput
+                id="supervisor.officeAddress"
+                type="text"
+                value={formData.supervisor.officeAddress}
+                onChange={handleInputChange}
+                disabled
+                htmlFor="supervisor.officeAddress"
+              >
+                Office Address
+              </LabelInput>
+            </>
+          ) : (
+            <div className="p-6 bg-gray-100 border border-gray-300 rounded-lg text-center">
+              <p className="text-gray-600 font-medium">No Supervisor Assigned</p>
+              <p className="text-gray-500 text-sm mt-1">
+                You will be assigned a supervisor when you register for a project
+              </p>
+            </div>
+          )}
 
           {isEditMode && <SubmitButtons toggleEditMode={toggleEditMode} />}
         </form>

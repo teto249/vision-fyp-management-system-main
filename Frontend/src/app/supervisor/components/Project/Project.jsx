@@ -58,13 +58,7 @@ export default function Project({ projectData }) {
   const supervisorDepartment = projectData?.supervisor?.department || "Not set";
 
   // Debug logging to verify data structure
-  useEffect(() => {
-    console.log("Project Data Structure:", {
-      supervisor: projectData?.supervisor,
-      milestones: projectData?.milestones,
-      projectData: projectData,
-    });
-  }, [projectData]);
+
 
   // Safe access to milestones
   const milestones = projectData?.milestones || [];

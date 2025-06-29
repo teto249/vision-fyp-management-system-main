@@ -9,11 +9,14 @@ import {
   ClockIcon, 
   LinkIcon,
   ChevronDownIcon,
-  ChevronUpIcon
+  ChevronUpIcon,
+  PencilIcon,
+  XMarkIcon
 } from "@heroicons/react/24/outline";
 
-import { addMeeting } from "../../../../api/StudentApi/Projects";
+import { addMeeting, deleteMeeting, updateMeeting } from "../../../../api/StudentApi/Projects";
 export default function Meeting({ meetings = [], onMeetingUpdate, milestoneId }) {
+
   const [newMeeting, setNewMeeting] = useState({ 
     date: "", 
     time: "", 
@@ -21,12 +24,20 @@ export default function Meeting({ meetings = [], onMeetingUpdate, milestoneId })
     purpose: "",
     type: "Online" 
   });
-  console.log("Initial meetings:", meetings);
+
   const [localMeetings, setLocalMeetings] = useState(meetings);
   const [isAdding, setIsAdding] = useState(false);
   const [loading, setLoading] = useState(false);
   const [expandedMeetingId, setExpandedMeetingId] = useState(null);
   const [showMeetingDetails, setShowMeetingDetails] = useState({});
+  const [editingMeeting, setEditingMeeting] = useState(null);
+  const [editForm, setEditForm] = useState({ 
+    date: "", 
+    time: "", 
+    link: "", 
+    purpose: "",
+    type: "Online" 
+  });
 
   useEffect(() => {
     setLocalMeetings(meetings);
@@ -42,8 +53,30 @@ export default function Meeting({ meetings = [], onMeetingUpdate, milestoneId })
 
   const handleAddMeeting = async () => {
     try {
-      if (!newMeeting.date || !newMeeting.time || !newMeeting.purpose) {
-        alert("Meeting date, time and purpose are required.");
+      // Enhanced validation
+      if (!newMeeting.purpose?.trim()) {
+        alert("Meeting purpose is required");
+        return;
+      }
+      if (newMeeting.purpose.trim().length < 5) {
+        alert("Meeting purpose must be at least 5 characters long");
+        return;
+      }
+      if (!newMeeting.date) {
+        alert("Meeting date is required");
+        return;
+      }
+      if (!newMeeting.time) {
+        alert("Meeting time is required");
+        return;
+      }
+
+      // Validate meeting is not in the past
+      const meetingDateTime = new Date(`${newMeeting.date}T${newMeeting.time}`);
+      const now = new Date();
+      
+      if (meetingDateTime <= now) {
+        alert("Meeting date and time cannot be in the past");
         return;
       }
 
@@ -80,7 +113,6 @@ export default function Meeting({ meetings = [], onMeetingUpdate, milestoneId })
         throw new Error(result.message);
       }
     } catch (error) {
-      console.error("Error adding meeting:", error);
       alert(error instanceof Error ? error.message : "Failed to add meeting");
     } finally {
       setLoading(false);
@@ -91,8 +123,104 @@ export default function Meeting({ meetings = [], onMeetingUpdate, milestoneId })
     if (!confirm("Are you sure you want to delete this meeting?")) {
       return;
     }
-    const updatedMeetings = meetings.filter((meeting) => meeting.id !== meetingId);
-    onMeetingUpdate(updatedMeetings);
+    
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        throw new Error("Authentication required");
+      }
+
+      const result = await deleteMeeting(milestoneId, meetingId, token);
+
+      if (result.success) {
+        const updatedMeetings = localMeetings.filter((meeting) => meeting.id !== meetingId);
+        setLocalMeetings(updatedMeetings);
+        onMeetingUpdate(updatedMeetings);
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to delete meeting");
+    }
+  };
+
+  const handleEditMeeting = (meeting) => {
+    setEditingMeeting(meeting.id);
+    const meetingDate = new Date(meeting.date);
+    setEditForm({
+      date: meetingDate.toISOString().split('T')[0],
+      time: meeting.time ? meeting.time : meetingDate.toTimeString().slice(0, 5),
+      link: meeting.link || "",
+      purpose: meeting.purpose || meeting.title || "",
+      type: meeting.type || "Online"
+    });
+  };
+
+  const handleUpdateMeeting = async () => {
+    try {
+      // Enhanced validation
+      if (!editForm.purpose?.trim()) {
+        alert("Meeting purpose is required");
+        return;
+      }
+      if (editForm.purpose.trim().length < 5) {
+        alert("Meeting purpose must be at least 5 characters");
+        return;
+      }
+      if (!editForm.date) {
+        alert("Meeting date is required");
+        return;
+      }
+      if (!editForm.time) {
+        alert("Meeting time is required");
+        return;
+      }
+
+      // Validate date is not in the past
+      const selectedDateTime = new Date(`${editForm.date}T${editForm.time}`);
+      const now = new Date();
+      
+      if (selectedDateTime < now) {
+        alert("Meeting date and time cannot be in the past");
+        return;
+      }
+
+      setLoading(true);
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        throw new Error("Authentication required");
+      }
+
+      const meetingData = {
+        title: editForm.purpose.trim(),
+        date: selectedDateTime.toISOString(),
+        link: editForm.link.trim(),
+        type: editForm.type
+      };
+
+      const result = await updateMeeting(milestoneId, editingMeeting, meetingData, token);
+
+      if (result.success) {
+        const updatedMeetings = localMeetings.map((meeting) =>
+          meeting.id === editingMeeting ? { ...meeting, ...result.meeting } : meeting
+        );
+        setLocalMeetings(updatedMeetings);
+        onMeetingUpdate(updatedMeetings);
+        setEditingMeeting(null);
+        setEditForm({ date: "", time: "", link: "", purpose: "", type: "Online" });
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to update meeting");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMeeting(null);
+    setEditForm({ date: "", time: "", link: "", purpose: "", type: "Online" });
   };
 
   const formatDate = (dateStr) => {
@@ -107,13 +235,24 @@ export default function Meeting({ meetings = [], onMeetingUpdate, milestoneId })
   // Add a function to format time
   const formatTime = (timeStr) => {
     try {
+      // Handle empty or invalid time strings
+      if (!timeStr || !timeStr.trim()) {
+        return 'Time not set';
+      }
+      
+      // If it's already in a readable format (like "10:30 AM"), return as is
+      if (timeStr.includes('AM') || timeStr.includes('PM')) {
+        return timeStr;
+      }
+      
+      // Try to parse and format HH:mm format
       return new Date(`2000-01-01T${timeStr}`).toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
         hour12: true
       });
     } catch {
-      return timeStr; // Return original if parsing fails
+      return timeStr || 'Time not set'; // Return original if parsing fails
     }
   };
 
@@ -125,16 +264,27 @@ export default function Meeting({ meetings = [], onMeetingUpdate, milestoneId })
   };
 
   return (
-    <div className="mt-6 space-y-4">
-      <div className="flex justify-between items-center">
-        <h5 className="text-lg font-semibold text-gray-200">Meetings</h5>
+    <div className="mt-8 space-y-6">
+      {/* Header Section */}
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-2 h-8 bg-gradient-to-b from-green-500 to-blue-600 rounded-full"></div>
+          <div>
+            <h5 className="text-xl font-bold text-gray-100">Meetings</h5>
+            <p className="text-sm text-gray-400">
+              {localMeetings.length === 0 ? 'No meetings scheduled' : `${localMeetings.length} meeting${localMeetings.length > 1 ? 's' : ''} scheduled`}
+            </p>
+          </div>
+        </div>
         {!isAdding && (
           <button
             onClick={() => setIsAdding(true)}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+            className="group flex items-center gap-2 bg-gradient-to-r from-green-600 to-blue-600 
+                     hover:from-green-700 hover:to-blue-700 text-white px-5 py-2.5 rounded-xl
+                     transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
           >
-            <PlusIcon className="h-5 w-5" />
-            Schedule Meeting
+            <PlusIcon className="h-5 w-5 group-hover:rotate-90 transition-transform duration-300" />
+            <span className="font-medium">Schedule Meeting</span>
           </button>
         )}
       </div>
@@ -174,6 +324,7 @@ export default function Meeting({ meetings = [], onMeetingUpdate, milestoneId })
                 <input
                   type="date"
                   value={newMeeting.date}
+                  min={new Date().toISOString().split('T')[0]} // Prevent past dates
                   onChange={(e) => setNewMeeting({ ...newMeeting, date: e.target.value })}
                   className="w-full pl-10 p-2 border border-gray-600 bg-gray-700/50 text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
@@ -247,9 +398,9 @@ export default function Meeting({ meetings = [], onMeetingUpdate, milestoneId })
           >
             <div className="flex justify-between items-start mb-3">
               <div>
-                {/* Use title or purpose based on what's available */}
+                {/* Use purpose first, then title as fallback */}
                 <h6 className="text-gray-100 font-medium text-lg">
-                  {meeting.title || meeting.purpose}
+                  {meeting.purpose || meeting.title || "Untitled Meeting"}
                 </h6>
               </div>
               <div className="flex items-center gap-2">
@@ -262,6 +413,12 @@ export default function Meeting({ meetings = [], onMeetingUpdate, milestoneId })
                   ) : (
                     <ChevronDownIcon className="h-5 w-5" />
                   )}
+                </button>
+                <button
+                  onClick={() => handleEditMeeting(meeting)}
+                  className="text-gray-400 hover:text-yellow-400 transition-colors duration-200"
+                >
+                  <PencilIcon className="h-5 w-5" />
                 </button>
                 <button
                   onClick={() => handleDeleteMeeting(meeting.id)}
@@ -286,7 +443,11 @@ export default function Meeting({ meetings = [], onMeetingUpdate, milestoneId })
               
               <div className="flex items-center gap-2 text-gray-400">
                 <ClockIcon className="h-4 w-4 flex-shrink-0" />
-                <span>{meeting.time ? formatTime(meeting.time) : 'Time not set'}</span>
+                <span>
+                  {meeting.time && meeting.time.trim() 
+                    ? formatTime(meeting.time) 
+                    : 'Time not set'}
+                </span>
               </div>
 
               <div className="flex items-center gap-2 text-gray-400">
@@ -332,6 +493,106 @@ export default function Meeting({ meetings = [], onMeetingUpdate, milestoneId })
                 </>
               )}
             </button>
+
+            {/* Edit meeting form - hidden by default */}
+            {editingMeeting === meeting.id && (
+              <div className="mt-4 p-4 bg-gray-700 rounded-lg border border-gray-600">
+                <h6 className="text-gray-200 font-medium mb-4">Edit Meeting</h6>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="block text-sm text-gray-400">Purpose*</label>
+                    <input
+                      type="text"
+                      placeholder="Meeting purpose"
+                      value={editForm.purpose}
+                      onChange={(e) => setEditForm({ ...editForm, purpose: e.target.value })}
+                      className="w-full p-2 border border-gray-600 bg-gray-700 text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-sm text-gray-400">Meeting Type</label>
+                    <select
+                      value={editForm.type}
+                      onChange={(e) => setEditForm({ ...editForm, type: e.target.value })}
+                      className="w-full p-2 border border-gray-600 bg-gray-700 text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="Online">Online</option>
+                      <option value="Physical">Physical</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-sm text-gray-400">Date*</label>
+                    <div className="relative">
+                      <CalendarIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                      <input
+                        type="date"
+                        value={editForm.date}
+                        min={new Date().toISOString().split('T')[0]} // Prevent past dates
+                        onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                        className="w-full pl-10 p-2 border border-gray-600 bg-gray-700 text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-sm text-gray-400">Time*</label>
+                    <div className="relative">
+                      <ClockIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                      <input
+                        type="time"
+                        value={editForm.time}
+                        onChange={(e) => setEditForm({ ...editForm, time: e.target.value })}
+                        className="w-full pl-10 p-2 border border-gray-600 bg-gray-700 text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+
+                  {editForm.type === 'Online' && (
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="block text-sm text-gray-400">Meeting Link</label>
+                      <div className="relative">
+                        <LinkIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                        <input
+                          type="url"
+                          placeholder="https://meet.google.com/..."
+                          value={editForm.link}
+                          onChange={(e) => setEditForm({ ...editForm, link: e.target.value })}
+                          className="w-full pl-10 p-2 border border-gray-600 bg-gray-700 text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4">
+                  <button
+                    onClick={handleCancelEdit}
+                    className="px-4 py-2 text-gray-300 hover:text-white transition-colors duration-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleUpdateMeeting}
+                    disabled={loading}
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 
+                             text-white px-6 py-2 rounded-lg transition-colors duration-200"
+                  >
+                    {loading ? (
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                    ) : (
+                      <PencilIcon className="h-5 w-5" />
+                    )}
+                    Update Meeting
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ))}
       </div>

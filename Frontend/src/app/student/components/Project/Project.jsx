@@ -1,3 +1,4 @@
+"use client";
 import { useState, useEffect } from "react";
 import Milestone from "./Milestone";
 import {
@@ -9,8 +10,9 @@ import {
   ClipboardDocumentListIcon,
   ClockIcon,
 } from "@heroicons/react/24/outline";
+import { Building } from "lucide-react";
 
-export default function Project({ projectData }) {
+export default function Project({ projectData, onProjectUpdate }) {
   const [currentData, setCurrentData] = useState(projectData);
   const [timeRemaining, setTimeRemaining] = useState("");
 
@@ -55,134 +57,194 @@ export default function Project({ projectData }) {
   const supervisorName = projectData?.supervisor?.name || "Not assigned";
   const supervisorDepartment = projectData?.supervisor?.department || "Not set";
 
+  // Safe access to university data
+  const universityName =
+    projectData?.university?.shortName ||
+    projectData?.university?.fullName ||
+    "Not set";
+
   // Debug logging to verify data structure
-  useEffect(() => {
-    console.log("Project Data Structure:", {
-      supervisor: projectData?.supervisor,
-      milestones: projectData?.milestones,
-      projectData: projectData,
-    });
-  }, [projectData]);
 
-  // Safe access to milestones
-  const milestones = projectData?.milestones || [];
+  // Safe access to milestones with better validation
+  const milestones = Array.isArray(projectData?.milestones)
+    ? projectData.milestones
+    : [];
 
-  const totalTasks = milestones.reduce(
-    (sum, milestone) => sum + (milestone?.tasks?.length || 0),
-    0
-  );
+  const totalTasks = milestones.reduce((sum, milestone) => {
+    if (!milestone || !Array.isArray(milestone.tasks)) return sum;
+    return sum + milestone.tasks.length;
+  }, 0);
 
-  const completedTasks = milestones.reduce(
-    (sum, milestone) =>
+  const completedTasks = milestones.reduce((sum, milestone) => {
+    if (!milestone || !Array.isArray(milestone.tasks)) return sum;
+    return (
       sum +
-      ((milestone?.tasks || []).filter((task) => task?.status === "Completed")
-        .length || 0),
-    0
-  );
+      milestone.tasks.filter((task) => task?.status === "Completed").length
+    );
+  }, 0);
+
+  if (!projectData) {
+    return (
+      <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+        <p className="text-slate-400">No project data available</p>
+      </div>
+    );
+  }
 
   return (
-    <section className="bg-gray-800/50 backdrop-blur p-6 rounded-xl shadow-lg border border-gray-700">
-      <div className="space-y-6">
-        {/* Project Header */}
-        <div>
-          <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
-            {currentData?.projectTitle || "Untitled Project"}
-          </h2>
-          <p className="text-gray-300 mt-2">
-            {currentData?.projectDescription || "No description available"}
-          </p>
+    <section className="bg-gray-800/50 backdrop-blur p-8 rounded-2xl shadow-xl border border-gray-700 hover:border-gray-600 transition-all duration-300">
+      <div className="space-y-8">
+        {/* Project Header with Status Badge */}
+        <div className="space-y-4">
+          <div className="flex items-start justify-between">
+            <div>
+              <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400 hover:from-blue-300 hover:to-purple-300 transition-colors">
+                {currentData?.title || "Untitled Project"}
+              </h2>
+              <div className="flex items-center gap-2 mt-2">
+                <UserIcon className="h-5 w-5 text-gray-400" />
+                <p className="text-gray-300">
+                  Supervised by{" "}
+                  <span className="font-medium text-white hover:text-blue-400 transition-colors">
+                    {supervisorName}
+                  </span>
+                </p>
+              </div>
+              <div className="flex items-center gap-2 mt-1">
+                <Building className="h-4 w-4 text-gray-400" />
+                <p className="text-gray-400 text-sm">{universityName}</p>
+              </div>
+            </div>
+            <span
+              className={`px-3 py-1 rounded-full text-sm font-medium ${
+                currentData?.status === "Completed" ||
+                currentData?.progress >= 100
+                  ? "bg-green-500/20 text-green-400"
+                  : currentData?.status === "Pending"
+                  ? "bg-yellow-500/20 text-yellow-400"
+                  : currentData?.progress >= 50
+                  ? "bg-blue-500/20 text-blue-400"
+                  : "bg-gray-500/20 text-gray-400"
+              }`}
+            >
+              {currentData?.status ||
+                (currentData?.progress >= 100 ? "Completed" : "In Progress")}
+            </span>
+          </div>
+
+          {/* Project Description with Icon */}
+          <div className="flex items-start gap-3 bg-gray-700/30 p-4 rounded-xl">
+            <ClipboardDocumentListIcon className="h-5 w-5 text-gray-400 mt-1" />
+            <p className="text-gray-300 leading-relaxed">
+              {currentData?.description || "No description available"}
+            </p>
+          </div>
         </div>
 
-        {/* Project Details Grid */}
+        {/* Project Details Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-gray-700/50 p-4 rounded-lg flex items-center gap-3">
-            <CalendarIcon className="h-5 w-5 text-blue-400" />
-            <div>
-              <p className="text-sm text-gray-400">Start Date</p>
-              <p className="text-white font-medium">
-                {formatDate(currentData?.startDate)}
-              </p>
+          {[
+            {
+              icon: <CalendarIcon className="h-6 w-6 text-blue-400" />,
+              label: "Start Date",
+              value: formatDate(currentData?.startDate),
+              bgColor: "hover:bg-blue-400/10",
+            },
+            {
+              icon: <ClockIcon className="h-6 w-6 text-purple-400" />,
+              label: "End Date",
+              value: formatDate(currentData?.endDate),
+              bgColor: "hover:bg-purple-400/10",
+            },
+            {
+              icon: <AcademicCapIcon className="h-6 w-6 text-yellow-400" />,
+              label: "Project Type",
+              value: currentData?.type || "Not specified",
+              bgColor: "hover:bg-yellow-400/10",
+            },
+            {
+              icon: <ChartBarIcon className="h-6 w-6 text-green-400" />,
+              label: "Time Remaining",
+              value: timeRemaining,
+              bgColor: "hover:bg-green-400/10",
+            },
+          ].map((item, index) => (
+            <div
+              key={index}
+              className={`bg-gray-700/30 p-5 rounded-xl flex items-start gap-4 transform hover:-translate-y-1 transition-all duration-300 ${item.bgColor}`}
+            >
+              {item.icon}
+              <div>
+                <p className="text-sm text-gray-400">{item.label}</p>
+                <p className="text-white font-medium mt-1">{item.value}</p>
+              </div>
             </div>
-          </div>
-
-          <div className="bg-gray-700/50 p-4 rounded-lg flex items-center gap-3">
-            <ClockIcon className="h-5 w-5 text-purple-400" />
-            <div>
-              <p className="text-sm text-gray-400">End Date</p>
-              <p className="text-white font-medium">
-                {formatDate(currentData?.endDate)}
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-gray-700/50 p-4 rounded-lg flex items-center gap-3">
-            <UserIcon className="h-5 w-5 text-green-400" />
-            <div>
-              <p className="text-sm text-gray-400">Supervisor</p>
-              <p className="text-white font-medium">{supervisorName}</p>
-            </div>
-          </div>
-
-          <div className="bg-gray-700/50 p-4 rounded-lg flex items-center gap-3">
-            <AcademicCapIcon className="h-5 w-5 text-yellow-400" />
-            <div>
-              <p className="text-sm text-gray-400">Department</p>
-              <p className="text-white font-medium">{supervisorDepartment}</p>
-            </div>
-          </div>
+          ))}
         </div>
 
-        {/* Progress Section */}
-        <div className="bg-gray-700/50 p-6 rounded-lg space-y-4">
-          <h3 className="text-xl font-semibold text-white mb-4">
+        {/* Progress Section with Improved Visual Feedback */}
+        <div className="bg-gray-700/30 p-6 rounded-xl space-y-6">
+          <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+            <ChartBarIcon className="h-6 w-6 text-blue-400" />
             Project Progress
           </h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center gap-3">
-              <ClipboardDocumentListIcon className="h-5 w-5 text-blue-400" />
-              <div>
-                <p className="text-sm text-gray-400">Total Tasks</p>
-                <p className="text-xl font-semibold text-white">{totalTasks}</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              {
+                icon: (
+                  <ClipboardDocumentListIcon className="h-8 w-8 text-blue-400" />
+                ),
+                label: "Total Tasks",
+                value: totalTasks,
+                color: "text-blue-400",
+              },
+              {
+                icon: <CheckCircleIcon className="h-8 w-8 text-green-400" />,
+                label: "Completed",
+                value: completedTasks,
+                color: "text-green-400",
+              },
+              {
+                icon: <ChartBarIcon className="h-8 w-8 text-purple-400" />,
+                label: "Progress",
+                value: `${currentData?.progress || 0}%`,
+                color: getProgressColor(currentData?.progress || 0),
+              },
+            ].map((stat, index) => (
+              <div
+                key={index}
+                className="bg-gray-800/50 p-4 rounded-lg transform hover:scale-105 transition-all duration-300"
+              >
+                <div className="flex items-center gap-3">
+                  {stat.icon}
+                  <div>
+                    <p className="text-sm text-gray-400">{stat.label}</p>
+                    <p className={`text-2xl font-bold ${stat.color}`}>
+                      {stat.value}
+                    </p>
+                  </div>
+                </div>
               </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <CheckCircleIcon className="h-5 w-5 text-green-400" />
-              <div>
-                <p className="text-sm text-gray-400">Completed</p>
-                <p className="text-xl font-semibold text-white">
-                  {completedTasks}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <ChartBarIcon className="h-5 w-5 text-purple-400" />
-              <div>
-                <p className="text-sm text-gray-400">Overall Progress</p>
-                <p
-                  className={`text-xl font-semibold ${getProgressColor(
-                    currentData?.progress || 0
-                  )}`}
-                >
-                  {currentData?.progress || 0}%
-                </p>
-              </div>
-            </div>
+            ))}
           </div>
 
-          {/* Progress Bar */}
-          <div className="mt-4">
-            <div className="h-2 bg-gray-600 rounded-full overflow-hidden">
+          {/* Enhanced Progress Bar */}
+          <div className="mt-6">
+            <div className="h-3 bg-gray-700 rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-blue-400 to-purple-400 transition-all duration-500"
-                style={{ width: `${currentData?.progress || 0}%` }}
+                className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-700 ease-in-out"
+                style={{
+                  width: `${currentData?.progress || 0}%`,
+                  boxShadow: "0 0 10px rgba(147, 51, 234, 0.3)",
+                }}
               />
             </div>
-            <p className="text-sm text-gray-400 mt-2 text-center">
-              {timeRemaining}
-            </p>
+            <div className="flex justify-between mt-2 text-sm text-gray-400">
+              <span>0%</span>
+              <span>{currentData?.progress || 0}% Complete</span>
+              <span>100%</span>
+            </div>
           </div>
         </div>
       </div>

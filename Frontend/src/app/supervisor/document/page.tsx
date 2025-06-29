@@ -52,7 +52,7 @@ export default function Documents() {
       setError(null);
       const token = localStorage.getItem("authToken");
       const supervisorInfoStr = localStorage.getItem("supervisorInfo");
-      console.log('supervisorInfo:', JSON.parse(supervisorInfoStr));
+
 
       if (!token || !supervisorInfoStr) {
         setError({
@@ -206,7 +206,7 @@ export default function Documents() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+      <div className=" flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-teal-500" />
       </div>
     );
@@ -214,7 +214,7 @@ export default function Documents() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+      <div className=" flex items-center justify-center">
         <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full">
           <div className="flex items-center justify-center text-red-500 mb-4">
             <AlertCircle size={32} />
@@ -251,7 +251,7 @@ export default function Documents() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         <header className="flex justify-between items-center mb-8">
           <div>

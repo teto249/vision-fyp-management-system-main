@@ -170,7 +170,7 @@ export default function Supervisor() {
 
   // ...existing code...
   return (
-    <div className="min-h-screen bg-gray-800">
+    <>
       {/* Header */}
 
       {/* Main Content */}
@@ -594,6 +594,6 @@ export default function Supervisor() {
           )}
         </div>
       </main>
-    </div>
+    </>
   );
 }

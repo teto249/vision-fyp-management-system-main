@@ -11,6 +11,15 @@ interface University {
   status: string;
 }
 
+interface Supervisor {
+  userId: string;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  department: string;
+  officeAddress: string;
+}
+
 interface StudentData {
   userId: string;
   fullName: string;
@@ -26,6 +35,7 @@ interface StudentData {
   supervisorId?: string | null;
   createdAt?: string;
   university?: University;
+  supervisor?: Supervisor | null;
 }
 
 interface UpdateStudentData {
@@ -48,9 +58,8 @@ class ApiError extends Error {
 async function fetchWithAuth(url: string, options: RequestInit = {}) {
   const authToken = localStorage.getItem("authToken");
 
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...options.headers,
   };
 
   if (authToken) {
@@ -63,7 +72,7 @@ async function fetchWithAuth(url: string, options: RequestInit = {}) {
     const response = await fetch(url, { ...options, headers });
     const data = await response.json();
     
-    console.log("Raw response data:", JSON.stringify(data, null, 2));
+  
     
     return data;
   } catch (error) {
@@ -78,7 +87,7 @@ export async function fetchStudentAccount(
   userId: string
 ): Promise<StudentData> {
   try {
-    console.log("Fetching student account for userId:", userId);
+  
     
     if (!userId) {
       throw new ApiError("User ID is required");
@@ -86,7 +95,7 @@ export async function fetchStudentAccount(
 
     const url = `${API_BASE_URL}?userid=${encodeURIComponent(userId)}`;
     const studentData = await fetchWithAuth(url);
-    console.log("Fetched student data:", studentData);
+    
     localStorage.setItem("studentInfo", JSON.stringify(studentData));
     return studentData;
   } catch (error) {

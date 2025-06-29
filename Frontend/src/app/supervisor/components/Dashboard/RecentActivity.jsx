@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { Clock, User, CheckCircle, AlertCircle } from "lucide-react";
+import { Clock, CheckCircle, AlertCircle } from "lucide-react";
 
 export default function RecentActivity({ students = [] }) {
   // Generate recent activities from student data

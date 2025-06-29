@@ -783,3 +783,100 @@ export const updateMilestone = async (projectId: string, milestoneId: string, mi
     };
   }
 };
+
+// Update Feedback API Function
+export const updateFeedback = async (
+  taskId: string,
+  feedbackId: string,
+  feedbackData: {
+    title: string;
+    description: string;
+  }
+) => {
+  try {
+    const token = localStorage.getItem("authToken");
+    const supervisorInfo = JSON.parse(
+      localStorage.getItem("supervisorInfo") || "{}"
+    );
+
+    if (!token || !supervisorInfo?.userId) {
+      throw new Error("Authentication required");
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/${supervisorInfo.userId}/tasks/${taskId}/feedback/${feedbackId}`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(feedbackData),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to update feedback");
+    }
+
+    return {
+      success: true,
+      feedback: data.feedback,
+    };
+  } catch (error) {
+    console.error("Error updating feedback:", error);
+    return {
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Failed to update feedback",
+    };
+  }
+};
+
+// Delete Feedback API Function
+export const deleteFeedback = async (
+  taskId: string,
+  feedbackId: string
+) => {
+  try {
+    const token = localStorage.getItem("authToken");
+    const supervisorInfo = JSON.parse(
+      localStorage.getItem("supervisorInfo") || "{}"
+    );
+
+    if (!token || !supervisorInfo?.userId) {
+      throw new Error("Authentication required");
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/${supervisorInfo.userId}/tasks/${taskId}/feedback/${feedbackId}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to delete feedback");
+    }
+
+    return {
+      success: true,
+      message: data.message || "Feedback deleted successfully",
+    };
+  } catch (error) {
+    console.error("Error deleting feedback:", error);
+    return {
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Failed to delete feedback",
+    };
+  }
+};

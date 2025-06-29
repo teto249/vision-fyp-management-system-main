@@ -1,55 +1,122 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Home,
   User,
-  MessageCircle,
-  ShoppingBag,
-  Presentation,
+  Bell,
+  FolderOpen,
+  Plus,
   FileText,
+  BarChart3,
+  Calendar,
+  Settings,
+  HelpCircle
 } from "lucide-react";
 
 export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
+  const pathname = usePathname();
+
   const menuItems = [
-    { icon: <Home size={20} />, text: "Home", href: "" },
-    { icon: <User size={20} />, text: "Account", href: "account" },
-    { icon: <ShoppingBag size={20} />, text: "My Project", href: "myProject" },
-    { icon: <MessageCircle size={20} />, text: "Notifications", href: "notifications" },
-    { icon: <Presentation size={20} />, text: "Register New Project", href: "registerproject" },
-    { icon: <FileText size={20} />, text: "Documents", href: "document" }, // New menu item
+    { icon: Home, text: "Dashboard", href: "", badge: null },
+    { icon: User, text: "Profile", href: "account", badge: null },
+    { icon: FolderOpen, text: "My Project", href: "myProject", badge: null },
+    
+    { icon: Plus, text: "Register New Project", href: "registerproject", badge: null },
+    { icon: FileText, text: "Documents", href: "document", badge: null },
+   
+
   ];
+
+  const isActive = (href) => {
+    if (href === "") {
+      return pathname === "/student" || pathname === "/student/";
+    }
+    return pathname.includes(`/student/${href}`);
+  };
 
   return (
     <>
-      {/* Floating Sidebar */}
+      {/* Sidebar */}
       <aside
-        className={`fixed top-[70px] left-0 h-[90vh] w-[90vw] max-w-xs bg-teal-700 shadow-2xl transition-all duration-300 ease-in-out z-40 rounded-r-xl mx-6 my-2 border border-gray-700
+        className={`fixed top-16 left-0 h-[calc(100vh-4rem)] w-72 bg-slate-900/95 backdrop-blur-xl shadow-2xl transition-all duration-300 ease-in-out z-40 border-r border-slate-700/50
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
-          sm:w-64`}
+        `}
       >
-        <div className="p-4 h-full overflow-y-auto">
-          <ul className="menu space-y-2 bg-transparent">
-            {menuItems.map((item) => (
-              <li key={item.text}>
+        <div className="p-6 h-full overflow-y-auto">
+          {/* Navigation Header */}
+          <div className="mb-8">
+            <h2 className="text-lg font-semibold text-white mb-2">Navigation</h2>
+            <div className="w-12 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
+          </div>
+
+          {/* Menu Items */}
+          <nav className="space-y-2">
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              const active = isActive(item.href);
+              
+              return (
                 <Link
+                  key={item.text}
                   href={`/student/${item.href}`}
                   onClick={() => setSidebarOpen(false)}
-                  className="flex items-center bg-gray-700 hover:bg-gray-600 gap-3 py-3 px-4 rounded-lg text-gray-300 hover:text-primary-400 transition-colors"
+                  className={`group flex items-center justify-between p-3 rounded-xl transition-all duration-200 ${
+                    active
+                      ? "bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-white border border-blue-500/30 shadow-lg shadow-blue-500/10"
+                      : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+                  }`}
                 >
-                  {item.icon}
-                  <span className="text-sm font-medium">{item.text}</span>
+                  <div className="flex items-center space-x-3">
+                    <div className={`p-2 rounded-lg transition-all duration-200 ${
+                      active 
+                        ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg" 
+                        : "bg-slate-800/50 group-hover:bg-slate-700/50"
+                    }`}>
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <span className="font-medium">{item.text}</span>
+                  </div>
+                  
+                  {item.badge && (
+                    <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-medium">
+                      {item.badge}
+                    </span>
+                  )}
+                  
+                  {active && (
+                    <div className="w-1 h-8 bg-gradient-to-b from-blue-400 to-purple-400 rounded-full absolute right-0"></div>
+                  )}
                 </Link>
-              </li>
-            ))}
-          </ul>
+              );
+            })}
+          </nav>
+
+          {/* Bottom Section */}
+          <div className="absolute bottom-6 left-6 right-6">
+            <div className="p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-xl border border-blue-500/20">
+              <div className="flex items-center space-x-3 mb-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl flex items-center justify-center">
+                  <HelpCircle className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-white">Need Help?</h3>
+                  <p className="text-xs text-slate-400">Contact support</p>
+                </div>
+              </div>
+              <button className="w-full py-2 bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 hover:text-white rounded-lg text-sm font-medium transition-colors duration-200">
+                Get Support
+              </button>
+            </div>
+          </div>
         </div>
       </aside>
 
       {/* Overlay for mobile */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-30 backdrop-blur-sm"
+          className="fixed inset-0 bg-black/50 z-30 backdrop-blur-sm transition-opacity duration-300"
           onClick={() => setSidebarOpen(false)}
         />
       )}

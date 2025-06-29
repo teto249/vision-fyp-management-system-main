@@ -3,6 +3,17 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  Bell,
+  Menu,
+  X,
+  User,
+  LogOut,
+  Settings,
+  ChevronDown,
+  Search,
+  Activity,
+} from "lucide-react";
 import { logout } from "../../../../api/auth";
 
 export default function Navbar({
@@ -14,6 +25,7 @@ export default function Navbar({
   const [supervisorInfo, setSupervisorInfo] = useState({});
   const router = useRouter();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const storedInfo = localStorage.getItem("supervisorInfo");
@@ -27,230 +39,249 @@ export default function Navbar({
     logout();
     router.push("/");
   };
+
+  const notifications = [
+    {
+      id: 1,
+      title: "New Project Submission",
+      message: "John Doe submitted a new project milestone",
+      time: "2 minutes ago",
+      type: "project",
+      unread: true,
+    },
+    {
+      id: 2,
+      title: "Meeting Reminder",
+      message: "Project review meeting in 30 minutes",
+      time: "25 minutes ago",
+      type: "meeting",
+      unread: true,
+    },
+    {
+      id: 3,
+      title: "Document Updated",
+      message: "Project requirements document was updated",
+      time: "1 hour ago",
+      type: "document",
+      unread: false,
+    },
+  ];
+
   return (
-    <nav className="sticky top-0 z-40 navbar rounded-br-2xl rounded-bl-2xl bg-teal-700 border-b border-gray-700 px-4 sm:px-6 text-gray-300">
-      <button
-        className="btn btn-soft bg-gray-700 hover:bg-gray-600 btn-square mr-3"
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        aria-label="Toggle sidebar"
-      >
-        {sidebarOpen ? (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        ) : (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 6h16M4 12h16M4 18h16"
-            />
-          </svg>
-        )}
-      </button>
+    <nav className="sticky top-0 z-50 bg-slate-900/95 backdrop-blur-xl border-b border-slate-700/50 shadow-xl">
+      <div className="px-4 sm:px-6">
+        <div className="flex items-center justify-between h-16">
+          {/* Left section */}
+          <div className="flex items-center space-x-4">
+            {/* Menu Toggle */}
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="p-2 rounded-xl bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 hover:text-white transition-all duration-200 group"
+              aria-label="Toggle sidebar"
+            >
+              {sidebarOpen ? (
+                <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-200" />
+              ) : (
+                <Menu className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
+              )}
+            </button>
 
-      {/* Logo */}
-      <div className="flex-1 flex items-center">
-        <div className="flex items-center gap-3">
-          <Image
-            src="/logo.png"
-            alt="Company Logo"
-            width={40}
-            height={40}
-            className="rounded-full"
-            priority
-          />
-          <h1 className="text-xl font-bold text-gray-200 hidden sm:block">
-            VISION
-          </h1>
-        </div>
-      </div>
-
-      {/* Navigation controls */}
-      <div className="navbar-end gap-2">
-        {/* Notifications dropdown */}
-        <div className="relative">
-          <button
-            className="btn btn-ghost btn-circle hover:bg-gray-700"
-            onClick={() => {
-              setNotificationsOpen(!notificationsOpen);
-              setProfileOpen(false);
-            }}
-            aria-label="Notifications"
-          >
-            <div className="indicator">
-              <span className="indicator-item badge badge-xs bg-status-critical"></span>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                />
-              </svg>
-            </div>
-          </button>
-
-          {notificationsOpen && (
-            <div className="absolute right-0 mt-2 w-72 bg-gray-800 shadow-xl rounded-lg z-50 divide-y divide-gray-700 border border-gray-700">
-              <div className="p-4">
-                <h3 className="font-bold text-lg text-gray-200">
-                  Notifications
-                </h3>
+            {/* Logo */}
+            <div className="flex items-center space-x-3">
+              <div className="relative">
+                <div className="w-10 h-10 bg-gradient-to-r from-teal-500 to-blue-500 rounded-xl flex items-center justify-center shadow-lg">
+                  <Activity className="w-6 h-6 text-white" />
+                </div>
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-slate-900"></div>
               </div>
-              <div className="max-h-96 overflow-y-auto">
-                {[1, 2, 3].map((item) => (
-                  <div
-                    key={item}
-                    className="p-3 hover:bg-gray-700 transition-colors cursor-pointer"
-                  >
-                    <div className="flex gap-3 items-start">
-                      <div className="avatar">
-                        <div className="w-10 rounded-full">
-                          <Image
-                            src={`https://cdn.flyonui.com/fy-assets/avatar/avatar-${item}.png`}
-                            alt={`Notification ${item}`}
-                            width={40}
-                            height={40}
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-gray-200">
-                          Notification {item}
-                        </h4>
-                        <p className="text-sm text-gray-400">
-                          Description of notification
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="p-3 text-center">
-                <button className="btn btn-ghost btn-sm text-primary-500 hover:text-primary-400">
-                  View all
-                </button>
+              <div className="hidden sm:block">
+                <h1 className="text-xl font-bold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
+                  VISION
+                </h1>
+                <p className="text-xs text-slate-400">Supervisor Portal</p>
               </div>
             </div>
-          )}
-        </div>
+          </div>
 
-        {/* Profile dropdown */}
-        <div className="relative">
-          <button
-            className="btn btn-ghost btn-circle avatar hover:bg-gray-700"
-            onClick={() => {
-              setProfileOpen(!profileOpen);
-              setNotificationsOpen(false);
-            }}
-            aria-label="User menu"
-          >
-            <div className="w-8 rounded-full">
-              <Image
-                src="/logo.png"
-                alt="User profile"
-                width={32}
-                height={32}
+          {/* Center section - Search */}
+          <div className="hidden md:flex flex-1 max-w-md mx-8">
+            <div className="relative w-full">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search students, projects..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-slate-800/50 border border-slate-700/50 rounded-xl text-slate-300 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500/50 transition-all duration-200"
               />
             </div>
-          </button>
+          </div>
 
-          {profileOpen && (
-            <ul className="absolute right-0 mt-2 w-56 bg-gray-800 shadow-xl rounded-lg z-50 divide-y divide-gray-700 border border-gray-700">
-              <li className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="avatar">
-                    <div className="w-10 rounded-full">
-                      <Image
-                        src={supervisorInfo.profilePhoto || "/logo.png"}
-                        alt="User profile"
-                        width={40}
-                        height={40}
-                      />
+          {/* Right section */}
+          <div className="flex items-center space-x-3">
+            {/* Notifications */}
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setNotificationsOpen(!notificationsOpen);
+                  setProfileOpen(false);
+                }}
+                className="relative p-2 rounded-xl bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 hover:text-white transition-all duration-200 group"
+                aria-label="Notifications"
+              >
+                <Bell className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
+                {notifications.some((n) => n.unread) && (
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-slate-900 animate-pulse"></span>
+                )}
+              </button>
+
+              {notificationsOpen && (
+                <div className="absolute right-0 mt-2 w-80 bg-slate-800/95 backdrop-blur-xl shadow-2xl rounded-2xl border border-slate-700/50 z-50 animate-in slide-in-from-top-2 duration-200">
+                  <div className="p-4 border-b border-slate-700/50">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-white">Notifications</h3>
+                      <span className="text-xs text-slate-400">
+                        {notifications.filter((n) => n.unread).length} unread
+                      </span>
                     </div>
                   </div>
-                  <div>
-                    <h4 className="font-bold text-gray-200">
-                      {supervisorInfo.fullName || "Loading..."}
-                    </h4>
-                    <p className="text-sm text-gray-400">
-                      {supervisorInfo.role || "Supervisor"}
-                    </p>
+                  <div className="max-h-96 overflow-y-auto">
+                    {notifications.map((notification) => (
+                      <div
+                        key={notification.id}
+                        className={`p-4 hover:bg-slate-700/30 transition-colors cursor-pointer border-l-2 ${
+                          notification.unread
+                            ? "border-teal-500 bg-teal-500/5"
+                            : "border-transparent"
+                        }`}
+                      >
+                        <div className="flex items-start space-x-3">
+                          <div
+                            className={`w-2 h-2 rounded-full mt-2 ${
+                              notification.unread ? "bg-teal-500" : "bg-slate-600"
+                            }`}
+                          ></div>
+                          <div className="flex-1 min-w-0">
+                            <h4
+                              className={`font-medium ${
+                                notification.unread ? "text-white" : "text-slate-300"
+                              }`}
+                            >
+                              {notification.title}
+                            </h4>
+                            <p className="text-sm text-slate-400 truncate">
+                              {notification.message}
+                            </p>
+                            <p className="text-xs text-slate-500 mt-1">
+                              {notification.time}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="p-3 border-t border-slate-700/50 text-center">
+                    <button className="text-sm text-teal-400 hover:text-teal-300 font-medium transition-colors">
+                      View all notifications
+                    </button>
                   </div>
                 </div>
-              </li>
-              <li>
-                <Link
-                  href="/supervisor/account"
-                  onClick={() => setProfileOpen(false)}
-                >
-                  <button className="w-full text-left px-4 py-2 hover:bg-gray-700 flex items-center gap-2 text-gray-300">
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                      />
-                    </svg>
-                    Profile
-                  </button>
-                </Link>
-              </li>
+              )}
+            </div>
 
-              <li>
-                <button
-                  className="w-full text-left px-4 py-2 hover:bg-gray-700 text-status-critical flex items-center gap-2"
-                  onClick={handleLogout}
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                    />
-                  </svg>
-                  Logout
-                </button>
-              </li>
-            </ul>
-          )}
+            {/* Profile Menu */}
+            <div className="relative" data-menu>
+              <button
+                onClick={() => {
+                  setProfileOpen(!profileOpen);
+                  setNotificationsOpen(false);
+                }}
+                className="flex items-center space-x-3 p-2 rounded-xl bg-slate-800/50 hover:bg-slate-700/50 transition-all duration-200 group"
+                aria-label="User menu"
+              >
+                <div className="w-8 h-8 rounded-lg overflow-hidden ring-2 ring-slate-700 group-hover:ring-teal-500/50 transition-all duration-200">
+                  <Image
+                    src={supervisorInfo.profilePhoto || "/logo.png"}
+                    alt="Profile"
+                    width={32}
+                    height={32}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="hidden sm:block text-left">
+                  <p className="text-sm font-medium text-white truncate max-w-24">
+                    {supervisorInfo.fullName || "Loading..."}
+                  </p>
+                  <p className="text-xs text-slate-400">Supervisor</p>
+                </div>
+                <ChevronDown
+                  className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
+                    profileOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {profileOpen && (
+                <div className="absolute right-0 mt-2 w-64 bg-slate-800/95 backdrop-blur-xl shadow-2xl rounded-2xl border border-slate-700/50 z-[60] opacity-100 scale-100 transform transition-all duration-200">
+                  <div className="p-4 border-b border-slate-700/50">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 rounded-xl overflow-hidden ring-2 ring-slate-700">
+                        <Image
+                          src={supervisorInfo.profilePhoto || "/logo.png"}
+                          alt="Profile"
+                          width={48}
+                          height={48}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-white truncate">
+                          {supervisorInfo.fullName || "Loading..."}
+                        </h4>
+                        <p className="text-sm text-slate-400">
+                          {supervisorInfo.email || "supervisor@university.edu"}
+                        </p>
+                        <div className="flex items-center mt-1">
+                          <div className="w-2 h-2 bg-emerald-400 rounded-full mr-2"></div>
+                          <span className="text-xs text-emerald-400">Online</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-2">
+                    <Link
+                      href="/supervisor/account"
+                      onClick={() => setProfileOpen(false)}
+                      className="flex items-center space-x-3 w-full px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-700/50 transition-colors duration-200"
+                    >
+                      <User className="w-4 h-4" />
+                      <span className="text-sm font-medium">Profile Settings</span>
+                    </Link>
+
+                    <Link
+                      href="/supervisor/settings"
+                      onClick={() => setProfileOpen(false)}
+                      className="flex items-center space-x-3 w-full px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-700/50 transition-colors duration-200"
+                    >
+                      <Settings className="w-4 h-4" />
+                      <span className="text-sm font-medium">Preferences</span>
+                    </Link>
+                  </div>
+
+                  <div className="p-2 border-t border-slate-700/50">
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center space-x-3 w-full px-3 py-2 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors duration-200"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span className="text-sm font-medium">Sign Out</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </nav>

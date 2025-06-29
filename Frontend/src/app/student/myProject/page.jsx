@@ -7,7 +7,7 @@ import {
   getProjectById,
   updateProjectMilestones,
   checkAuth,
-} from "../../../api/StudentApi/Projects";
+} from "../../../api/StudentApi/Projects"; // Explicitly use .ts extension
 import {
   Loader2,
   AlertCircle,
@@ -20,9 +20,7 @@ import {
 // Debug utility function (keep existing implementation)
 const debugLog = (context, data, error = null) => {
   if (process.env.NODE_ENV === "development") {
-    console.group(`🔍 Debug: ${context}`);
-    console.log("Timestamp:", new Date().toISOString());
-    console.log("Data:", data);
+
     if (error) {
       console.error("Error:", error);
       console.error("Stack:", error.stack);
@@ -102,9 +100,14 @@ export default function MyProject() {
       setLoading(true);
       setError(null);
 
+      // Test if checkAuth function exists
+      if (typeof checkAuth !== "function") {
+        throw new Error("checkAuth function is not available");
+      }
+
       const { token, userInfo } = checkAuth();
       setUser(userInfo);
-      console.log("userInfo:", userInfo);
+    
 
       const result = await getProjectById(
         userInfo.username || userInfo.userId,
@@ -114,9 +117,14 @@ export default function MyProject() {
       if (result.success) {
         setProjectData(result.project);
       } else {
-        throw new Error(result.message);
+        if (result.message && result.message.includes("No project found")) {
+          setProjectData(null);
+        } else {
+          throw new Error(result.message || "Failed to fetch project");
+        }
       }
     } catch (err) {
+      console.error("Fetch project error:", err);
       setError(err.message);
       if (err.message.includes("Authentication")) {
         router.push("/auth");

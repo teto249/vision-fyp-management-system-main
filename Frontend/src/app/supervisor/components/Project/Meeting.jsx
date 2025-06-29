@@ -22,7 +22,7 @@ export default function Meeting({ meetings = [], onMeetingUpdate, milestoneId })
     purpose: "",
     type: "Online" 
   });
-  console.log("Initial meetings:", meetings);
+ 
   const [localMeetings, setLocalMeetings] = useState(meetings);
   const [isAdding, setIsAdding] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -81,7 +81,6 @@ export default function Meeting({ meetings = [], onMeetingUpdate, milestoneId })
         throw new Error(result.message);
       }
     } catch (error) {
-      console.error("Error adding meeting:", error);
       alert(error instanceof Error ? error.message : "Failed to add meeting");
     } finally {
       setLoading(false);
@@ -107,7 +106,6 @@ export default function Meeting({ meetings = [], onMeetingUpdate, milestoneId })
         throw new Error(result.message || "Failed to delete meeting");
       }
     } catch (error) {
-      console.error("Error deleting meeting:", error);
       alert(error instanceof Error ? error.message : "Failed to delete meeting");
     }
   };

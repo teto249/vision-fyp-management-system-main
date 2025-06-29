@@ -30,6 +30,48 @@ export interface Milestone {
   endDate: string;
 }
 
+// Feedback interface for tasks
+export interface Feedback {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+}
+
+// Task interface with feedback
+export interface Task {
+  id: string;
+  title: string;
+  description: string;
+  dueDate: string;
+  endDate: string; // Keep for compatibility
+  status: string;
+  feedback?: Feedback[];
+}
+
+// Meeting interface
+export interface Meeting {
+  id: string;
+  title: string;
+  purpose: string; // For backward compatibility
+  date: string;
+  time: string;
+  link?: string;
+  type: 'Online' | 'Physical';
+}
+
+// Complete Milestone interface with tasks and meetings
+export interface MilestoneWithTasks {
+  id: string;
+  title: string;
+  description: string;
+  status: string;
+  startDate: string;
+  endDate: string;
+  tasks: Task[];
+  meetings: Meeting[];
+}
+
 export interface ProjectDetails {
   id: string;
   title: string;
@@ -54,7 +96,7 @@ export interface ProjectDetails {
     shortName: string;
     fullName: string;
   };
-  milestones: Milestone[];
+  milestones: MilestoneWithTasks[];
 }
 
 export interface ProjectResponse {
@@ -87,11 +129,11 @@ export interface MilestoneResponse {
 }
 
 // Transform project data from API response
-const transformProjectData = (projectData) => ({
+const transformProjectData = (projectData: any) => ({
   id: projectData?.id,
-  projectTitle: projectData?.title,
-  projectDescription: projectData?.description,
-  projectType: projectData?.type,
+  title: projectData?.title, // Changed from projectTitle to title to match interface
+  description: projectData?.description, // Changed from projectDescription to description
+  type: projectData?.type, // Changed from projectType to type
   status: projectData?.status,
   progress: projectData?.progress || 0,
   startDate: projectData?.startDate,
@@ -106,25 +148,34 @@ const transformProjectData = (projectData) => ({
     shortName: projectData?.university?.shortName || '',
     fullName: projectData?.university?.fullName || ''
   },
-  milestones: Array.isArray(projectData?.milestones) ? projectData.milestones.map(milestone => ({
+  milestones: Array.isArray(projectData?.milestones) ? projectData.milestones.map((milestone: any) => ({
     ...milestone,
     id: milestone?.id || '',
     title: milestone?.title || '',
     description: milestone?.description || '',
     status: milestone?.status || 'Pending',
-    tasks: Array.isArray(milestone?.tasks) ? milestone.tasks.map(task => ({
+    tasks: Array.isArray(milestone?.tasks) ? milestone.tasks.map((task: any) => ({
       id: task?.id || '',
       title: task?.title || '',
       description: task?.description || '',
-      dueDate: task?.dueDate || '',
-      status: task?.status || 'Pending'
+      dueDate: task?.endDate || task?.dueDate || '', // Handle both endDate and dueDate
+      endDate: task?.endDate || task?.dueDate || '', // Keep endDate for compatibility
+      status: task?.status || 'Pending',
+      feedback: Array.isArray(task?.feedback) ? task.feedback.map((feedback: any) => ({
+        id: feedback?.id || '',
+        title: feedback?.title || '',
+        description: feedback?.description || '',
+        date: feedback?.date || feedback?.createdAt || ''
+      })) : []
     })) : [],
-    meetings: Array.isArray(milestone?.meetings) ? milestone.meetings.map(meeting => ({
+    meetings: Array.isArray(milestone?.meetings) ? milestone.meetings.map((meeting: any) => ({
       id: meeting?.id || '',
-      purpose: meeting?.purpose || '',
+      title: meeting?.title || '',
+      purpose: meeting?.title || meeting?.purpose || '', // Map title to purpose for backward compatibility
       date: meeting?.date || '',
       time: meeting?.time || '',
-      link: meeting?.link || ''
+      link: meeting?.link || '',
+      type: meeting?.type || 'Online'
     })) : []
   })) : []
 });
@@ -159,13 +210,14 @@ export const getProjectById = async (studentId: string, token: string) => {
   }
 };
 
-// Add milestone
+// Add milestone - Make sure this is properly exported
 export const addMilestone = async (
-  projectId: string, 
+  projectId: string,
   milestoneData: MilestoneData, 
   token: string
 ): Promise<MilestoneResponse> => {
   try {
+  
     if (!milestoneData.title?.trim()) {
       throw new Error("Title is required");
     }
@@ -179,10 +231,11 @@ export const addMilestone = async (
     const payload = {
       title: milestoneData.title.trim(),
       description: milestoneData.description.trim(),
-      startDate: new Date().toISOString().split('T')[0],
-      endDate: milestoneData.dueDate,
+      dueDate: milestoneData.dueDate, // Send as dueDate for backend compatibility
       status: 'Pending'
     };
+
+
 
     const response = await fetch(
       `${API_BASE_URL}/project/${projectId}/milestones`,
@@ -196,7 +249,10 @@ export const addMilestone = async (
       }
     );
 
+   
+
     const data = await response.json();
+   
 
     if (!response.ok) {
       throw new Error(data.message || 'Failed to add milestone');
@@ -268,9 +324,8 @@ export const addTask = async (
   milestoneId: string,
   taskData: {
     title: string;
-    description: string;
-    startDate: string;
-    endDate: string;
+    description?: string;
+    dueDate: string;
   },
   token: string
 ) => {
@@ -355,7 +410,7 @@ export const updateTask = async (taskId: string, taskData: {
   status: "Pending" | "In Progress" | "Completed";
 }, token: string) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
+    const response = await fetch(`${API_BASE_URL}/tasks/${taskId}/status`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -383,15 +438,338 @@ export const updateTask = async (taskId: string, taskData: {
   }
 };
 
-// Check authentication status
-export const checkAuth = () => {
-  const token = localStorage.getItem("authToken");
-  const userInfo = JSON.parse(localStorage.getItem("studentInfo") || "{}");
+// Check authentication status - Add proper typing
+export const checkAuth = (): { token: string; userInfo: any } => {
+  try {
+    const token = localStorage.getItem("authToken");
+    const userInfoString = localStorage.getItem("studentInfo");
+    
+    if (!token) {
+      throw new Error("No authentication token found");
+    }
+    
+    if (!userInfoString) {
+      throw new Error("No user information found");
+    }
+    
+    const userInfo = JSON.parse(userInfoString);
+    
+    if (!userInfo?.userId && !userInfo?.username) {
+      throw new Error("Invalid user information");
+    }
 
-  if (!token || !userInfo?.userId) {
+    return { token, userInfo };
+  } catch (error) {
+    console.error("Authentication check failed:", error);
     throw new Error("Authentication required");
   }
-
-  return { token, userInfo };
 };
+
+// Add registerProject function
+export const registerProject = async (projectData: any, token: string) => {
+  try {
+
+    
+    
+    // Check if we're in browser environment
+    if (typeof window === 'undefined') {
+      throw new Error("This function can only be called from the browser");
+    }
+
+    // Add timeout to the fetch request
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+    const response = await fetch(`${API_BASE_URL}/projects`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify(projectData),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+   
+    
+    // Handle different response scenarios
+    let data;
+    try {
+      data = await response.json();
+    } catch (jsonError) {
+      console.error("Failed to parse response as JSON:", jsonError);
+      throw new Error(`Server returned invalid JSON. Status: ${response.status}`);
+    }
+
+ 
+    
+    
+    if (!response.ok) {
+      throw new Error(data.message || `HTTP error! status: ${response.status}`);
+    }
+
+    return {
+      success: true,
+      data: data,
+      message: data.message || "Project registered successfully"
+    };
+  } catch (error) {
+    console.error("Project registration error:", error);
+    
+    // Handle different types of errors
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        return {
+          success: false,
+          message: "Request timed out. Please check if the server is running and try again."
+        };
+      }
+      
+      if (error.name === 'TypeError' && (error.message.includes('fetch') || error.message.includes('Failed to fetch'))) {
+        return {
+          success: false,
+          message: `Unable to connect to server at ${API_BASE_URL}. Please ensure the backend server is running on port 3000.`
+        };
+      }
+      
+      if (error.message.includes('CORS')) {
+        return {
+          success: false,
+          message: "Server configuration error. Please contact support."
+        };
+      }
+
+      return {
+        success: false,
+        message: error.message || "Failed to register project"
+      };
+    }
+
+    return {
+      success: false,
+      message: "Failed to register project"
+    };
+  }
+};
+
+// Update milestone
+export const updateMilestone = async (
+  projectId: string,
+  milestoneId: string,
+  milestoneData: {
+    title: string;
+    description: string;
+    startDate: string;
+    endDate: string;
+    status?: string;
+  },
+  token: string
+) => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/project/${projectId}/milestones/${milestoneId}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(milestoneData)
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to update milestone');
+    }
+
+    return {
+      success: true,
+      milestone: data.milestone
+    };
+  } catch (error) {
+    console.error('Error in updateMilestone:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to update milestone'
+    };
+  }
+};
+
+// Delete milestone
+export const deleteMilestone = async (
+  projectId: string,
+  milestoneId: string,
+  token: string
+) => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/project/${projectId}/milestones/${milestoneId}`,
+      {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to delete milestone');
+    }
+
+    return {
+      success: true,
+      message: data.message
+    };
+  } catch (error) {
+    console.error('Error in deleteMilestone:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to delete milestone'
+    };
+  }
+};
+
+// Delete task
+export const deleteTask = async (
+  milestoneId: string,
+  taskId: string,
+  token: string
+) => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/milestones/${milestoneId}/tasks/${taskId}`,
+      {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to delete task');
+    }
+
+    return {
+      success: true,
+      message: data.message
+    };
+  } catch (error) {
+    console.error('Error in deleteTask:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to delete task'
+    };
+  }
+};
+
+// Update meeting
+export const updateMeeting = async (
+  milestoneId: string,
+  meetingId: string,
+  meetingData: {
+    title: string;
+    date: string;
+    link?: string;
+    type?: 'Online' | 'Physical';
+  },
+  token: string
+) => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/milestones/${milestoneId}/meetings/${meetingId}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(meetingData)
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to update meeting');
+    }
+
+    return {
+      success: true,
+      meeting: data.meeting
+    };
+  } catch (error) {
+    console.error('Error in updateMeeting:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to update meeting'
+    };
+  }
+};
+
+// Delete meeting
+export const deleteMeeting = async (
+  milestoneId: string,
+  meetingId: string,
+  token: string
+) => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/milestones/${milestoneId}/meetings/${meetingId}`,
+      {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to delete meeting');
+    }
+
+    return {
+      success: true,
+      message: data.message
+    };
+  } catch (error) {
+    console.error('Error in deleteMeeting:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to delete meeting'
+    };
+  }
+};
+
+// Keep default export for compatibility
+const studentProjectsAPI = {
+  getProjectById,
+  addMilestone,
+  updateMilestone,
+  deleteMilestone,
+  updateProjectMilestones,
+  addTask,
+  updateTask,
+  deleteTask,
+  addMeeting,
+  updateMeeting,
+  deleteMeeting,
+  checkAuth,
+  registerProject
+};
+
+export default studentProjectsAPI;
 

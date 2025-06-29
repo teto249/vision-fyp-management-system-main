@@ -5,6 +5,8 @@ const {
   registerSingleUser,
   registerBulkUsers,
   getUsersByUniversityId,
+  deleteUser,
+  bulkDeleteUsers,
 } = require("../controllers/uniAdminController");
 
 
@@ -14,9 +16,14 @@ const router = express.Router();
 router.get("/account", getUniAdminAccount);
 router.put("/account", updateUniAdminAccount);
 router.get("/users/:universityId", getUsersByUniversityId);
+
 // Registration routes
 router.post("/registration/single", registerSingleUser);
 router.post("/registration/bulk", registerBulkUsers);
+
+// User deletion routes
+router.delete("/users/:userType/:userId", deleteUser);
+router.delete("/users/bulk", bulkDeleteUsers);
 
 module.exports = router;
 

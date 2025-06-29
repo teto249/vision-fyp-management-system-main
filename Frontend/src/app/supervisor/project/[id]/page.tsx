@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Project from "../../components/Project/Project";
@@ -18,14 +18,12 @@ import {
 // Debug utility function
 const debugLog = (context: string, data: any, error: Error | null = null) => {
   if (process.env.NODE_ENV === "development") {
-    console.group(`🔍 Debug: ${context}`);
-    console.log("Timestamp:", new Date().toISOString());
-    console.log("Data:", data);
+ 
     if (error) {
       console.error("Error:", error);
       console.error("Stack:", error.stack);
     }
-    console.groupEnd();
+   
   }
 };
 
@@ -72,11 +70,57 @@ interface ProjectData {
 }
 
 interface MilestoneType {
+  id: string;
+  title: string;
+  description: string;
+  status: string;
+  startDate: string;
+  endDate: string;
   tasks?: Array<{
+    id: string;
+    title: string;
+    description: string;
     status: string;
-    [key: string]: any;
+    startDate: string;
+    endDate: string;
+    feedback?: Array<{
+      id: string;
+      title: string;
+      description: string;
+      date: string;
+    }>;
   }>;
-  [key: string]: any;
+  meetings?: Array<{
+    id: string;
+    title: string;
+    purpose: string;
+    date: string;
+    time: string;
+    link: string;
+    type: string;
+  }>;
+}
+
+interface StudentWithProject {
+  userId: string;
+  fullName: string;
+  email: string;
+  universityEmail: string;
+  level: string;
+  department: string;
+  phoneNumber?: string;
+  address?: string;
+  project?: {
+    id: string;
+    title: string;
+    description: string;
+    type: string;
+    status: string;
+    progress: number;
+    startDate: string;
+    endDate: string;
+    milestones: any[];
+  };
 }
 
 export default function StudentProject() {
@@ -86,7 +130,7 @@ export default function StudentProject() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
 
-  const fetchProject = async () => {
+  const fetchProject = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -94,7 +138,7 @@ export default function StudentProject() {
       const result = await getSupervisedStudents();
       
       if (result.success && result.students) {
-        const foundStudent = result.students.find(s => s.userId === params.id);
+        const foundStudent = result.students.find(s => s.userId === params.id) as StudentWithProject;
         
         if (foundStudent?.project) {
           const transformedProject = {
@@ -106,7 +150,32 @@ export default function StudentProject() {
             endDate: foundStudent.project.endDate || "",
             status: foundStudent.project.status || "Pending",
             progress: foundStudent.project.progress || 0,
-            milestones: foundStudent.project.milestones || [],
+            milestones: (foundStudent.project.milestones || []).map((milestone: any) => ({
+              id: milestone.id || "",
+              title: milestone.title || "",
+              description: milestone.description || "",
+              status: milestone.status || "Pending",
+              startDate: milestone.startDate || "",
+              endDate: milestone.endDate || "",
+              tasks: (milestone.tasks || []).map((task: any) => ({
+                id: task.id || "",
+                title: task.title || "",
+                description: task.description || "",
+                status: task.status || "Pending",
+                startDate: task.startDate || "",
+                endDate: task.endDate || "",
+                feedback: task.feedback || [],
+              })),
+              meetings: (milestone.meetings || []).map((meeting: any) => ({
+                id: meeting.id || "",
+                title: meeting.title || "",
+                purpose: meeting.title || "", // Map title to purpose for Meeting component
+                date: meeting.date || "",
+                time: meeting.time || "",
+                link: meeting.link || "",
+                type: meeting.type || "Online",
+              })),
+            })),
             student: {
               fullName: foundStudent.fullName,
               department: foundStudent.department,
@@ -132,11 +201,11 @@ export default function StudentProject() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [params, router]);
 
   useEffect(() => {
     fetchProject();
-  }, [params.id]);
+  }, [fetchProject]);
 
   const handleMilestoneUpdate = async (updatedMilestones: MilestoneType[]) => {
     try {
@@ -176,7 +245,7 @@ export default function StudentProject() {
   if (error) return <ErrorState error={error} onRetry={fetchProject} />;
 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <>
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
         <header className="relative">
           <Link
@@ -234,7 +303,7 @@ export default function StudentProject() {
           )}
         </div>
       </div>
-    </div>
+    </>
   );
 }
 

@@ -115,20 +115,40 @@ export default function Milestone({
       setLoading(true);
       setError("");
 
-      // Validation
-      if (!newMilestone.title?.trim()) throw new Error("Title is required");
-      if (!newMilestone.description?.trim())
-        throw new Error("Description is required");
-      if (!newMilestone.dueDate) throw new Error("Due date is required");
+      // Enhanced validation with better UX
+      if (!newMilestone.title?.trim()) {
+        setError("Milestone title is required");
+        return;
+      }
+      if (!newMilestone.description?.trim()) {
+        setError("Milestone description is required");
+        return;
+      }
+      if (!newMilestone.dueDate) {
+        setError("Due date is required");
+        return;
+      }
+
+      // Validate due date is not in the past
+      const selectedDate = new Date(newMilestone.dueDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (selectedDate < today) {
+        setError("Due date cannot be in the past");
+        return;
+      }
 
       const token = localStorage.getItem("authToken");
-      if (!token) throw new Error("Authentication required");
+      if (!token) {
+        setError("Authentication required. Please log in again.");
+        return;
+      }
 
       const milestoneData = {
         title: newMilestone.title.trim(),
         description: newMilestone.description.trim(),
-        startDate: new Date().toISOString(),
-        endDate: new Date(newMilestone.dueDate).toISOString(),
+        dueDate: newMilestone.dueDate, // Send as dueDate for backend compatibility
         status: "Pending",
       };
 
@@ -145,20 +165,29 @@ export default function Milestone({
         setNewMilestone({ title: "", description: "", dueDate: "" });
         setShowAddMilestone(false);
         onMilestoneUpdate([...milestones, newMilestoneData]);
+        setError(""); // Clear any existing errors
       } else {
-        throw new Error(result.message || "Failed to add milestone");
+        setError(result.message || "Failed to add milestone");
       }
     } catch (error) {
-      setError(error.message);
+      setError(error.message || "An unexpected error occurred");
     } finally {
       setLoading(false);
     }
   };
   const handleDeleteMilestone = async (milestoneId) => {
     try {
-      if (!confirm("Are you sure you want to delete this milestone?")) return;
+      if (!confirm("Are you sure you want to delete this milestone? This action cannot be undone.")) return;
+
+      setLoading(true);
+      setError("");
 
       const token = localStorage.getItem("authToken");
+      if (!token) {
+        setError("Authentication required. Please log in again.");
+        return;
+      }
+
       const result = await deleteMilestone(projectId, milestoneId, token);
 
       if (result.success) {
@@ -167,11 +196,14 @@ export default function Milestone({
         );
         setMilestones(updatedMilestones);
         onMilestoneUpdate(updatedMilestones);
+        setError(""); // Clear any existing errors
       } else {
-        throw new Error(result.message || "Failed to delete milestone");
+        setError(result.message || "Failed to delete milestone");
       }
     } catch (error) {
-      setError(error.message);
+      setError(error.message || "An unexpected error occurred while deleting milestone");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -189,20 +221,40 @@ export default function Milestone({
       setLoading(true);
       setError("");
 
-      // Validation
-      if (!editForm.title?.trim()) throw new Error("Title is required");
-      if (!editForm.description?.trim())
-        throw new Error("Description is required");
-      if (!editForm.dueDate) throw new Error("Due date is required");
+      // Enhanced validation
+      if (!editForm.title?.trim()) {
+        setError("Milestone title is required");
+        return;
+      }
+      if (!editForm.description?.trim()) {
+        setError("Milestone description is required");
+        return;
+      }
+      if (!editForm.dueDate) {
+        setError("Due date is required");
+        return;
+      }
+
+      // Validate due date is not in the past
+      const selectedDate = new Date(editForm.dueDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (selectedDate < today) {
+        setError("Due date cannot be in the past");
+        return;
+      }
 
       const token = localStorage.getItem("authToken");
-      if (!token) throw new Error("Authentication required");
+      if (!token) {
+        setError("Authentication required. Please log in again.");
+        return;
+      }
 
       const updateData = {
         title: editForm.title.trim(),
         description: editForm.description.trim(),
-        startDate: new Date().toISOString(),
-        endDate: new Date(editForm.dueDate).toISOString(),
+        dueDate: editForm.dueDate, // Send as dueDate for backend compatibility
       };
 
       const result = await updateMilestone(projectId, id, updateData, token);
@@ -217,11 +269,12 @@ export default function Milestone({
         onMilestoneUpdate(updatedMilestones);
         setEditingMilestone(null);
         setEditForm({ title: "", description: "", dueDate: "" });
+        setError(""); // Clear any existing errors
       } else {
-        throw new Error(result.message || "Failed to update milestone");
+        setError(result.message || "Failed to update milestone");
       }
     } catch (error) {
-      setError(error.message);
+      setError(error.message || "An unexpected error occurred while updating milestone");
     } finally {
       setLoading(false);
     }
@@ -253,6 +306,7 @@ export default function Milestone({
   };
 
   const getFilteredMilestones = () => {
+  
     if (filter === "all") return milestones;
     return milestones.filter((milestone) => {
       const status = getMilestoneStatus(milestone);
@@ -381,6 +435,7 @@ export default function Milestone({
                 <input
                   type="date"
                   value={newMilestone.dueDate}
+                  min={new Date().toISOString().split('T')[0]} // Prevent past dates
                   onChange={(e) =>
                     setNewMilestone({
                       ...newMilestone,
@@ -543,6 +598,7 @@ export default function Milestone({
                         <input
                           type="date"
                           value={editForm.dueDate}
+                          min={new Date().toISOString().split('T')[0]} // Prevent past dates
                           onChange={(e) =>
                             setEditForm({
                               ...editForm,

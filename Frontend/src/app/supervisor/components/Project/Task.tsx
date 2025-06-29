@@ -7,9 +7,11 @@ import {
   CheckCircleIcon,
   ClockIcon,
   ExclamationCircleIcon,
-  ChatBubbleLeftEllipsisIcon
+  ChatBubbleLeftEllipsisIcon,
+  PencilIcon,
+  XMarkIcon
 } from "@heroicons/react/24/outline";
-import { addTask, updateTaskStatus, addFeedback, deleteTask } from "../../../../api/SupervisorApi/FetchProjects";
+import { addTask, updateTaskStatus, addFeedback, updateFeedback, deleteFeedback, deleteTask } from "../../../../api/SupervisorApi/FetchProjects";
 
 interface Task {
   id: string;
@@ -46,6 +48,7 @@ export default function Task({ tasks = [], onTaskUpdate, milestoneId, userRole =
   const [feedbackModal, setFeedbackModal] = useState({ isOpen: false, taskId: "" });
   const [feedbackForm, setFeedbackForm] = useState({ title: "", description: "" });
   const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
+  const [editingFeedback, setEditingFeedback] = useState<{id: string, taskId: string} | null>(null);
 
   const canEdit = userRole === "Supervisor";
   useEffect(() => {
@@ -88,7 +91,6 @@ export default function Task({ tasks = [], onTaskUpdate, milestoneId, userRole =
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to add task");
-      console.error("Error adding task:", error);
     } finally {
       setLoading(false);
     }
@@ -121,7 +123,6 @@ export default function Task({ tasks = [], onTaskUpdate, milestoneId, userRole =
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to update task status");
-      console.error("Error updating task status:", error);
     } finally {
       setStatusUpdating(null);
     }
@@ -160,6 +161,78 @@ export default function Task({ tasks = [], onTaskUpdate, milestoneId, userRole =
       setError(error instanceof Error ? error.message : "Failed to add feedback");
     }
   };
+
+  const handleEditFeedback = (taskId: string, feedbackId: string, feedback: any) => {
+    setEditingFeedback({ id: feedbackId, taskId });
+    setFeedbackForm({ title: feedback.title, description: feedback.description });
+    setFeedbackModal({ isOpen: true, taskId });
+  };
+
+  const handleUpdateFeedback = async () => {
+    if (!editingFeedback) return;
+    
+    try {
+      if (!feedbackForm.title.trim() || !feedbackForm.description.trim()) {
+        setError("Both title and description are required for feedback");
+        return;
+      }
+
+      const result = await updateFeedback(editingFeedback.taskId, editingFeedback.id, {
+        title: feedbackForm.title.trim(),
+        description: feedbackForm.description.trim()
+      });
+
+      if (result.success) {
+        // Update the task with updated feedback
+        const updatedTasks = localTasks.map((task) =>
+          task.id === editingFeedback.taskId
+            ? { 
+                ...task, 
+                feedback: task.feedback?.map(f => 
+                  f.id === editingFeedback.id ? result.feedback : f
+                ) || []
+              }
+            : task
+        );
+        setLocalTasks(updatedTasks);
+        onTaskUpdate(updatedTasks);
+        setFeedbackModal({ isOpen: false, taskId: "" });
+        setFeedbackForm({ title: "", description: "" });
+        setEditingFeedback(null);
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to update feedback");
+    }
+  };
+
+  const handleDeleteFeedback = async (taskId: string, feedbackId: string) => {
+    const confirmDelete = window.confirm("Are you sure you want to delete this feedback? This action cannot be undone.");
+    if (!confirmDelete) return;
+
+    try {
+      const result = await deleteFeedback(taskId, feedbackId);
+
+      if (result.success) {
+        // Remove the feedback from the task
+        const updatedTasks = localTasks.map((task) =>
+          task.id === taskId
+            ? { 
+                ...task, 
+                feedback: task.feedback?.filter(f => f.id !== feedbackId) || []
+              }
+            : task
+        );
+        setLocalTasks(updatedTasks);
+        onTaskUpdate(updatedTasks);
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to delete feedback");
+    }
+  };
   const handleDeleteTask = async (taskId: string) => {
     if (!canEdit) return;
     
@@ -184,7 +257,6 @@ export default function Task({ tasks = [], onTaskUpdate, milestoneId, userRole =
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to delete task");
-      console.error("Error deleting task:", error);
     } finally {
       setLoading(false);
     }
@@ -399,7 +471,7 @@ export default function Task({ tasks = [], onTaskUpdate, milestoneId, userRole =
                   </select>
                   
                   {canEdit && (
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <div className="flex items-center gap-1 transition-opacity duration-200">
                       <button
                         onClick={() => setFeedbackModal({ isOpen: true, taskId: task.id })}
                         className="flex items-center gap-1 bg-blue-600/20 hover:bg-blue-600/40 
@@ -465,12 +537,32 @@ export default function Task({ tasks = [], onTaskUpdate, milestoneId, userRole =
                   </div>
                   <div className="space-y-2 max-h-32 overflow-y-auto">
                     {task.feedback.map((feedback) => (
-                      <div key={feedback.id} className="bg-blue-500/5 border border-blue-500/20 p-3 rounded-lg">
+                      <div key={feedback.id} className="group bg-blue-500/5 border border-blue-500/20 p-3 rounded-lg hover:bg-blue-500/10 transition-all duration-200">
                         <div className="flex justify-between items-start mb-1">
                           <h6 className="text-sm font-medium text-blue-300">{feedback.title}</h6>
-                          <span className="text-xs text-gray-500">
-                            {new Date(feedback.date).toLocaleDateString()}
-                          </span>
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-gray-500">
+                              {new Date(feedback.date).toLocaleDateString()}
+                            </span>
+                            {canEdit && (
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 ml-2">
+                                <button
+                                  onClick={() => handleEditFeedback(task.id, feedback.id, feedback)}
+                                  className="text-blue-400 hover:text-blue-300 p-1 hover:bg-blue-500/20 rounded"
+                                  title="Edit Feedback"
+                                >
+                                  <PencilIcon className="h-3 w-3" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteFeedback(task.id, feedback.id)}
+                                  className="text-red-400 hover:text-red-300 p-1 hover:bg-red-500/20 rounded"
+                                  title="Delete Feedback"
+                                >
+                                  <TrashIcon className="h-3 w-3" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <p className="text-xs text-gray-300 leading-relaxed">{feedback.description}</p>
                       </div>
@@ -492,8 +584,12 @@ export default function Task({ tasks = [], onTaskUpdate, milestoneId, userRole =
                 <ChatBubbleLeftEllipsisIcon className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h6 className="text-xl font-semibold text-gray-100">Add Feedback</h6>
-                <p className="text-sm text-gray-400">Provide constructive feedback for this task</p>
+                <h6 className="text-xl font-semibold text-gray-100">
+                  {editingFeedback ? "Edit Feedback" : "Add Feedback"}
+                </h6>
+                <p className="text-sm text-gray-400">
+                  {editingFeedback ? "Update your feedback for this task" : "Provide constructive feedback for this task"}
+                </p>
               </div>
             </div>
             
@@ -544,6 +640,7 @@ export default function Task({ tasks = [], onTaskUpdate, milestoneId, userRole =
                 onClick={() => {
                   setFeedbackModal({ isOpen: false, taskId: "" });
                   setFeedbackForm({ title: "", description: "" });
+                  setEditingFeedback(null);
                   setError("");
                 }}
                 className="px-6 py-2.5 text-gray-300 hover:text-white bg-gray-700/50 
@@ -553,14 +650,14 @@ export default function Task({ tasks = [], onTaskUpdate, milestoneId, userRole =
                 Cancel
               </button>
               <button
-                onClick={handleAddFeedback}
+                onClick={editingFeedback ? handleUpdateFeedback : handleAddFeedback}
                 className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 
                          hover:from-blue-700 hover:to-blue-800 text-white px-6 py-2.5 
                          rounded-xl transition-all duration-200 font-medium shadow-lg 
                          transform hover:scale-105"
               >
                 <ChatBubbleLeftEllipsisIcon className="h-5 w-5" />
-                <span>Add Feedback</span>
+                <span>{editingFeedback ? "Update Feedback" : "Add Feedback"}</span>
               </button>
             </div>
           </div>
