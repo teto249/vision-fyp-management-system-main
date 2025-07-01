@@ -48,9 +48,9 @@ class ApiError extends Error {
 async function fetchWithAuth(url: string, options: RequestInit = {}) {
   const authToken = localStorage.getItem("authToken");
 
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...options.headers,
+    ...(options.headers as Record<string, string>),
   };
 
   if (authToken) {

@@ -202,7 +202,7 @@ export default function Documents() {
 
   useEffect(() => {
     fetchDocuments();
-  }, []);
+  }, [fetchDocuments]);
 
   if (loading) {
     return (
@@ -308,7 +308,7 @@ export default function Documents() {
               <h2 className="text-xl font-semibold text-white mb-4">Upload Document</h2>
               {error && (
                 <div className="bg-red-900/20 border border-red-500 rounded-lg p-3 mb-4">
-                  <p className="text-red-500 text-sm">{error.message}</p>
+                  <p className="text-red-500 text-sm">{(error as ErrorState).message}</p>
                 </div>
               )}
 

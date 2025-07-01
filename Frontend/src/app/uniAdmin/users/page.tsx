@@ -335,24 +335,32 @@ export default function UserListPage() {
         setIsLoading(true);
         setError("");
         
-        // Get admin info from localStorage (same approach as dashboard)
+        // Get admin info from localStorage
         const adminInfoString = localStorage.getItem("adminInfo");
         
         if (!adminInfoString) {
           throw new Error("University admin information not found. Please log in again.");
         }
 
-        const adminInfo = JSON.parse(adminInfoString);
-       
-        const universityId = adminInfo?.universityId;
+        let adminInfo;
+        try {
+          adminInfo = JSON.parse(adminInfoString);
+        } catch (parseError) {
+          throw new Error("Invalid admin information format. Please log in again.");
+        }
+        
+        // Try multiple ways to get the university ID
+        const universityId = adminInfo?.universityId || 
+                            adminInfo?.university?.id ||
+                            adminInfo?.University?.id;
         
         if (!universityId) {
-          console.error("Full admin info structure:", JSON.stringify(adminInfo, null, 2));
-          throw new Error(`University ID not found. Please ensure you are logged in as a university admin.`);
+          console.error("Admin info structure:");
+          throw new Error("University ID not found. Please ensure you are logged in as a university admin.");
         }
 
         showNotification('info', 'Loading users...');
-        console.log("Fetching users for university ID:", universityId);
+     
         
         // Fetch users data
         const data = await fetchUsersByUniversity(universityId);

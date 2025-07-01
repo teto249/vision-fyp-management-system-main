@@ -109,7 +109,7 @@ export default function Documents() {
 
   useEffect(() => {
     fetchDocuments();
-  }, []);
+  }, [fetchDocuments]);
 
   if (loading) {
     return (

@@ -7,13 +7,11 @@ import {
   Loader2,
   FileText,
   Download,
-  Trash2,
-  AlertTriangle,
+  ArrowLeft,
 } from "lucide-react";
 import {
   getDocumentById,
-  deleteDocument,
-} from "../../../../api/SupervisorApi/Documnets";
+} from "../../../../api/StudentApi/Document";
 import { logger } from "../../../../utils/logger";
 
 const formatDate = (dateString: string): string => {
@@ -44,8 +42,6 @@ export default function DocumentViewPage({
   const [doc, setDoc] = useState<DocumentType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Unwrap params using React.use()
   const unwrappedParams = use(params);
@@ -76,28 +72,6 @@ export default function DocumentViewPage({
 
     fetchDocument();
   }, [unwrappedParams.id, router]);
-
-  const handleDelete = async () => {
-    try {
-      setIsDeleting(true);
-      const token = localStorage.getItem("authToken");
-
-      if (!token || !doc) {
-        throw new Error("Unable to delete document");
-      }
-
-      await deleteDocument(unwrappedParams.id, token);
-      router.push("/supervisor/document");
-    } catch (err) {
-      logger.error("Failed to delete document:", err);
-      setError(
-        err instanceof Error ? err.message : "Failed to delete document"
-      );
-    } finally {
-      setIsDeleting(false);
-      setShowDeleteConfirm(false);
-    }
-  };
 
   const handleDownload = () => {
     if (!doc?.fileUrl) return;
@@ -199,13 +173,6 @@ export default function DocumentViewPage({
               <Download size={20} />
               Download
             </button>
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-            >
-              <Trash2 size={20} />
-              Delete
-            </button>
           </div>
         </div>
 
@@ -213,51 +180,14 @@ export default function DocumentViewPage({
 
         <div className="mt-6 flex gap-2">
           <button
-            onClick={() => router.back()}
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+            onClick={() => router.push('/student/document')}
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg flex items-center gap-2"
           >
-            Go Back
+            <ArrowLeft size={20} />
+            Back to Documents
           </button>
         </div>
 
-        {/* Delete Confirmation Modal */}
-        {showDeleteConfirm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full">
-              <div className="flex items-center gap-3 text-red-500 mb-4">
-                <AlertTriangle size={24} />
-                <h2 className="text-xl font-semibold">Delete Document</h2>
-              </div>
-              <p className="text-gray-400 mb-6">
-                Are you sure you want to delete &quot;{doc.title}&quot;? This
-                action cannot be undone.
-              </p>
-              <div className="flex gap-3 justify-end">
-                <button
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
-                  disabled={isDeleting}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center gap-2"
-                >
-                  {isDeleting ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
-                    <>
-                      <Trash2 size={20} />
-                      Delete
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

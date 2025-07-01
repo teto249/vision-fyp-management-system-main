@@ -2,7 +2,6 @@
 import Image from "next/image";
 import { User, Mail, Phone, Building, Upload } from "lucide-react";
 import SubmitButtons from "./SubmitButtons";
-import TextDivider from "./TextDivider";
 import LabelInput from "./LabelInput";
 import { getInitials } from "../../../../utils/getInitials";
 
@@ -62,9 +61,11 @@ export default function Profile({
                            flex items-center justify-center overflow-hidden ring-4 ring-slate-700/50 
                            group-hover:ring-teal-500/50 transition-all duration-300">
               {formData.profilePhoto ? (
-                <img
+                <Image
                   src={formData.profilePhoto}
                   alt="Profile"
+                  width={128}
+                  height={128}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -116,12 +117,10 @@ export default function Profile({
 
         {/* Personal Information Section */}
         <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6">
-          <TextDivider>
-            <span className="flex items-center gap-2">
-              <User className="w-5 h-5" />
-              Personal Information
-            </span>
-          </TextDivider>
+          <div className="flex items-center gap-3 mb-6">
+            <User className="w-5 h-5 text-teal-400" />
+            <h3 className="text-xl font-semibold text-white">Personal Information</h3>
+          </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
             <LabelInput
@@ -172,12 +171,10 @@ export default function Profile({
 
         {/* University Information Section */}
         <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6">
-          <TextDivider>
-            <span className="flex items-center gap-2">
-              <Building className="w-5 h-5" />
-              University Information
-            </span>
-          </TextDivider>
+          <div className="flex items-center gap-3 mb-6">
+            <Building className="w-5 h-5 text-teal-400" />
+            <h3 className="text-xl font-semibold text-white">University Information</h3>
+          </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
             <LabelInput
@@ -234,10 +231,7 @@ export default function Profile({
                 disabled={!isEditMode}
                 icon={<Building className="w-5 h-5" />}
                 placeholder="Full university address"
-              >
-                {/* No children content needed */}
-                {/* Provide empty children to satisfy the type */}
-              </LabelInput>
+              />
             </div>
           </div>
         </div>
@@ -245,9 +239,8 @@ export default function Profile({
         {/* Submit Buttons */}
         {isEditMode && (
           <SubmitButtons
-            isSubmitting={isSubmitting}
-            onCancel={toggleEditMode}
-            saveStatus={saveStatus}
+            toggleEditMode={toggleEditMode}
+            disabled={isSubmitting}
           />
         )}
       </form>

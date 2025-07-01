@@ -64,7 +64,7 @@ export const getDocumentById = async (id: string, token: string): Promise<Docume
   return {
     ...doc,
     fileUrl: doc.fileContent ? 
-      `data:application/pdf;base64,${doc.fileContent.toString('base64')}` : 
+      `data:application/pdf;base64,${doc.fileContent}` : 
       undefined
   };
 };

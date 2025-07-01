@@ -120,6 +120,7 @@ exports.registerUniversity = async (req, res) => {
  
   
   try {
+    
     const {
       shortName,
       fullName,
@@ -133,6 +134,8 @@ exports.registerUniversity = async (req, res) => {
       adminPassword,
       adminPhone,
     } = req.body;
+ 
+    
  
     // Validate required fields
     const missingFields = [];
@@ -157,14 +160,36 @@ exports.registerUniversity = async (req, res) => {
     };
 
     // Check existing university
-    const exists = await University.findOne({
+    const existingUniversity = await University.findOne({
       where: { shortName: shortName.toUpperCase() },
       transaction,
     });
 
-    if (exists) {
+    if (existingUniversity) {
       await transaction.rollback();
-      return res.status(400).json({ message: "University already exists" });
+      return res.status(400).json({ message: `University with short name '${shortName.toUpperCase()}' already exists` });
+    }
+
+    // Check existing admin email
+    const existingAdmin = await UniAdmin.findOne({
+      where: { primaryEmail: adminEmail },
+      transaction,
+    });
+
+    if (existingAdmin) {
+      await transaction.rollback();
+      return res.status(400).json({ message: `An administrator with email '${adminEmail}' already exists` });
+    }
+
+    // Check existing university email
+    const existingUniEmail = await University.findOne({
+      where: { email: email },
+      transaction,
+    });
+
+    if (existingUniEmail) {
+      await transaction.rollback();
+      return res.status(400).json({ message: `A university with email '${email}' already exists` });
     }
 
     // Create university
@@ -197,7 +222,6 @@ exports.registerUniversity = async (req, res) => {
       {
         username, // Using generated username
         universityId: university.id,
-        universityShortName: university.shortName,
         fullName: adminFullName,
         primaryEmail: adminEmail,
         phoneNumber: adminPhone,
@@ -209,38 +233,7 @@ exports.registerUniversity = async (req, res) => {
 
     await transaction.commit();
 
-    // Send welcome email to the university admin
-    try {
-      const emailResult = await emailService.sendUniversityRegistrationEmail(
-        {
-          id: university.id,
-          shortName: university.shortName,
-          fullName: university.fullName,
-          address: university.address,
-          email: university.email,
-          phone: university.phone,
-          maxStudents: university.maxStudents,
-          maxSupervisors: university.maxSupervisors,
-        },
-        {
-          username: admin.username,
-          fullName: admin.fullName,
-          primaryEmail: admin.primaryEmail,
-          temporaryPassword: adminPassword, // Note: In production, you might want to generate a random password
-        }
-      );
-
-      if (emailResult.success) {
-        console.log(`Registration email sent successfully to ${admin.primaryEmail}`);
-      } else {
-        console.error(`Failed to send registration email: ${emailResult.error}`);
-        // Don't fail the registration if email fails, just log the error
-      }
-    } catch (emailError) {
-      console.error('Email service error during university registration:', emailError);
-      // Continue with successful registration response even if email fails
-    }
-
+    // Note: Email sending is now handled by frontend via EmailJS
     res.status(201).json({
       message: "University registered successfully",
       university: {
@@ -254,11 +247,53 @@ exports.registerUniversity = async (req, res) => {
         fullName: admin.fullName,
         email: admin.primaryEmail,
       },
-      emailSent: true, // Indicate that email was attempted
+      emailHandledByFrontend: true, // Indicate that email is handled by frontend
     });
   } catch (error) {
     await transaction.rollback();
-    res.status(500).json({ message: error.message });
+    console.error("University registration error:", error);
+    
+    // Handle Sequelize validation errors
+    if (error.name === 'SequelizeValidationError') {
+      const validationErrors = error.errors.map(err => ({
+        field: err.path,
+        message: err.message,
+        value: err.value
+      }));
+      return res.status(400).json({ 
+        message: "Validation error", 
+        errors: validationErrors,
+        details: error.message
+      });
+    }
+    
+    // Handle unique constraint errors
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      const field = error.errors[0]?.path;
+      const value = error.errors[0]?.value;
+      
+      let message = "Duplicate entry error";
+      if (field === 'primaryEmail') {
+        message = `An administrator with email '${value}' already exists`;
+      } else if (field === 'shortName') {
+        message = `University with short name '${value}' already exists`;
+      } else if (field === 'email') {
+        message = `University with email '${value}' already exists`;
+      } else if (field === 'username') {
+        message = `Username '${value}' already exists`;
+      }
+      
+      return res.status(400).json({ 
+        message: message,
+        field: field,
+        details: error.message
+      });
+    }
+    
+    res.status(500).json({ 
+      message: "Internal server error", 
+      details: error.message 
+    });
   }
 };
 
@@ -687,5 +722,193 @@ exports.getDashboardStats = async (req, res) => {
   } catch (error) {
     console.error("Error fetching dashboard stats:", error);
     res.status(500).json({ message: error.message });
+  }
+};
+
+
+// Delete university
+exports.deleteUniversity = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
+  try {
+    const { id } = req.params;
+    
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'University ID is required'
+      });
+    }
+
+    // Check if university exists
+    const university = await University.findByPk(id);
+    
+    if (!university) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        message: 'University not found'
+      });
+    }
+
+    // Check if university has active users (students, supervisors, or admin)
+    const [studentsCount, supervisorsCount, uniAdminCount] = await Promise.all([
+      Student.count({ where: { universityId: id } }),
+      Supervisor.count({ where: { universityId: id } }),
+      UniAdmin.count({ where: { universityId: id } })
+    ]);
+
+    const totalUsers = studentsCount + supervisorsCount + uniAdminCount;
+    
+    if (totalUsers > 0) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: `Cannot delete university with active users. Found ${studentsCount} students, ${supervisorsCount} supervisors, and ${uniAdminCount} administrators.`,
+        details: {
+          students: studentsCount,
+          supervisors: supervisorsCount,
+          administrators: uniAdminCount
+        }
+      });
+    }
+
+    // Check for active projects
+    const activeProjects = await Project.count({
+      include: [{
+        model: Student,
+        where: { universityId: id }
+      }]
+    });
+
+    if (activeProjects > 0) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: `Cannot delete university with ${activeProjects} active projects. Please complete or transfer projects first.`
+      });
+    }
+
+    // Store university name for response
+    const universityName = university.fullName;
+
+    // Delete the university (cascade will handle related records)
+    await university.destroy({ transaction });
+
+    await transaction.commit();
+
+    res.status(200).json({
+      success: true,
+      message: `University "${universityName}" has been successfully deleted`,
+      deletedUniversity: {
+        id: id,
+        name: universityName
+      }
+    });
+
+  } catch (error) {
+    await transaction.rollback();
+    console.error('Error deleting university:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete university',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Force delete university (with all related data)
+exports.forceDeleteUniversity = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
+  try {
+    const { id } = req.params;
+    const { confirmForce } = req.body;
+    
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'University ID is required'
+      });
+    }
+
+    if (!confirmForce) {
+      return res.status(400).json({
+        success: false,
+        message: 'Force deletion must be explicitly confirmed'
+      });
+    }
+
+    // Check if university exists
+    const university = await University.findByPk(id);
+    
+    if (!university) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        message: 'University not found'
+      });
+    }
+
+
+    // Get counts for logging
+    const [studentsCount, supervisorsCount, uniAdminCount, projectsCount] = await Promise.all([
+      Student.count({ where: { universityId: id } }),
+      Supervisor.count({ where: { universityId: id } }),
+      UniAdmin.count({ where: { universityId: id } }),
+      Project.count({
+        include: [{
+          model: Student,
+          as: 'student',
+          where: { universityId: id }
+        }]
+      })
+    ]);
+
+    const universityName = university.fullName;
+
+    // Force delete all related data
+    await Promise.all([
+      // Delete projects first (due to foreign key constraints)
+      Project.destroy({
+        include: [{
+          model: Student,
+          where: { universityId: id }
+        }],
+        transaction
+      }),
+      // Delete students
+      Student.destroy({ where: { universityId: id }, transaction }),
+      // Delete supervisors
+      Supervisor.destroy({ where: { universityId: id }, transaction }),
+      // Delete university admin
+      UniAdmin.destroy({ where: { universityId: id }, transaction })
+    ]);
+
+    // Finally delete the university
+    await university.destroy({ transaction });
+
+    await transaction.commit();
+
+    res.status(200).json({
+      success: true,
+      message: `University "${universityName}" and all related data have been permanently deleted`,
+      deletedData: {
+        university: universityName,
+        students: studentsCount,
+        supervisors: supervisorsCount,
+        administrators: uniAdminCount,
+        projects: projectsCount
+      }
+    });
+
+  } catch (error) {
+    await transaction.rollback();
+    console.error('Error force deleting university:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to force delete university',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };

@@ -1,5 +1,5 @@
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 export interface DashboardStats {
   totalUsers: number;
@@ -36,7 +36,7 @@ export interface DashboardStats {
 
 export async function fetchDashboardStats(): Promise<DashboardStats> {
   try {
-    const response = await fetch(`${API_BASE_URL}/admin/dashboard/stats`, {
+    const response = await fetch(`${API_BASE_URL}/api/admin/dashboard/stats`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem("authToken")}`,
         "Content-Type": "application/json",

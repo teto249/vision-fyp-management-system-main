@@ -14,6 +14,8 @@ const {
   registerUniversity,
   getUniversityStatistics,
   getUniversityMembers,
+  deleteUniversity,
+  forceDeleteUniversity,
   
   // Dashboard
   getDashboardStats,
@@ -37,6 +39,8 @@ router.get("/universities", getAllUniversitiesWithDetails);
 router.post("/registerUniversity", registerUniversity); // Make sure this matches frontend
 router.get("/universities/:id/statistics", getUniversityStatistics);
 router.get("/universities/:id/members", getUniversityMembers);
+router.delete("/universities/:id", deleteUniversity);
+router.delete("/universities/:id/force", forceDeleteUniversity);
 
 // Dashboard routes
 router.get("/dashboard/stats", getDashboardStats);

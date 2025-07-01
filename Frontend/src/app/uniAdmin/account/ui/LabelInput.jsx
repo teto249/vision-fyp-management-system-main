@@ -9,7 +9,7 @@ export default function LabelInput({
   disabled = false,
   icon,
   placeholder,
-  children,
+  children = null, // Default to null to make it optional
   ...rest
 }) {
   return (

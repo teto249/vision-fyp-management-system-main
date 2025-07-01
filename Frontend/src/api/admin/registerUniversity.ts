@@ -1,4 +1,5 @@
 import { toast } from "react-toastify";
+import { sendEmail } from "../../lib/emailjs";
 
 
 interface UniversityResponse {
@@ -30,7 +31,7 @@ interface RegistrationResponse {
 }
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000";
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 export function validateLogoFile(file: File): boolean {
   const maxSize = 2 * 1024 * 1024; // 2MB
@@ -50,17 +51,19 @@ export async function registerUniversity(
   formData: FormData
 ): Promise<RegistrationResponse> {
   try {
+    console.log('🚀 Starting university registration...');
     const jsonData = Object.fromEntries(formData.entries());
+    console.log('📝 Form data received:', Object.keys(jsonData));
 
     const requiredFields = [
       "shortName",
-      "fullName",
+      "fullName", 
       "address",
       "email",
       "phone",
       "maxStudents",
       "maxSupervisors",
-      "adminFullName", // Removed adminUsername since it's generated
+      "adminFullName",
       "adminEmail",
       "adminPhone",
       "adminPassword",
@@ -70,6 +73,8 @@ export async function registerUniversity(
     if (missingFields.length > 0) {
       throw new Error(`Missing required fields: ${missingFields.join(", ")}`);
     }
+
+    console.log('📡 Sending registration request to backend...');
 
     const response = await fetch(
       `${API_BASE_URL}/api/admin/registerUniversity`,
@@ -81,7 +86,7 @@ export async function registerUniversity(
           Authorization: `Bearer ${localStorage.getItem("authToken")}`,
         },
         body: JSON.stringify({
-          shortName: jsonData.shortName,
+          shortName: (jsonData.shortName as string).toUpperCase(),
           fullName: jsonData.fullName,
           address: jsonData.address,
           email: jsonData.email,
@@ -97,22 +102,73 @@ export async function registerUniversity(
     );
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Registration failed");
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData.message || errorData.details || `HTTP ${response.status}: ${response.statusText}`;
+      console.error('❌ Backend registration failed:', errorMessage);
+      throw new Error(errorMessage);
     }
 
+    console.log('✅ Backend registration successful');
     const data = await response.json();
+    
     if (!data.university || !data.admin || !data.admin.username) {
-      throw new Error("Invalid response from server");
+      throw new Error("Invalid response from server - missing required data");
+    }
+
+    console.log('📧 Registration successful, proceeding with email notification...');
+
+    // Send welcome email via EmailJS
+    try {
+      console.log('📧 Preparing to send university registration email...');
+      
+      const templateParams = {
+        to_name: jsonData.adminFullName as string,
+        to_email: jsonData.adminEmail as string,
+        username: data.admin.username,
+        password: jsonData.adminPassword as string,
+        university_name: data.university.shortName,
+        university_code: data.university.shortName,
+        admin_email: jsonData.adminEmail as string,
+        login_url: `${window.location.origin}/auth/signin`,
+        university_full_name: data.university.fullName,
+        university_address: jsonData.address as string,
+        university_phone: jsonData.phone as string,
+        university_email: jsonData.email as string,
+        max_students: jsonData.maxStudents as string,
+        max_supervisors: jsonData.maxSupervisors as string,
+        // Additional fields for EmailJS template
+        user_role: 'University Administrator',
+        contact_email: 'support@vision-fyp.com',
+        year: new Date().getFullYear().toString()
+      };
+
+      const templateId = process.env.NEXT_PUBLIC_EMAILJS_UNIVERSITY_TEMPLATE || 
+                        process.env.NEXT_PUBLIC_EMAILJS_USER_TEMPLATE || 
+                        'template_ebbzvbb';
+      
+      console.log(`📧 Using template ID: ${templateId}`);
+
+      await sendEmail({
+        templateParams,
+        templateId
+      });
+
+      console.log('✅ University registration email sent successfully');
+      
+    } catch (emailError) {
+      console.error('❌ Failed to send registration email:', emailError);
+      // Don't fail the registration if email fails
+      toast.warning('University registered successfully, but welcome email could not be sent. Please check your email configuration.');
     }
 
     toast.success(
-      `University registered successfully! Admin username: ${data.admin.username}`
+      `🎉 University "${data.university.shortName}" registered successfully! Admin username: ${data.admin.username}`
     );
+    console.log('✅ University registration process completed');
     return data;
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Registration failed";
+    console.error('❌ University registration failed:', error);
+    const message = error instanceof Error ? error.message : "Registration failed due to unknown error";
     toast.error(message);
     throw error;
   }

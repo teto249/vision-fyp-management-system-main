@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Card from "./ui/Card";
-import { fetchUniversities } from "../../../api/admin/fetchUniversities";
+import { fetchUniversities, deleteUniversity, forceDeleteUniversity } from "../../../api/admin/fetchUniversities";
 import { useRouter } from "next/navigation";
 
 export default function UniversityPage() {
@@ -11,6 +11,11 @@ export default function UniversityPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState("all");
   const [viewMode, setViewMode] = useState("grid"); // grid or list
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showForceDeleteModal, setShowForceDeleteModal] = useState(false);
+  const [selectedUniversity, setSelectedUniversity] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -39,6 +44,82 @@ export default function UniversityPage() {
         uni.shortName.toLowerCase().includes(searchTerm.toLowerCase())
     )
     .filter((uni) => (filter === "all" ? true : uni.status === filter));
+
+  const handleDeleteUniversity = async () => {
+    if (!selectedUniversity) return;
+    
+    setIsDeleting(true);
+    setDeleteError(null);
+    
+    try {
+      const response = await deleteUniversity(selectedUniversity.id);
+      
+      // Remove the university from the list
+      setUniversities(prev => prev.filter(uni => uni.id !== selectedUniversity.id));
+      
+      // Show success message
+      alert(`University "${response.deletedUniversity?.name}" has been successfully deleted.`);
+      
+      // Close modal
+      setShowDeleteModal(false);
+      setSelectedUniversity(null);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete university';
+      console.error('List page delete error:', error);
+      console.error('Error message:', errorMessage);
+      setDeleteError(errorMessage);
+      
+      // If the error indicates there are active users, show force delete option
+      if (errorMessage.includes('Cannot delete university with active users')) {
+        setShowDeleteModal(false);
+        setShowForceDeleteModal(true);
+      } 
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleForceDeleteUniversity = async () => {
+    if (!selectedUniversity) return;
+    
+    setIsDeleting(true);
+    setDeleteError(null);
+    
+    try {
+      const response = await forceDeleteUniversity(selectedUniversity.id, true);
+      
+      // Remove the university from the list
+      setUniversities(prev => prev.filter(uni => uni.id !== selectedUniversity.id));
+      
+      // Show success message with details
+      const deletedData = response.deletedData;
+      if (deletedData) {
+        alert(`University "${deletedData.university}" and all related data have been permanently deleted:\n` +
+              `- ${deletedData.students} students\n` +
+              `- ${deletedData.supervisors} supervisors\n` +
+              `- ${deletedData.administrators} administrators\n` +
+              `- ${deletedData.projects} projects`);
+      } else {
+        alert(`University has been successfully deleted.`);
+      }
+      
+      // Close modal
+      setShowForceDeleteModal(false);
+      setSelectedUniversity(null);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to force delete university';
+      setDeleteError(errorMessage);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteClick = (universityId) => {
+    const university = universities.find(uni => uni.id === universityId);
+    setSelectedUniversity(university);
+    setDeleteError(null);
+    setShowDeleteModal(true);
+  };
 
   if (loading) {
     return (
@@ -281,6 +362,7 @@ export default function UniversityPage() {
                     status={uni.status}
                     onView={handleViewUniversity}
                     viewMode={viewMode}
+                    onDelete={handleDeleteClick}
                   />
                 </div>
               ))}
@@ -305,6 +387,87 @@ export default function UniversityPage() {
           animation: fadeInUp 0.6s ease-out both;
         }
       `}</style>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black opacity-50"></div>
+          <div className="bg-gray-800 rounded-lg shadow-lg max-w-sm w-full z-10">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-white mb-4">Confirm Deletion</h3>
+              <p className="text-gray-400 mb-6">
+                Are you sure you want to delete the university "{selectedUniversity?.title}"?
+              </p>
+              
+              {/* Error Message */}
+              {deleteError && (
+                <div className="bg-red-900/20 p-4 rounded-lg mb-4">
+                  <p className="text-red-400 text-sm">{deleteError}</p>
+                </div>
+              )}
+
+              <div className="flex justify-end space-x-4">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteUniversity}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors duration-200 flex items-center justify-center"
+                >
+                  {isDeleting ? (
+                    <svg className="animate-spin h-5 w-5 mr-3 text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                      <path fill="none" d="M0 0h24v24H0z" />
+                      <path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+                    </svg>
+                  ) : (
+                    "Delete University"
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Force Delete Confirmation Modal */}
+      {showForceDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black opacity-50"></div>
+          <div className="bg-gray-800 rounded-lg shadow-lg max-w-sm w-full z-10">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-white mb-4">Force Delete University</h3>
+              <p className="text-gray-400 mb-6">
+                This university has active users. Please choose a deletion option:
+              </p>
+
+              <div className="flex flex-col space-y-4">
+                <button
+                  onClick={handleForceDeleteUniversity}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors duration-200 flex items-center justify-center"
+                >
+                  {isDeleting ? (
+                    <svg className="animate-spin h-5 w-5 mr-3 text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                      <path fill="none" d="M0 0h24v24H0z" />
+                      <path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+                    </svg>
+                  ) : (
+                    "Force Delete University"
+                  )}
+                </button>
+                <button
+                  onClick={() => setShowForceDeleteModal(false)}
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

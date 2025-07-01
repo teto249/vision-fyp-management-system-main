@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useEffect, FormEvent } from "react";
+import { useState, FormEvent } from "react";
 import { login, logout, AuthError } from "../../api/auth";
 
 export default function LoginForm() {
@@ -12,41 +12,6 @@ export default function LoginForm() {
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [username, setUsername] = useState<string>("");
   const router = useRouter();
-
-  // Inactivity timer configuration
-  const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes
-  let inactivityTimer: NodeJS.Timeout;
-
-  const resetInactivityTimer = () => {
-    clearTimeout(inactivityTimer);
-    inactivityTimer = setTimeout(handleLogout, INACTIVITY_TIMEOUT);
-  };
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      router.push("/");
-    } catch (error) {
-      console.error("Logout failed:", error);
-      // Force redirect even if logout fails
-      router.push("/");
-    }
-  };
-
-  useEffect(() => {
-    const events = ["mousemove", "keydown", "click", "scroll"];
-    events.forEach((event) =>
-      window.addEventListener(event, resetInactivityTimer)
-    );
-    resetInactivityTimer();
-
-    return () => {
-      clearTimeout(inactivityTimer);
-      events.forEach((event) =>
-        window.removeEventListener(event, resetInactivityTimer)
-      );
-    };
-  }, []);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();

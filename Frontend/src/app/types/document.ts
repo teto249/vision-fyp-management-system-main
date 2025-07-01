@@ -7,7 +7,9 @@ export interface Document {
   supervisorId: string;
   studentId?: string;
   createdAt: string;
+   fileSize?: number;
   // Full document data (only populated when viewing)
   fileUrl?: string;
   fileContent?: string;
 }
+

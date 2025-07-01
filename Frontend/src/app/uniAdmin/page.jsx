@@ -11,11 +11,11 @@ import {
   Legend,
 } from "chart.js";
 import { Bar, Pie } from "react-chartjs-2";
-import { 
-  Users, 
-  GraduationCap, 
-  UserCheck, 
-  TrendingUp, 
+import {
+  Users,
+  GraduationCap,
+  UserCheck,
+  TrendingUp,
   TrendingDown,
   Activity,
   Clock,
@@ -25,7 +25,7 @@ import {
   Loader2,
   Edit3,
   BarChart3,
-  PieChart
+  PieChart,
 } from "lucide-react";
 import PerformancePanel from "./components/Dashboard/PerformancePanel";
 import SummaryCard from "./components/Dashboard/SummaryCard";
@@ -42,7 +42,6 @@ ChartJS.register(
 
 // Mock Data
 
-
 // Enhanced Chart Data
 const milestoneData = {
   labels: ["Requirements", "Design", "Implementation", "Testing", "Deployment"],
@@ -55,14 +54,14 @@ const milestoneData = {
         "rgba(59, 130, 246, 0.8)",
         "rgba(139, 92, 246, 0.8)",
         "rgba(244, 63, 94, 0.8)",
-        "rgba(245, 158, 11, 0.8)"
+        "rgba(245, 158, 11, 0.8)",
       ],
       borderColor: [
         "rgb(20, 184, 166)",
         "rgb(59, 130, 246)",
         "rgb(139, 92, 246)",
         "rgb(244, 63, 94)",
-        "rgb(245, 158, 11)"
+        "rgb(245, 158, 11)",
       ],
       borderWidth: 2,
       borderRadius: 8,
@@ -78,12 +77,12 @@ const systemStatusData = {
       backgroundColor: [
         "rgba(20, 184, 166, 0.8)",
         "rgba(59, 130, 246, 0.8)",
-        "rgba(100, 116, 139, 0.8)"
+        "rgba(100, 116, 139, 0.8)",
       ],
       borderColor: [
         "rgb(20, 184, 166)",
         "rgb(59, 130, 246)",
-        "rgb(100, 116, 139)"
+        "rgb(100, 116, 139)",
       ],
       borderWidth: 2,
     },
@@ -95,11 +94,11 @@ const CapacityUsageCard = ({ currentUsers, maxCapacity }) => {
   const percentage = Math.floor((currentUsers / maxCapacity) * 100);
   const isNearLimit = percentage > 80;
   const isAtLimit = percentage > 95;
-  
+
   let statusColor = "text-emerald-400";
   let bgColor = "bg-emerald-500/20";
   let borderColor = "border-emerald-500/30";
-  
+
   if (isAtLimit) {
     statusColor = "text-red-400";
     bgColor = "bg-red-500/20";
@@ -117,7 +116,9 @@ const CapacityUsageCard = ({ currentUsers, maxCapacity }) => {
           <h3 className="text-slate-300 text-sm font-medium uppercase tracking-wider">
             Capacity Usage
           </h3>
-          <div className={`px-2 py-1 rounded-full text-xs font-medium ${bgColor} ${statusColor} ${borderColor} border`}>
+          <div
+            className={`px-2 py-1 rounded-full text-xs font-medium ${bgColor} ${statusColor} ${borderColor} border`}
+          >
             {percentage}%
           </div>
         </div>
@@ -126,19 +127,21 @@ const CapacityUsageCard = ({ currentUsers, maxCapacity }) => {
           <p className="text-3xl font-bold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent group-hover:from-teal-300 group-hover:to-blue-300 transition-all duration-300">
             {currentUsers.toLocaleString()}/{maxCapacity.toLocaleString()}
           </p>
-          
+
           {/* Progress Bar */}
           <div className="w-full bg-slate-700/50 rounded-full h-2">
-            <div 
+            <div
               className={`h-2 rounded-full transition-all duration-500 ${
-                isAtLimit ? 'bg-gradient-to-r from-red-500 to-red-600' :
-                isNearLimit ? 'bg-gradient-to-r from-amber-500 to-amber-600' :
-                'bg-gradient-to-r from-emerald-500 to-teal-600'
+                isAtLimit
+                  ? "bg-gradient-to-r from-red-500 to-red-600"
+                  : isNearLimit
+                  ? "bg-gradient-to-r from-amber-500 to-amber-600"
+                  : "bg-gradient-to-r from-emerald-500 to-teal-600"
               }`}
               style={{ width: `${Math.min(percentage, 100)}%` }}
             />
           </div>
-          
+
           <p className={`text-xs ${statusColor}`}>
             {maxCapacity - currentUsers} users remaining
           </p>
@@ -150,14 +153,15 @@ const CapacityUsageCard = ({ currentUsers, maxCapacity }) => {
 
 // Enhanced Active Sessions Card Component
 const ActiveSessionsCard = ({ activeSessions, totalUsers, change }) => {
-  const activePercentage = totalUsers > 0 ? Math.floor((activeSessions / totalUsers) * 100) : 0;
+  const activePercentage =
+    totalUsers > 0 ? Math.floor((activeSessions / totalUsers) * 100) : 0;
   const isHighActivity = activePercentage > 70;
   const isLowActivity = activePercentage < 30;
-  
+
   let statusColor = "text-blue-400";
   let bgColor = "bg-blue-500/20";
   let dotColor = "bg-blue-500";
-  
+
   if (isHighActivity) {
     statusColor = "text-emerald-400";
     bgColor = "bg-emerald-500/20";
@@ -176,11 +180,15 @@ const ActiveSessionsCard = ({ activeSessions, totalUsers, change }) => {
             Active Sessions
           </h3>
           <div className="flex items-center space-x-2">
-            <div className={`w-2 h-2 rounded-full ${dotColor} animate-pulse`}></div>
+            <div
+              className={`w-2 h-2 rounded-full ${dotColor} animate-pulse`}
+            ></div>
             {change !== undefined && (
-              <div className={`flex items-center space-x-1 text-sm font-medium ${
-                change > 0 ? "text-emerald-400" : "text-red-400"
-              }`}>
+              <div
+                className={`flex items-center space-x-1 text-sm font-medium ${
+                  change > 0 ? "text-emerald-400" : "text-red-400"
+                }`}
+              >
                 {change > 0 ? (
                   <TrendingUp className="w-4 h-4" />
                 ) : (
@@ -199,9 +207,11 @@ const ActiveSessionsCard = ({ activeSessions, totalUsers, change }) => {
           <p className="text-3xl font-bold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent group-hover:from-teal-300 group-hover:to-blue-300 transition-all duration-300">
             {activeSessions.toLocaleString()}
           </p>
-          
+
           <div className="flex items-center space-x-2">
-            <div className={`px-2 py-1 rounded-full text-xs font-medium ${bgColor} ${statusColor}`}>
+            <div
+              className={`px-2 py-1 rounded-full text-xs font-medium ${bgColor} ${statusColor}`}
+            >
               {activePercentage}% active
             </div>
             <span className="text-xs text-slate-400">
@@ -223,45 +233,62 @@ const UserManagementTable = ({ users }) => (
         </div>
         <div>
           <h3 className="text-xl font-semibold text-white">User Management</h3>
-          <p className="text-sm text-slate-400">Manage students and supervisors</p>
+          <p className="text-sm text-slate-400">
+            Manage students and supervisors
+          </p>
         </div>
       </div>
     </div>
-    
+
     <div className="overflow-x-auto">
       <table className="w-full">
         <thead className="bg-slate-800/50">
           <tr>
-            <th className="px-6 py-4 text-left text-sm font-medium text-slate-300">User</th>
-            <th className="px-6 py-4 text-left text-sm font-medium text-slate-300">Role</th>
-            <th className="px-6 py-4 text-left text-sm font-medium text-slate-300">Status</th>
-            <th className="px-6 py-4 text-left text-sm font-medium text-slate-300">Actions</th>
+            <th className="px-6 py-4 text-left text-sm font-medium text-slate-300">
+              User
+            </th>
+            <th className="px-6 py-4 text-left text-sm font-medium text-slate-300">
+              Role
+            </th>
+            <th className="px-6 py-4 text-left text-sm font-medium text-slate-300">
+              Status
+            </th>
+            <th className="px-6 py-4 text-left text-sm font-medium text-slate-300">
+              Actions
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-700/50">
           {users.length > 0 ? (
             users.slice(0, 10).map((user) => (
-              <tr key={user.id} className="hover:bg-slate-800/30 transition-all duration-200">
+              <tr
+                key={user.id}
+                className="hover:bg-slate-800/30 transition-all duration-200"
+              >
                 <td className="px-6 py-4">
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-gradient-to-r from-slate-600 to-slate-500 rounded-full flex items-center justify-center">
                       <span className="text-white font-medium text-sm">
-                        {user.name?.charAt(0) || 'U'}
+                        {user.name?.charAt(0) || "U"}
                       </span>
                     </div>
                     <div>
                       <p className="text-white font-medium">{user.name}</p>
-                      <p className="text-slate-400 text-sm">User ID: {user.id}</p>
+                      <p className="text-slate-400 text-sm">
+                        User ID: {user.id}
+                      </p>
                     </div>
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                    user.role === 'Student' 
-                      ? 'bg-blue-900/30 text-blue-300 border border-blue-500/30'
-                      : 'bg-purple-900/30 text-purple-300 border border-purple-500/30'
-                  }`}>
-                    {user.role === 'Student' ? (
+                  <span
+                    className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                      user.role === "Student"
+                        ? "bg-blue-900/30 text-blue-300 border border-blue-500/30"
+                        : "bg-purple-900/30 text-purple-300 border border-purple-500/30"
+                    }`}
+                  >
+                    {user.role === "Student" ? (
                       <GraduationCap className="w-4 h-4 mr-1" />
                     ) : (
                       <UserCheck className="w-4 h-4 mr-1" />
@@ -295,7 +322,7 @@ const UserManagementTable = ({ users }) => (
         </tbody>
       </table>
     </div>
-    
+
     {users.length > 10 && (
       <div className="p-4 border-t border-slate-700/50 text-center">
         <button className="text-teal-400 hover:text-teal-300 font-medium transition-colors">
@@ -330,7 +357,7 @@ export default function Dashboard() {
   const [dashboardStats, setDashboardStats] = useState({
     projects: [],
     milestoneProgress: [],
-    systemStatus: { active: 0, idle: 0, offline: 0 }
+    systemStatus: { active: 0, idle: 0, offline: 0 },
   });
 
   useEffect(() => {
@@ -338,31 +365,36 @@ export default function Dashboard() {
       try {
         setIsLoading(true);
         setError(null);
-        
+
         // Get admin info from localStorage
         const adminInfoString = localStorage.getItem("adminInfo");
-        
+
         if (!adminInfoString) {
-          throw new Error("University admin information not found. Please log in again.");
+          throw new Error(
+            "University admin information not found. Please log in again."
+          );
         }
 
         const adminInfo = JSON.parse(adminInfoString);
-       
-        const universityId = adminInfo?.university.id||adminInfo?.universityId;
-        
+        const universityId = adminInfo?.universityId || adminInfo?.university?.id;
+
         if (!universityId) {
-          console.error("Full admin info structure:", JSON.stringify(adminInfo, null, 2));
-          throw new Error(`University ID not found. Please ensure you are logged in as a university admin.`);
+          console.error(
+            "Full admin info structure:",
+            JSON.stringify(adminInfo, null, 2)
+          );
+          throw new Error(
+            `University ID not found. Please ensure you are logged in as a university admin.`
+          );
         }
 
-        
         // Fetch users data
         const usersResponse = await fetchUsersByUniversity(universityId);
-        
+
         const studentsCount = usersResponse.students?.length || 0;
         const supervisorsCount = usersResponse.supervisors?.length || 0;
         const totalUsersCount = studentsCount + supervisorsCount;
-        
+
         setTotalStudents(studentsCount);
         setTotalSupervisors(supervisorsCount);
         setTotalUsers(totalUsersCount);
@@ -370,20 +402,30 @@ export default function Dashboard() {
 
         // Calculate capacity usage (current users / max capacity)
         const maxCapacity = 1000; // You can make this configurable per university
-        const capacityPercentage = Math.floor((totalUsersCount / maxCapacity) * 100);
-        setCapacityUsage(`${totalUsersCount}/${maxCapacity} (${capacityPercentage}%)`);
+        const capacityPercentage = Math.floor(
+          (totalUsersCount / maxCapacity) * 100
+        );
+        setCapacityUsage(
+          `${totalUsersCount}/${maxCapacity} (${capacityPercentage}%)`
+        );
 
         // Calculate active sessions (simulated based on active users with some randomness)
         const baseActiveRate = 0.6; // 60% base active rate
         const variance = 0.1; // ±10% variance
-        const activeRate = baseActiveRate + (Math.random() - 0.5) * variance * 2;
-        const activeSessionsCount = Math.floor(totalUsersCount * Math.max(0.3, Math.min(0.9, activeRate)));
+        const activeRate =
+          baseActiveRate + (Math.random() - 0.5) * variance * 2;
+        const activeSessionsCount = Math.floor(
+          totalUsersCount * Math.max(0.3, Math.min(0.9, activeRate))
+        );
         setActiveSessions(activeSessionsCount);
 
         // Calculate real metrics from user data
         const activeProjectsCount = Math.floor(studentsCount * 0.8); // Assuming 80% of students have active projects
-        const completionPercentage = studentsCount > 0 ? Math.floor((supervisorsCount / studentsCount) * 100) : 0;
-        
+        const completionPercentage =
+          studentsCount > 0
+            ? Math.floor((supervisorsCount / studentsCount) * 100)
+            : 0;
+
         setActiveProjects(activeProjectsCount);
         setCompletionRate(`${Math.min(completionPercentage, 100)}%`);
 
@@ -395,9 +437,8 @@ export default function Dashboard() {
         setDashboardStats({
           projects,
           milestoneProgress,
-          systemStatus
+          systemStatus,
         });
-        
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
         setError(error.message);
@@ -413,28 +454,47 @@ export default function Dashboard() {
   const generateProjectsFromUserData = (userData) => {
     const { students = [], supervisors = [] } = userData;
     const projectNames = [
-      "Machine Learning Platform", "Web Development Portal", "Mobile Application",
-      "Data Analytics System", "Cloud Security Framework", "IoT Management System",
-      "Blockchain Implementation", "AI Chatbot Development", "E-commerce Platform",
-      "Database Optimization Tool"
+      "Machine Learning Platform",
+      "Web Development Portal",
+      "Mobile Application",
+      "Data Analytics System",
+      "Cloud Security Framework",
+      "IoT Management System",
+      "Blockchain Implementation",
+      "AI Chatbot Development",
+      "E-commerce Platform",
+      "Database Optimization Tool",
     ];
 
-    return students.slice(0, Math.min(8, students.length)).map((student, index) => ({
-      id: student.userId || index + 1,
-      name: projectNames[index % projectNames.length],
-      studentName: student.fullName,
-      progress: Math.floor(Math.random() * 60) + 20, // 20-80% progress
-      milestones: Math.floor(Math.random() * 4) + 2, // 2-5 milestones
-      status: ["active", "review", "planning"][Math.floor(Math.random() * 3)]
-    }));
+    return students
+      .slice(0, Math.min(8, students.length))
+      .map((student, index) => ({
+        id: student.userId || index + 1,
+        name: projectNames[index % projectNames.length],
+        studentName: student.fullName,
+        progress: Math.floor(Math.random() * 60) + 20, // 20-80% progress
+        milestones: Math.floor(Math.random() * 4) + 2, // 2-5 milestones
+        status: ["active", "review", "planning"][Math.floor(Math.random() * 3)],
+      }));
   };
 
   // Helper function to generate milestone progress
   const generateMilestoneProgress = (projects) => {
-    const stages = ["Requirements", "Design", "Implementation", "Testing", "Deployment"];
+    const stages = [
+      "Requirements",
+      "Design",
+      "Implementation",
+      "Testing",
+      "Deployment",
+    ];
     return stages.map((stage, index) => {
-      const completedProjects = projects.filter(p => p.progress > (index + 1) * 20).length;
-      const percentage = projects.length > 0 ? Math.floor((completedProjects / projects.length) * 100) : 0;
+      const completedProjects = projects.filter(
+        (p) => p.progress > (index + 1) * 20
+      ).length;
+      const percentage =
+        projects.length > 0
+          ? Math.floor((completedProjects / projects.length) * 100)
+          : 0;
       return percentage;
     });
   };
@@ -442,21 +502,27 @@ export default function Dashboard() {
   // Helper function to generate system status
   const generateSystemStatus = (totalUsers) => {
     if (totalUsers === 0) return { active: 0, idle: 0, offline: 0 };
-    
+
     const activePercentage = 60; // 60% active
-    const idlePercentage = 25;   // 25% idle
+    const idlePercentage = 25; // 25% idle
     const offlinePercentage = 15; // 15% offline
-    
+
     return {
-      active: Math.floor(totalUsers * activePercentage / 100),
-      idle: Math.floor(totalUsers * idlePercentage / 100),
-      offline: Math.floor(totalUsers * offlinePercentage / 100)
+      active: Math.floor((totalUsers * activePercentage) / 100),
+      idle: Math.floor((totalUsers * idlePercentage) / 100),
+      offline: Math.floor((totalUsers * offlinePercentage) / 100),
     };
   };
 
   // Update chart data based on real data
   const milestoneData = {
-    labels: ["Requirements", "Design", "Implementation", "Testing", "Deployment"],
+    labels: [
+      "Requirements",
+      "Design",
+      "Implementation",
+      "Testing",
+      "Deployment",
+    ],
     datasets: [
       {
         label: "Completion %",
@@ -466,14 +532,14 @@ export default function Dashboard() {
           "rgba(59, 130, 246, 0.8)",
           "rgba(139, 92, 246, 0.8)",
           "rgba(244, 63, 94, 0.8)",
-          "rgba(245, 158, 11, 0.8)"
+          "rgba(245, 158, 11, 0.8)",
         ],
         borderColor: [
           "rgb(20, 184, 166)",
           "rgb(59, 130, 246)",
           "rgb(139, 92, 246)",
           "rgb(244, 63, 94)",
-          "rgb(245, 158, 11)"
+          "rgb(245, 158, 11)",
         ],
         borderWidth: 2,
         borderRadius: 8,
@@ -488,17 +554,17 @@ export default function Dashboard() {
         data: [
           dashboardStats.systemStatus.active,
           dashboardStats.systemStatus.idle,
-          dashboardStats.systemStatus.offline
+          dashboardStats.systemStatus.offline,
         ],
         backgroundColor: [
           "rgba(20, 184, 166, 0.8)",
           "rgba(59, 130, 246, 0.8)",
-          "rgba(100, 116, 139, 0.8)"
+          "rgba(100, 116, 139, 0.8)",
         ],
         borderColor: [
           "rgb(20, 184, 166)",
           "rgb(59, 130, 246)",
-          "rgb(100, 116, 139)"
+          "rgb(100, 116, 139)",
         ],
         borderWidth: 2,
       },
@@ -515,7 +581,9 @@ export default function Dashboard() {
             <BarChart3 className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-white">Milestone Progress</h3>
+            <h3 className="text-lg font-semibold text-white">
+              Milestone Progress
+            </h3>
             <p className="text-sm text-slate-400">Project completion stages</p>
           </div>
         </div>
@@ -525,22 +593,28 @@ export default function Dashboard() {
               <Loader2 className="w-8 h-8 text-teal-400 animate-spin" />
             </div>
           ) : (
-            <Bar data={milestoneData} options={{
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: { legend: { display: false } },
-              scales: {
-                y: {
-                  beginAtZero: true,
-                  ticks: { color: "#94a3b8", font: { size: 12 } },
-                  grid: { color: "rgba(148, 163, 184, 0.1)", drawBorder: false },
+            <Bar
+              data={milestoneData}
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    ticks: { color: "#94a3b8", font: { size: 12 } },
+                    grid: {
+                      color: "rgba(148, 163, 184, 0.1)",
+                      drawBorder: false,
+                    },
+                  },
+                  x: {
+                    ticks: { color: "#94a3b8", font: { size: 12 } },
+                    grid: { display: false },
+                  },
                 },
-                x: {
-                  ticks: { color: "#94a3b8", font: { size: 12 } },
-                  grid: { display: false },
-                },
-              },
-            }} />
+              }}
+            />
           )}
         </div>
       </div>
@@ -552,7 +626,9 @@ export default function Dashboard() {
             <Target className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-white">Active Projects</h3>
+            <h3 className="text-lg font-semibold text-white">
+              Active Projects
+            </h3>
             <p className="text-sm text-slate-400">Current project status</p>
           </div>
         </div>
@@ -563,27 +639,42 @@ export default function Dashboard() {
             </div>
           ) : dashboardStats.projects.length > 0 ? (
             dashboardStats.projects.slice(0, 4).map((project) => (
-              <div key={project.id} className="p-4 bg-slate-800/30 rounded-xl border border-slate-700/50">
+              <div
+                key={project.id}
+                className="p-4 bg-slate-800/30 rounded-xl border border-slate-700/50"
+              >
                 <div className="flex items-center justify-between mb-2">
                   <div>
-                    <h4 className="text-white font-medium text-sm">{project.name}</h4>
-                    <p className="text-slate-400 text-xs">{project.studentName}</p>
+                    <h4 className="text-white font-medium text-sm">
+                      {project.name}
+                    </h4>
+                    <p className="text-slate-400 text-xs">
+                      {project.studentName}
+                    </p>
                   </div>
-                  <span className="text-teal-400 font-bold text-sm">{project.progress}%</span>
+                  <span className="text-teal-400 font-bold text-sm">
+                    {project.progress}%
+                  </span>
                 </div>
                 <div className="w-full bg-slate-700/50 rounded-full h-2 mb-2">
-                  <div 
+                  <div
                     className="bg-gradient-to-r from-teal-500 to-blue-500 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${project.progress}%` }}
                   />
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-400">{project.milestones} milestones</span>
-                  <span className={`px-2 py-1 rounded-full text-xs ${
-                    project.status === 'active' ? 'bg-emerald-900/30 text-emerald-300' :
-                    project.status === 'review' ? 'bg-amber-900/30 text-amber-300' :
-                    'bg-slate-700/50 text-slate-400'
-                  }`}>
+                  <span className="text-slate-400">
+                    {project.milestones} milestones
+                  </span>
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs ${
+                      project.status === "active"
+                        ? "bg-emerald-900/30 text-emerald-300"
+                        : project.status === "review"
+                        ? "bg-amber-900/30 text-amber-300"
+                        : "bg-slate-700/50 text-slate-400"
+                    }`}
+                  >
                     {project.status}
                   </span>
                 </div>
@@ -615,16 +706,23 @@ export default function Dashboard() {
               <Loader2 className="w-8 h-8 text-teal-400 animate-spin" />
             </div>
           ) : totalUsers > 0 ? (
-            <Pie data={systemStatusData} options={{
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                legend: {
-                  position: 'bottom',
-                  labels: { color: "#94a3b8", font: { size: 12 }, padding: 15 },
+            <Pie
+              data={systemStatusData}
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: {
+                    position: "bottom",
+                    labels: {
+                      color: "#94a3b8",
+                      font: { size: 12 },
+                      padding: 15,
+                    },
+                  },
                 },
-              },
-            }} />
+              }}
+            />
           ) : (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
@@ -651,17 +749,27 @@ export default function Dashboard() {
     })) || []),
   ];
 
-  const StatCard = ({ title, value, icon: Icon, color, isLoading, error, change }) => (
+  const StatCard = ({
+    title,
+    value,
+    icon: Icon,
+    color,
+    isLoading,
+    error,
+    change,
+  }) => (
     <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 shadow-2xl hover:shadow-teal-500/10 transition-all duration-300 group">
       <div className="flex items-center justify-between">
         <div className="flex-1">
           <div className="flex items-center space-x-3 mb-3">
-            <div className={`w-10 h-10 bg-gradient-to-r ${color} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+            <div
+              className={`w-10 h-10 bg-gradient-to-r ${color} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}
+            >
               <Icon className="w-6 h-6 text-white" />
             </div>
             <h3 className="text-lg font-semibold text-slate-300">{title}</h3>
           </div>
-          
+
           {isLoading ? (
             <div className="flex items-center space-x-2">
               <Loader2 className="w-5 h-5 text-teal-400 animate-spin" />
@@ -678,8 +786,13 @@ export default function Dashboard() {
                 {value}
               </p>
               {change && (
-                <span className={`text-sm font-medium ${change > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {change > 0 ? '+' : ''}{change}%
+                <span
+                  className={`text-sm font-medium ${
+                    change > 0 ? "text-emerald-400" : "text-red-400"
+                  }`}
+                >
+                  {change > 0 ? "+" : ""}
+                  {change}%
                 </span>
               )}
             </div>
@@ -694,7 +807,10 @@ export default function Dashboard() {
       {/* Background Effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+        <div
+          className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse"
+          style={{ animationDelay: "2s" }}
+        />
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl" />
       </div>
 
@@ -710,7 +826,9 @@ export default function Dashboard() {
                 <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-slate-200 to-slate-300 bg-clip-text text-transparent">
                   Dashboard Overview
                 </h1>
-                <p className="text-slate-400 text-lg">Monitor your university's performance and analytics</p>
+                <p className="text-slate-400 text-lg">
+                  Monitor your university's performance and analytics
+                </p>
               </div>
             </div>
             <div className="w-32 h-1 bg-gradient-to-r from-teal-500 to-blue-500 rounded-full" />
@@ -776,10 +894,10 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
             <SummaryCard title="Total Users" value={totalUsers} change={12} />
             <CapacityUsageCard currentUsers={totalUsers} maxCapacity={1000} />
-            <ActiveSessionsCard 
-              activeSessions={activeSessions} 
-              totalUsers={totalUsers} 
-              change={Math.floor(Math.random() * 10) - 5} 
+            <ActiveSessionsCard
+              activeSessions={activeSessions}
+              totalUsers={totalUsers}
+              change={Math.floor(Math.random() * 10) - 5}
             />
           </div>
 

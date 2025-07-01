@@ -1,5 +1,5 @@
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 export interface UniversityAdmin {
   username: string; // Added username field
@@ -99,7 +99,7 @@ export interface UniversityMembers {
 
 export async function fetchUniversities(): Promise<University[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/admin/universities`, {
+    const response = await fetch(`${API_BASE_URL}/api/admin/universities`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem("authToken")}`,
         "Content-Type": "application/json",
@@ -131,7 +131,7 @@ export async function fetchUniversityById(
   id: string
 ): Promise<UniversityDetail> {
   try {
-    const response = await fetch(`${API_BASE_URL}/admin/universities/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/api/admin/universities/${id}`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem("authToken")}`,
         "Content-Type": "application/json",
@@ -162,7 +162,7 @@ export async function fetchUniversityById(
 
 export async function fetchUniversityStatistics(id: string): Promise<UniversityStatistics> {
   try {
-    const response = await fetch(`${API_BASE_URL}/admin/universities/${id}/statistics`, {
+    const response = await fetch(`${API_BASE_URL}/api/admin/universities/${id}/statistics`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem("authToken")}`,
         "Content-Type": "application/json",
@@ -193,7 +193,7 @@ export async function fetchUniversityMembers(
       limit: limit.toString(),
     });
 
-    const response = await fetch(`${API_BASE_URL}/admin/universities/${id}/members?${params}`, {
+    const response = await fetch(`${API_BASE_URL}/api/admin/universities/${id}/members?${params}`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem("authToken")}`,
         "Content-Type": "application/json",
@@ -207,6 +207,75 @@ export async function fetchUniversityMembers(
     return await response.json();
   } catch (error) {
     console.error("Error fetching university members:", error);
+    throw error;
+  }
+}
+
+export interface DeleteUniversityResponse {
+  success: boolean;
+  message: string;
+  deletedUniversity?: {
+    id: string;
+    name: string;
+  };
+  deletedData?: {
+    university: string;
+    students: number;
+    supervisors: number;
+    administrators: number;
+    projects: number;
+  };
+  details?: {
+    students: number;
+    supervisors: number;
+    administrators: number;
+  };
+  error?: string;
+}
+
+export async function deleteUniversity(universityId: string): Promise<DeleteUniversityResponse> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/admin/universities/${universityId}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        "Content-Type": "application/json",
+      },
+    });
+    
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || `Failed to delete university: ${response.statusText}`);
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error deleting university:", error);
+    throw error;
+  }
+}
+
+export async function forceDeleteUniversity(universityId: string, confirmForce: boolean = true): Promise<DeleteUniversityResponse> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/admin/universities/${universityId}/force`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ confirmForce }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || `Failed to force delete university: ${response.statusText}`);
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error force deleting university:", error);
     throw error;
   }
 }

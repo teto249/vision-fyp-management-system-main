@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Home, User, Building, ShoppingBag, ChevronRight } from "lucide-react";
+import { Home, User, Building, ShoppingBag, FileText, ChevronRight } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
@@ -19,6 +19,11 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
       icon: <ShoppingBag size={20} />,
       text: "Register University",
       href: "uniregistration",
+    },
+    {
+      icon: <FileText size={20} />,
+      text: "System Reports",
+      href: "reports",
     },
   ];
 

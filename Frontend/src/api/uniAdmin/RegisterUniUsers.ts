@@ -40,8 +40,7 @@ const validateSupervisorData = (data: RegistrationData): string[] => {
 
 export async function registerSingleUser(data: RegistrationData) {
   try {
-
-        console.log("the data that has been recived is : ", data );
+    console.log("the data that has been received is : ", data);
 
     const response = await fetch(`${API_BASE_URL}/single`, {
       method: "POST",
@@ -57,7 +56,10 @@ export async function registerSingleUser(data: RegistrationData) {
       throw new Error(error.message || "Registration failed");
     }
 
-    return await response.json();
+    const result = await response.json();
+
+    console.log('✅ Single user registration completed successfully');
+    return result;
   } catch (error) {
     console.error("Registration error:", error);
     throw error;
@@ -123,6 +125,8 @@ export async function registerBulkUsers(data: RegistrationData[]) {
     }
 
     const result = await response.json();
+    
+    console.log('✅ Bulk user registration completed successfully');
     
     // Process results to show which records succeeded/failed
     const processedResults = {

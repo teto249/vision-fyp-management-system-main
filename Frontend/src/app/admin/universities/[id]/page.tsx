@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { fetchUniversityById, fetchUniversityStatistics, fetchUniversityMembers } from "../../../../api/admin/fetchUniversities";
-import type { UniversityDetail, UniversityStatistics, UniversityMembers, UniversityMember } from "../../../../api/admin/fetchUniversities";
+import { fetchUniversityById, fetchUniversityStatistics, fetchUniversityMembers, deleteUniversity, forceDeleteUniversity } from "../../../../api/admin/fetchUniversities";
+import type { UniversityDetail, UniversityStatistics, UniversityMembers, UniversityMember, DeleteUniversityResponse } from "../../../../api/admin/fetchUniversities";
 
 interface Member {
   id: string;
@@ -22,6 +22,10 @@ export default function UniversityViewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("overview");
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showForceDeleteModal, setShowForceDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadUniversityData = async () => {
@@ -66,6 +70,64 @@ export default function UniversityViewPage() {
     if (rate >= 90) return "text-red-400";
     if (rate >= 75) return "text-yellow-400";
     return "text-green-400";
+  };
+
+  const handleDeleteUniversity = async () => {
+    if (!universityData) return;
+    
+    setIsDeleting(true);
+    setDeleteError(null);
+    
+    try {
+      const response = await deleteUniversity(universityData.id);
+      
+      // Show success message and redirect
+      alert(`University "${response.deletedUniversity?.name}" has been successfully deleted.`);
+      router.push('/admin/universities');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete university';
+      console.error('Detail page delete error:', error);
+      console.error('Error message:', errorMessage);
+      setDeleteError(errorMessage);
+      
+      // If the error indicates there are active users, show force delete option
+      if (errorMessage.includes('Cannot delete university with active users')) {
+        setShowDeleteModal(false);
+        setShowForceDeleteModal(true);
+      } 
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleForceDeleteUniversity = async () => {
+    if (!universityData) return;
+    
+    setIsDeleting(true);
+    setDeleteError(null);
+    
+    try {
+      const response = await forceDeleteUniversity(universityData.id, true);
+      
+      // Show success message with details and redirect
+      const deletedData = response.deletedData;
+      if (deletedData) {
+        alert(`University "${deletedData.university}" and all related data have been permanently deleted:\n` +
+              `- ${deletedData.students} students\n` +
+              `- ${deletedData.supervisors} supervisors\n` +
+              `- ${deletedData.administrators} administrators\n` +
+              `- ${deletedData.projects} projects`);
+      } else {
+        alert(`University has been successfully deleted.`);
+      }
+      
+      router.push('/admin/universities');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to force delete university';
+      setDeleteError(errorMessage);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   if (loading) {
@@ -145,6 +207,19 @@ export default function UniversityViewPage() {
             <div className="flex items-center space-x-3">
               <div className={`w-3 h-3 rounded-full ${getStatusColor(universityData.status)}`}></div>
               <span className="text-gray-300 capitalize">{universityData.status || 'Active'}</span>
+              
+              {/* Action Buttons */}
+              <div className="flex items-center space-x-2 ml-6">
+                <button
+                  onClick={() => setShowDeleteModal(true)}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center space-x-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  <span>Delete University</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -553,6 +628,142 @@ export default function UniversityViewPage() {
           )}
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-800 rounded-2xl border border-gray-700 max-w-md w-full p-6 shadow-2xl">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-red-400">Delete University</h3>
+                <p className="text-sm text-gray-400">This action cannot be undone</p>
+              </div>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-gray-300 mb-4">
+                Are you sure you want to delete <strong className="text-white">{universityData?.name}</strong>?
+              </p>
+              <div className="bg-gray-700/50 rounded-lg p-3 text-sm text-gray-400">
+                <p className="mb-2">This will delete the university only if it has:</p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>No active students</li>
+                  <li>No active supervisors</li>
+                  <li>No active administrators</li>
+                  <li>No active projects</li>
+                </ul>
+              </div>
+              
+              {deleteError && (
+                <div className="mt-3 p-3 bg-red-900/20 border border-red-500/30 rounded-lg">
+                  <p className="text-red-300 text-sm">{deleteError}</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeleteError(null);
+                }}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteUniversity}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center space-x-2"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <span>Delete University</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Force Delete Confirmation Modal */}
+      {showForceDeleteModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-800 rounded-2xl border border-red-500/50 max-w-md w-full p-6 shadow-2xl">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="w-12 h-12 bg-red-500/30 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-red-400">Force Delete University</h3>
+                <p className="text-sm text-red-300">⚠️ DANGEROUS OPERATION</p>
+              </div>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-gray-300 mb-4">
+                University <strong className="text-white">{universityData?.name}</strong> has active users or projects.
+              </p>
+              <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3 text-sm text-red-300 mb-4">
+                <p className="font-semibold mb-2">⚠️ WARNING: Force delete will permanently remove:</p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>All students and their data</li>
+                  <li>All supervisors and their data</li>
+                  <li>All administrators</li>
+                  <li>All projects and related information</li>
+                  <li>The university itself</li>
+                </ul>
+                <p className="mt-2 font-semibold">This action cannot be undone!</p>
+              </div>
+              
+              {deleteError && (
+                <div className="mt-3 p-3 bg-red-900/20 border border-red-500/30 rounded-lg">
+                  <p className="text-red-300 text-sm">{deleteError}</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setShowForceDeleteModal(false);
+                  setDeleteError(null);
+                }}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleForceDeleteUniversity}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center space-x-2"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                    <span>Force Deleting...</span>
+                  </>
+                ) : (
+                  <span>Force Delete All</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         @keyframes fadeIn {

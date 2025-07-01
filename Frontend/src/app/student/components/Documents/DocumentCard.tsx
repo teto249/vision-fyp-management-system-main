@@ -28,7 +28,7 @@ export function DocumentCard({
     <div
       className="bg-gray-800 rounded-xl p-6 hover:bg-gray-700 transition-all duration-200 
                  transform hover:scale-[1.02] cursor-pointer group"
-      onClick={() => router.push(`/supervisor/document/${id}`)}
+      onClick={() => router.push(`/student/document/${id}`)}
     >
       <div className="flex items-start gap-4">
         <div className="p-3 bg-gray-700 rounded-lg group-hover:bg-gray-600 transition-colors">

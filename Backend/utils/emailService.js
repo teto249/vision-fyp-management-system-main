@@ -1,19 +1,25 @@
-const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
 
 class EmailService {
   constructor() {
-    this.isConfigured = !!process.env.RESEND_API_KEY;
+    this.isConfigured = !!(process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD);
     
     if (this.isConfigured) {
-      this.resend = new Resend(process.env.RESEND_API_KEY);
+      this.transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: process.env.GMAIL_USER,
+          pass: process.env.GMAIL_APP_PASSWORD
+        }
+      });
     } else {
-      console.warn('RESEND_API_KEY is not configured. Email service will run in mock mode.');
+      console.warn('Gmail credentials are not configured. Email service will run in mock mode.');
+      console.warn('Please set GMAIL_USER and GMAIL_APP_PASSWORD in your .env file');
     }
   }
 
   async sendAdminCredentials(adminData) {
     if (!this.isConfigured) {
-      console.log('Mock email - Admin credentials would be sent to:', adminData.email);
       return { 
         success: true, 
         messageId: 'mock-id',
@@ -23,21 +29,18 @@ class EmailService {
     }
 
     try {
-      const { data, error } = await this.resend.emails.send({
-        from: "FYP Admin <onboarding@resend.dev>", // Use Resend's default domain
+      const mailOptions = {
+        from: `"FYP Management System" <${process.env.GMAIL_USER}>`,
         to: adminData.email,
         subject: "Your FYP Management System Credentials",
         html: this.getAdminEmailTemplate(adminData)
-      });
+      };
 
-      if (error) {
-        console.error('Email sending failed:', error);
-        return { success: false, error: error.message };
-      }
+      const info = await this.transporter.sendMail(mailOptions);
 
       return { 
         success: true, 
-        messageId: data?.id,
+        messageId: info.messageId,
         sentTo: adminData.email 
       };
     } catch (error) {
@@ -52,10 +55,6 @@ class EmailService {
 
   async sendUniversityRegistrationEmail(universityData, adminData) {
     if (!this.isConfigured) {
-      console.log('Mock email - University registration email would be sent to:', adminData.primaryEmail);
-      console.log('University:', universityData.fullName);
-      console.log('Admin Username:', adminData.username);
-      console.log('Temporary Password:', adminData.temporaryPassword);
       return { 
         success: true, 
         messageId: 'mock-registration-id',
@@ -65,23 +64,19 @@ class EmailService {
     }
 
     try {
-      const { data, error } = await this.resend.emails.send({
-        from: "onboarding@resend.dev", // Use Resend's verified domain for now
+      const mailOptions = {
+        from: `"FYP Management System" <${process.env.GMAIL_USER}>`,
         to: adminData.primaryEmail,
         subject: `Welcome to FYP Management System - ${universityData.fullName} Registration Confirmed`,
         html: this.getUniversityRegistrationTemplate(universityData, adminData)
-      });
+      };
 
-      if (error) {
-        console.error('University registration email failed:', error);
-        return { success: false, error: error.message };
-      }
+      const info = await this.transporter.sendMail(mailOptions);
 
-      console.log(`University registration email sent to ${adminData.primaryEmail}`);
       return { 
         success: true, 
-        messageId: data?.id,
-        sentTo: adminData.primaryEmail 
+        messageId: info.messageId,
+        sentTo: adminData.primaryEmail
       };
     } catch (error) {
       console.error('University registration email service error:', error);
