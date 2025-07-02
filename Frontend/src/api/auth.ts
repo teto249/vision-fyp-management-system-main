@@ -74,8 +74,9 @@ export async function login(
       password,
     };
 
+    console.log("Sending login request with credentials:", credentials);
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/api/auth/login`,
+      `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/auth/login`,
       {
         method: "POST",
         headers: {
@@ -87,6 +88,7 @@ export async function login(
       }
     );
 
+    console.log("Login response status:", response.status);
     const contentType = response.headers.get("content-type");
     const isJson = contentType?.includes("application/json");
 

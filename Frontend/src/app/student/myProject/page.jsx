@@ -30,7 +30,7 @@ const debugLog = (context, data, error = null) => {
 };
 
 const LoadingState = () => (
-  <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+  <div className="min-h-screen  text-white flex items-center justify-center">
     <div
       className="bg-gray-800/50 backdrop-blur p-8 rounded-xl shadow-lg border border-gray-700 
                   flex items-center gap-4 animate-pulse"
@@ -42,7 +42,7 @@ const LoadingState = () => (
 );
 
 const ErrorState = ({ error, onRetry }) => (
-  <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+  <div className="min-h-screen  text-white flex items-center justify-center">
     <div
       className="bg-gray-800/50 backdrop-blur p-8 rounded-xl shadow-lg border border-gray-700 
                   flex flex-col items-center gap-6"
@@ -64,7 +64,7 @@ const ErrorState = ({ error, onRetry }) => (
 );
 
 const EmptyState = ({ onRegister }) => (
-  <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+  <div className="min-h-screen  text-white flex items-center justify-center">
     <div
       className="bg-gray-800/50 backdrop-blur p-8 rounded-xl shadow-lg border border-gray-700 
                   flex flex-col items-center gap-6"
@@ -275,7 +275,7 @@ export default function MyProject() {
     );
 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <>
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
         <header className="relative">
           <div className="text-center space-y-4">
@@ -329,6 +329,6 @@ export default function MyProject() {
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

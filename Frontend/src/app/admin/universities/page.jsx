@@ -16,9 +16,17 @@ export default function UniversityPage() {
   const [selectedUniversity, setSelectedUniversity] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
 
+  // Fix hydration error by ensuring client-side only rendering
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    
     const loadUniversities = async () => {
       try {
         const data = await fetchUniversities();
@@ -31,7 +39,16 @@ export default function UniversityPage() {
     };
 
     loadUniversities();
-  }, []);
+  }, [mounted]);
+
+  // Don't render until component is mounted to prevent hydration mismatch
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
 
   const handleViewUniversity = (universityId) => {
     router.push(`/admin/universities/${universityId}`);
@@ -40,8 +57,8 @@ export default function UniversityPage() {
   const filteredUniversities = universities
     .filter(
       (uni) =>
-        uni.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        uni.shortName.toLowerCase().includes(searchTerm.toLowerCase())
+        (uni.fullName && uni.fullName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (uni.shortName && uni.shortName.toLowerCase().includes(searchTerm.toLowerCase()))
     )
     .filter((uni) => (filter === "all" ? true : uni.status === filter));
 

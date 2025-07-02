@@ -10,8 +10,16 @@ const Supervisor = require("../models/Supervisor");
 exports.login = async (req, res) => {
   const { username, password } = req.body;
 
+  // Add detailed debug logging
+  console.log('🔐 Login attempt:');
+  console.log('  Username:', username);
+  console.log('  Password length:', password ? password.length : 0);
+  console.log('  Request body:', req.body);
+  console.log('  Request headers:', req.headers['content-type'], req.headers['origin']);
+
   try {
     if (!username || !password) {
+      console.log(' Missing credentials');
       return res
         .status(400)
         .json({ message: "Username and password are required" });
@@ -46,7 +54,9 @@ exports.login = async (req, res) => {
     ];
 
     // Find user
+    console.log(' Searching for user in different tables...');
     for (const query of userQueries) {
+      console.log(`  Checking ${query.defaultRole} table...`);
       const result = await query.model.findOne({ 
         where: query.where,
         include: query.include 
@@ -54,13 +64,23 @@ exports.login = async (req, res) => {
       if (result) {
         user = result;
         userType = query.defaultRole;
+        console.log(` Found user in ${userType} table`);
         break;
       }
     }
 
     if (!user) {
+      console.log(' User not found in any table');
       return res.status(404).json({ message: "User not found" });
     }
+
+    console.log(' User found:');
+    console.log('  User type:', userType);
+    console.log('  User data:', {
+      username: user.userId || user.username,
+      name: user.name || user.fullName,
+      role: userType
+    });
 
     // Handle different authentication for different roles
     let isValidPassword = false;
@@ -68,14 +88,21 @@ exports.login = async (req, res) => {
     if (userType === "Student" || userType === "Supervisor") {
       // For students and supervisors, password should match their ID
       isValidPassword = password === user.userId;
+      console.log(' Checking ID-based password for Student/Supervisor');
     } else {
       // For admins, use bcrypt comparison
+      console.log(' Checking bcrypt password for Admin');
       isValidPassword = await bcrypt.compare(password, user.password);
+      console.log('  Password hash in DB:', user.password ? user.password.substring(0, 20) + '...' : 'null');
+      console.log('  Password comparison result:', isValidPassword);
     }
 
     if (!isValidPassword) {
+      console.log(' Invalid password');
       return res.status(401).json({ message: "Invalid credentials" });
     }
+
+    console.log(' Password validated successfully');
 
     // Create JWT token
     const token = jwt.sign(
@@ -87,6 +114,8 @@ exports.login = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
+
+    console.log(' JWT token created');
 
     // Prepare response based on user type
     let responseUser;
@@ -129,15 +158,29 @@ exports.login = async (req, res) => {
       };
     }
 
+    console.log(' Sending response:');
+    console.log('  User role:', userType);
+    console.log('  Response user:', responseUser);
+
     res.status(200).json({
       message: "Login successful",
       token,
       user: responseUser,
     });
+
+    console.log(' Login response sent successfully');
   } catch (error) {
+    console.error('💥 Login error:', error.message);
+    console.error('📋 Error stack:', error.stack);
+    
+    // Enhanced error response with more details to help debug
     res.status(500).json({
       message: "An unexpected error occurred during login",
       error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      details: process.env.NODE_ENV === "development" ? {
+        stack: error.stack,
+        name: error.name
+      } : undefined
     });
   }
 };

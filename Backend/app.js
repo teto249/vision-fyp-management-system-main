@@ -13,13 +13,42 @@ const studentRoutes = require("./routes/studentRoutes");
 const supervisorRoutes = require("./routes/supervisorRoutes");
 dotenv.config();
 
+// Basic error handling for startup
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err.message);
+  console.error(err.stack);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
+
 const app = express();
 
-// Enhanced CORS configuration
+// Add request logging middleware for debugging
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  if (req.method === 'POST' || req.method === 'PUT') {
+    console.log('Request body keys:', Object.keys(req.body || {}));
+  }
+  next();
+});
+
+// Enhanced CORS configuration for debugging
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: [
+      process.env.FRONTEND_URL || "http://localhost:3000",
+      "http://localhost:3001", 
+      "http://localhost:3000",
+      "http://localhost:5173"
+    ],
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
   })
 );
 
@@ -51,8 +80,15 @@ const createUploadDirs = () => {
 // Create upload directories on startup
 createUploadDirs();
 
-// Connect to database
-connectDB();
+// Connect to database with error handling
+try {
+  console.log('Connecting to database...');
+  connectDB();
+  console.log('Database connection initiated');
+} catch (error) {
+  console.error('Database connection error:', error.message);
+  process.exit(1);
+}
 
 // API Routes
 app.use("/api/users", userRoutes);
@@ -88,7 +124,6 @@ app.use((req, res, next) => {
 
 // Enhanced error handler for file operations
 app.use((err, req, res, next) => {
-  console.error("Error:", err);
 
   // Handle file-related errors
   if (err.code === "ENOENT") {
@@ -118,18 +153,26 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Start server
+const PORT = process.env.PORT || 5000;
+const server = app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
+
 // Graceful shutdown with file cleanup
 process.on("SIGTERM", () => {
-
+  console.log("SIGTERM received, shutting down gracefully");
+  
   // Close server
   server.close(() => {
-
+    console.log("Server closed");
+    
     // Cleanup temp files if needed
     const tempDir = path.join(__dirname, "uploads", "temp");
     if (fs.existsSync(tempDir)) {
       fs.rmdir(tempDir, { recursive: true }, (err) => {
         if (err) {
-          // Cleanup error
+          console.error("Error cleaning up temp files:", err.message);
         }
         process.exit(0);
       });
@@ -137,12 +180,6 @@ process.on("SIGTERM", () => {
       process.exit(0);
     }
   });
-});
-
-// Start server
-const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => {
-  // Server running
 });
 
 module.exports = app;

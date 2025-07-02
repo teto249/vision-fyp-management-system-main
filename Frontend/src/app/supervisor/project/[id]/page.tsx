@@ -28,7 +28,7 @@ const debugLog = (context: string, data: any, error: Error | null = null) => {
 };
 
 const LoadingState = () => (
-  <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+  <div className="min-h-screen  text-white flex items-center justify-center">
     <div className="bg-gray-800/50 backdrop-blur p-8 rounded-xl shadow-lg border border-gray-700 flex items-center gap-4 animate-pulse">
       <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
       <span className="text-xl font-semibold">Loading project details...</span>

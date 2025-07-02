@@ -102,7 +102,7 @@ export default function DocumentViewPage({
     if (!doc?.id) return;
 
     // Create direct PDF download link
-    const downloadUrl = `http://localhost:3000/api/supervisor/documents/${doc.id}/pdf`;
+    const downloadUrl = `http://localhost:5000/api/supervisor/documents/${doc.id}/pdf`;
     const fileName = `${doc.title}${doc.fileType}`;
 
     // Create an anchor element and trigger download

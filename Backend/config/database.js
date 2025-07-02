@@ -1,5 +1,5 @@
 const { Sequelize } = require("sequelize");
-const mysql = require('mysql2/promise');
+const mysql = require("mysql2/promise");
 require("dotenv").config();
 
 const DB_NAME = process.env.DB_NAME || "vision-fyp-management-system";
@@ -14,7 +14,7 @@ async function createDatabase() {
     const connection = await mysql.createConnection({
       host: DB_HOST,
       user: DB_USER,
-      password: DB_PASSWORD
+      password: DB_PASSWORD,
     });
     // Create database if it doesn't exist
     await connection.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;`);
@@ -25,30 +25,23 @@ async function createDatabase() {
 }
 
 // Initialize Sequelize
-const sequelize = new Sequelize(
-  DB_NAME,
-  DB_USER,
-  DB_PASSWORD,
-  {
-    host: DB_HOST,
-    dialect: "mysql",
-    logging: false,
-    pool: {
-      max: 5,
-      min: 0,
-      acquire: 30000,
-      idle: 10000,
-    },
-    dialectOptions: {
-      connectTimeout: 60000,
-    },
-  }
-);
-
+const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASSWORD, {
+  host: DB_HOST,
+  dialect: "mysql",
+  logging: false,
+  pool: {
+    max: 5,
+    min: 0,
+    acquire: 30000,
+    idle: 10000,
+  },
+  dialectOptions: {
+    connectTimeout: 60000,
+  },
+});
 
 const connectDB = async () => {
   try {
-    
     // First create database if it doesn't exist
     await createDatabase();
 
@@ -72,7 +65,7 @@ const connectDB = async () => {
       "SELECT COUNT(*) as table_count FROM information_schema.tables WHERE table_schema = :schema",
       {
         replacements: { schema: DB_NAME },
-        type: sequelize.QueryTypes.SELECT
+        type: sequelize.QueryTypes.SELECT,
       }
     );
 
@@ -89,7 +82,8 @@ const connectDB = async () => {
         address: "Khartoum City, Sudan",
         email: "greentel@sudan.su",
         phone: "+1234567890",
-        logoPath: "https://ui-avatars.com/api/?name=GA&size=256&background=random",
+        logoPath:
+          "https://ui-avatars.com/api/?name=GA&size=256&background=random",
       });
 
       // Create default admin
@@ -105,36 +99,33 @@ const connectDB = async () => {
         phoneNumber: "0123456789",
         address: "43, Jalan Utama 38, Johor Bahru",
         role: "MainAdmin",
-        profilePhoto: "https://ui-avatars.com/api/?name=AM&size=256&background=random",
+        profilePhoto:
+          "https://ui-avatars.com/api/?name=AM&size=256&background=random",
         institutionId: institution.id,
       });
 
       if (process.env.NODE_ENV === "development") {
         // Development mode credentials displayed
       }
-
     } else {
       // Tables exist - just sync without force to update any schema changes
-      
-      await sequelize.sync({ alter: false });
-      
-    }
 
-    
-    
-    
+      await sequelize.sync({ alter: false });
+    }
   } catch (error) {
     console.error("❌ Database initialization failed:", error.message);
-    
-    if (error.name === 'SequelizeDatabaseError') {
+
+    if (error.name === "SequelizeDatabaseError") {
       console.error("💡 Database Error Details:");
       console.error("   SQL Error:", error.parent?.sqlMessage || error.message);
       console.error("   Error Code:", error.parent?.errno);
       console.error("   SQL State:", error.parent?.sqlState);
-      
+
       if (error.parent?.errno === 1932) {
         console.error("🔧 Fix: This error suggests table structure mismatch.");
-        console.error("   Try dropping the database and restarting the application:");
+        console.error(
+          "   Try dropping the database and restarting the application:"
+        );
         console.error("   1. Open phpMyAdmin (http://localhost/phpmyadmin)");
         console.error("   2. Drop the 'vision-fyp-management-system' database");
         console.error("   3. Restart the Node.js application");
@@ -142,7 +133,7 @@ const connectDB = async () => {
     } else {
       console.error("📋 Full error details:", error.stack);
     }
-    
+
     process.exit(1);
   }
 };

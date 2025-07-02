@@ -3,6 +3,7 @@ const { sequelize } = require("../config/database");
 // Removed UniAdmin import since association is in index.js
 const User = require("./user"); // Adjust path as needed, assumes User model with universityId and role
 
+
 const University = sequelize.define("University", {
   id: {
     type: DataTypes.STRING,
@@ -158,9 +159,10 @@ University.prototype.getSupervisorCount = async function() {
 
 // Static methods
 University.findByShortName = async function(shortName) {
+  // Note: UniAdmin association should be defined in index.js
+  // For now, return basic university data without administrators
   return await this.findOne({
-    where: { shortName: shortName.toUpperCase() },
-    include: [{ model: UniAdmin, as: 'administrators' }] // Relies on association in index.js
+    where: { shortName: shortName.toUpperCase() }
   });
 };
 

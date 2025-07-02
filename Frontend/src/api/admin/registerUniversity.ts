@@ -31,7 +31,7 @@ interface RegistrationResponse {
 }
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 export function validateLogoFile(file: File): boolean {
   const maxSize = 2 * 1024 * 1024; // 2MB
