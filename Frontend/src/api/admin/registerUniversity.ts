@@ -51,9 +51,7 @@ export async function registerUniversity(
   formData: FormData
 ): Promise<RegistrationResponse> {
   try {
-    console.log('🚀 Starting university registration...');
     const jsonData = Object.fromEntries(formData.entries());
-    console.log('📝 Form data received:', Object.keys(jsonData));
 
     const requiredFields = [
       "shortName",
@@ -73,8 +71,6 @@ export async function registerUniversity(
     if (missingFields.length > 0) {
       throw new Error(`Missing required fields: ${missingFields.join(", ")}`);
     }
-
-    console.log('📡 Sending registration request to backend...');
 
     const response = await fetch(
       `${API_BASE_URL}/api/admin/registerUniversity`,
@@ -108,18 +104,14 @@ export async function registerUniversity(
       throw new Error(errorMessage);
     }
 
-    console.log('✅ Backend registration successful');
     const data = await response.json();
     
     if (!data.university || !data.admin || !data.admin.username) {
       throw new Error("Invalid response from server - missing required data");
     }
 
-    console.log('📧 Registration successful, proceeding with email notification...');
-
     // Send welcome email via EmailJS
     try {
-      console.log('📧 Preparing to send university registration email...');
       
       const templateParams = {
         to_name: jsonData.adminFullName as string,
@@ -145,15 +137,10 @@ export async function registerUniversity(
       const templateId = process.env.NEXT_PUBLIC_EMAILJS_UNIVERSITY_TEMPLATE || 
                         process.env.NEXT_PUBLIC_EMAILJS_USER_TEMPLATE || 
                         'template_ebbzvbb';
-      
-      console.log(`📧 Using template ID: ${templateId}`);
-
       await sendEmail({
         templateParams,
         templateId
       });
-
-      console.log('✅ University registration email sent successfully');
       
     } catch (emailError) {
       console.error('❌ Failed to send registration email:', emailError);
@@ -164,7 +151,7 @@ export async function registerUniversity(
     toast.success(
       `🎉 University "${data.university.shortName}" registered successfully! Admin username: ${data.admin.username}`
     );
-    console.log('✅ University registration process completed');
+    
     return data;
   } catch (error) {
     console.error('❌ University registration failed:', error);

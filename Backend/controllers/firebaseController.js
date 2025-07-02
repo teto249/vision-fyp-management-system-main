@@ -42,9 +42,9 @@ exports.registerUniversityWithFirebase = async (req, res) => {
       });
 
       if (firebaseResult.success) {
-        console.log('✅ University also saved to Firestore:', firebaseResult.id);
+        // University also saved to Firestore
       } else {
-        console.warn('⚠️ Failed to save to Firestore:', firebaseResult.error);
+        // Failed to save to Firestore
       }
     }
 

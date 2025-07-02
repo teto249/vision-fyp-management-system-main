@@ -122,7 +122,7 @@ export default function Dashboard() {
           calculateStats(projectResult.project);
           generateRecentActivities(projectResult.project);
         } else {
-          console.log("No project found or failed to load project");
+          // No project found or failed to load project
         }
       } catch (error) {
         console.error("Error loading project data:", error);

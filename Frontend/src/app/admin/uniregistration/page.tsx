@@ -27,7 +27,6 @@ interface FormData {
 }
 
 export default function UniversityRegistrationForm() {
-  console.log('🏗️ University Registration Form component initialized');
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
@@ -50,13 +49,6 @@ export default function UniversityRegistrationForm() {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
 
-  console.log('📊 Component state initialized:', {
-    currentStep: 1,
-    isSubmitting: false,
-    errorsCount: Object.keys(errors).length,
-    formDataKeys: Object.keys(formData)
-  });
-
   const steps = [
     { id: 1, title: "University Details", description: "Basic information about the institution" },
     { id: 2, title: "Contact Information", description: "Official communication channels" },
@@ -66,258 +58,236 @@ export default function UniversityRegistrationForm() {
   ];
 
   const validateField = (name: string, value: string): string => {
-    console.log(`🔍 Validating field: ${name} with value: "${name.includes('password') ? '***hidden***' : value}"`);
     
     switch (name) {
       case "shortName":
         if (!value.trim()) {
-          console.log(`❌ ${name}: Empty value`);
           return "Short name is required";
         }
         if (value.length < 2 || value.length > 10) {
-          console.log(`❌ ${name}: Invalid length (${value.length})`);
           return "Short name must be 2-10 characters";
         }
         if (!/^[A-Z0-9]+$/.test(value.toUpperCase())) {
-          console.log(`❌ ${name}: Invalid characters`);
           return "Short name can only contain letters and numbers (no spaces)";
         }
-        console.log(`✅ ${name}: Valid`);
         return "";
       
       case "fullName":
         if (!value.trim()) {
-          console.log(`❌ ${name}: Empty value`);
           return "Full name is required";
         }
         if (value.length < 3 || value.length > 255) {
-          console.log(`❌ ${name}: Invalid length (${value.length})`);
           return "Full name must be 3-255 characters";
         }
-        console.log(`✅ ${name}: Valid`);
         return "";
       
       case "address":
         if (!value.trim()) {
-          console.log(`❌ ${name}: Empty value`);
           return "Address is required";
         }
         if (value.length < 5 || value.length > 500) {
-          console.log(`❌ ${name}: Invalid length (${value.length})`);
           return "Address must be 5-500 characters";
         }
-        console.log(`✅ ${name}: Valid`);
         return "";
       
       case "email":
       case "adminEmail":
         if (!value.trim()) {
-          console.log(`❌ ${name}: Empty value`);
           return "Email is required";
         }
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-          console.log(`❌ ${name}: Invalid email format`);
           return "Invalid email format";
         }
-        console.log(`✅ ${name}: Valid`);
         return "";
       
       case "phone":
       case "adminPhone":
         if (!value.trim()) {
-          console.log(`❌ ${name}: Empty value`);
           return "Phone number is required";
         }
         if (!/^\+?[\d\s-]+$/.test(value) || value.length < 8 || value.length > 20) {
-          console.log(`❌ ${name}: Invalid phone format`);
           return "Phone must be 8-20 characters with digits, spaces, hyphens only";
         }
-        console.log(`✅ ${name}: Valid`);
         return "";
       
       case "maxStudents":
       case "maxSupervisors":
         if (!value.trim()) {
-          console.log(`❌ ${name}: Empty value`);
           return "This field is required";
         }
         const num = parseInt(value);
         if (isNaN(num) || num < 1) {
-          console.log(`❌ ${name}: Invalid number (${value})`);
           return "Must be a positive number";
         }
         if (name === "maxStudents" && (num < 100 || num > 50000)) {
-          console.log(`❌ ${name}: Out of range (${num})`);
           return "Students must be between 100 and 50,000";
         }
         if (name === "maxSupervisors" && (num < 10 || num > 1000)) {
-          console.log(`❌ ${name}: Out of range (${num})`);
           return "Supervisors must be between 10 and 1,000";
         }
-        console.log(`✅ ${name}: Valid`);
         return "";
       
       case "adminFullName":
         if (!value.trim()) {
-          console.log(`❌ ${name}: Empty value`);
+
           return "Administrator name is required";
         }
         if (value.length < 2) {
-          console.log(`❌ ${name}: Too short (${value.length})`);
+
           return "Name must be at least 2 characters";
         }
-        console.log(`✅ ${name}: Valid`);
+
         return "";
       
       case "adminPassword":
         if (!value.trim()) {
-          console.log(`❌ ${name}: Empty value`);
+
           return "Password is required";
         }
         if (value.length < 8) {
-          console.log(`❌ ${name}: Too short (${value.length})`);
+
           return "Password must be at least 8 characters";
         }
         if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(value)) {
-          console.log(`❌ ${name}: Doesn't meet complexity requirements`);
+
           return "Password must contain uppercase, lowercase, and number";
         }
-        console.log(`✅ ${name}: Valid`);
+
         return "";
       
       default:
-        console.log(`⚠️ ${name}: No validation rule found`);
+
         return "";
     }
   };
 
   const validateStep = (step: number): boolean => {
-    console.log(`🔍 Starting validation for step ${step}`);
+
     const stepErrors: FormErrors = {};
     let isValid = true;
 
     switch (step) {
       case 1:
-        console.log('🔍 Validating university details (step 1)...');
+
         const uniFields = ["shortName", "fullName", "address"];
         uniFields.forEach(field => {
           const value = formData[field as keyof FormData];
-          console.log(`🔍 Validating ${field}: "${value}"`);
+
           const error = validateField(field, value);
           if (error) {
             console.error(`❌ ${field} validation failed: ${error}`);
             stepErrors[field] = error;
             isValid = false;
           } else {
-            console.log(`✅ ${field} validation passed`);
+
           }
         });
         break;
       
       case 2:
-        console.log('🔍 Validating contact information (step 2)...');
+
         const contactFields = ["email", "phone"];
         contactFields.forEach(field => {
           const value = formData[field as keyof FormData];
-          console.log(`🔍 Validating ${field}: "${value}"`);
+
           const error = validateField(field, value);
           if (error) {
             console.error(`❌ ${field} validation failed: ${error}`);
             stepErrors[field] = error;
             isValid = false;
           } else {
-            console.log(`✅ ${field} validation passed`);
+
           }
         });
         break;
       
       case 3:
-        console.log('🔍 Validating system capacity (step 3)...');
+
         const capacityFields = ["maxStudents", "maxSupervisors"];
         capacityFields.forEach(field => {
           const value = formData[field as keyof FormData];
-          console.log(`🔍 Validating ${field}: "${value}"`);
+
           const error = validateField(field, value);
           if (error) {
             console.error(`❌ ${field} validation failed: ${error}`);
             stepErrors[field] = error;
             isValid = false;
           } else {
-            console.log(`✅ ${field} validation passed`);
+
           }
         });
         break;
       
       case 4:
-        console.log('🔍 Validating administrator details (step 4)...');
+
         const adminFields = ["adminFullName", "adminEmail", "adminPassword"];
         adminFields.forEach(field => {
           const value = formData[field as keyof FormData];
-          console.log(`🔍 Validating ${field}: "${field === 'adminPassword' ? '***hidden***' : value}"`);
+
           const error = validateField(field, value);
           if (error) {
             console.error(`❌ ${field} validation failed: ${error}`);
             stepErrors[field] = error;
             isValid = false;
           } else {
-            console.log(`✅ ${field} validation passed`);
+
           }
         });
         break;
     }
 
-    console.log(`📊 Step ${step} validation result:`, { isValid, errors: stepErrors });
+
     setErrors(stepErrors);
     return isValid;
   };
 
   const handleInputChange = (name: string, value: string) => {
-    console.log(`📝 Input changed: ${name} = "${name.includes('password') ? '***hidden***' : value}"`);
+
     setFormData(prev => ({ ...prev, [name]: value }));
     
     // Clear error when user starts typing
     if (errors[name]) {
-      console.log(`🧹 Clearing error for field: ${name}`);
+
       setErrors(prev => ({ ...prev, [name]: "" }));
     }
   };
 
   const handleNextStep = () => {
-    console.log(`🔄 Attempting to move from step ${currentStep} to next step...`);
+
     if (validateStep(currentStep)) {
-      console.log(`✅ Step ${currentStep} validation passed, moving to next step`);
+
       setCompletedSteps(prev => new Set(Array.from(prev).concat(currentStep)));
       setCurrentStep(prev => Math.min(prev + 1, steps.length));
-      console.log(`📍 Moved to step ${Math.min(currentStep + 1, steps.length)}`);
+
     } else {
-      console.log(`❌ Step ${currentStep} validation failed, staying on current step`);
+
     }
   };
 
   const handlePrevStep = () => {
-    console.log(`🔄 Moving from step ${currentStep} to previous step...`);
+
     const prevStep = Math.max(currentStep - 1, 1);
     setCurrentStep(prevStep);
-    console.log(`📍 Moved to step ${prevStep}`);
+
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
-    console.log('🚀 Starting university registration submission...');
-    console.log('📝 Current form data:', formData);
+
+
     
     // Validate all steps
     let allValid = true;
-    console.log('🔍 Starting validation for all steps...');
+
     
     for (let i = 1; i <= 4; i++) {
-      console.log(`🔍 Validating step ${i}...`);
+
       if (!validateStep(i)) {
         console.error(`❌ Step ${i} validation failed`);
         allValid = false;
       } else {
-        console.log(`✅ Step ${i} validation passed`);
+
       }
     }
 
@@ -327,28 +297,28 @@ export default function UniversityRegistrationForm() {
       return;
     }
 
-    console.log('✅ All validation passed, proceeding with submission...');
+
     setIsSubmitting(true);
 
     try {
-      console.log('📦 Creating FormData object...');
+
       const submitFormData = new FormData();
       
       Object.entries(formData).forEach(([key, value]) => {
-        console.log(`📦 Adding to FormData: ${key} = ${value}`);
+
         submitFormData.append(key, value);
       });
 
-      console.log('🌐 Calling registerUniversity API...');
-      console.log('🔗 API endpoint will be called...');
+
+
       
       const data = await registerUniversity(submitFormData);
       
-      console.log("✅ Registration response received:", data);
-      console.log("📧 Email should be sent automatically via EmailJS");
+
+
       
       toast.success("🎉 University registered successfully! Welcome email sent to administrator.");
-      console.log('🔄 Redirecting to /admin...');
+
       router.push("/admin");
     } catch (error) {
       console.error('❌ Registration failed with error:', error);
@@ -361,7 +331,7 @@ export default function UniversityRegistrationForm() {
       const message = error instanceof Error ? error.message : "Registration failed";
       toast.error(message);
     } finally {
-      console.log('🏁 Setting isSubmitting to false...');
+
       setIsSubmitting(false);
     }
   };

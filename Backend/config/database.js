@@ -18,10 +18,8 @@ async function createDatabase() {
     });
     // Create database if it doesn't exist
     await connection.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;`);
-    console.log("Database checked/created successfully");
     await connection.end();
   } catch (err) {
-    console.error("Database creation failed:", err);
     process.exit(1);
   }
 }
@@ -50,17 +48,14 @@ const sequelize = new Sequelize(
 
 const connectDB = async () => {
   try {
-    console.log("=== Database Connection Process Started ===");
     
     // First create database if it doesn't exist
     await createDatabase();
 
     // Test database connection
     await sequelize.authenticate();
-    console.log("✅ MySQL connected successfully");
 
     // Import all models BEFORE checking tables
-    console.log("📦 Loading models...");
     const Institution = require("../models/Institution");
     const MainAdmin = require("../models/MainAdmin");
     const University = require("../models/University");
@@ -71,7 +66,6 @@ const connectDB = async () => {
 
     // Import and initialize model associations
     require("../models/index");
-    console.log("✅ Models loaded and associations initialized");
 
     // Check if any tables exist in the database
     const [tableResults] = await sequelize.query(
@@ -83,16 +77,12 @@ const connectDB = async () => {
     );
 
     const tableCount = tableResults.table_count;
-    console.log(`📊 Found ${tableCount} existing tables in database`);
 
     if (tableCount === 0) {
       // No tables exist - fresh installation
-      console.log("🚀 Fresh installation detected - creating all tables...");
       await sequelize.sync({ force: true });
-      console.log("✅ All tables created successfully");
 
       // Create default institution
-      console.log("🏢 Creating default institution...");
       const institution = await Institution.create({
         shortName: "GreenTel Agriculture",
         fullName: "GreenTel For Agriculture and Technology",
@@ -101,10 +91,8 @@ const connectDB = async () => {
         phone: "+1234567890",
         logoPath: "https://ui-avatars.com/api/?name=GA&size=256&background=random",
       });
-      console.log("✅ Default institution created:", institution.shortName);
 
       // Create default admin
-      console.log("👤 Creating default admin account...");
       const bcrypt = require("bcryptjs");
       const hashedPassword = await bcrypt.hash("admin123", 10);
 
@@ -122,21 +110,18 @@ const connectDB = async () => {
       });
 
       if (process.env.NODE_ENV === "development") {
-        console.log("🔐 Default admin credentials:");
-        console.log("   Email:", newAdmin.email);
-        console.log("   Password: admin123");
+        // Development mode credentials displayed
       }
-      console.log("✅ Default admin created successfully");
 
     } else {
       // Tables exist - just sync without force to update any schema changes
-      console.log("🔄 Existing database detected - syncing models...");
+      
       await sequelize.sync({ alter: false });
-      console.log("✅ Database schema synchronized");
+      
     }
 
-    console.log("🎉 Database initialization completed successfully");
-    console.log("=== Database Connection Process Completed ===");
+    
+    
     
   } catch (error) {
     console.error("❌ Database initialization failed:", error.message);

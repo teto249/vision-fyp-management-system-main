@@ -30,7 +30,7 @@ if (typeof window !== 'undefined') {
   try {
     messaging = getMessaging(app);
   } catch (error) {
-    console.log('Firebase messaging not available:', error);
+    // Firebase messaging not available
   }
 }
 

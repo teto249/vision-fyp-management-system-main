@@ -52,7 +52,7 @@ export default function Documents() {
       }
 
       const studentInfo = JSON.parse(studentInfoStr);
-      console.log("student Info from the document component :", studentInfo);
+
       const supervisorId = studentInfo.supervisorId;
 
       if (!supervisorId) {

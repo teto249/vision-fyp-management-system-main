@@ -232,7 +232,7 @@ exports.getSupervisorsByUniversity = async (req, res) => {
 // Create Project
 exports.createProject = async (req, res) => {
   try {
-    console.log("Received project data:", req.body); // Add logging
+     // Add logging
     
     const {
       projectTitle,
@@ -302,7 +302,7 @@ exports.createProject = async (req, res) => {
       });
     }
 
-    console.log("Found student:", student); // Add logging
+     // Add logging
 
     // Check if supervisor exists and belongs to student's university
     const supervisor = await Supervisor.findOne({
@@ -320,7 +320,7 @@ exports.createProject = async (req, res) => {
       });
     }
 
-    console.log("Found supervisor:", supervisor); // Add logging
+     // Add logging
 
     // Start a transaction
     const t = await sequelize.transaction();
@@ -343,7 +343,7 @@ exports.createProject = async (req, res) => {
         { transaction: t }
       );
 
-      console.log("Created project:", project); // Add logging
+       // Add logging
 
       // Update student's supervisorId - use the correct field name
       const updateField = student.userid ? { supervisorId: supervisorId } : { supervisorId: supervisorId };

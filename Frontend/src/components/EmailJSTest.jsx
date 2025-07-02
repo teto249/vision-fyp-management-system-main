@@ -35,7 +35,7 @@ export default function EmailJSTest() {
       );
 
       setResult(emailResult);
-      console.log('Test email result:', emailResult);
+
     } catch (err) {
       setError(err.message);
       console.error('Test email error:', err);
@@ -59,7 +59,7 @@ export default function EmailJSTest() {
 
       const emailResult = await emailService.sendBulkNotificationEmail(summaryData);
       setResult(emailResult);
-      console.log('Bulk summary email result:', emailResult);
+
     } catch (err) {
       setError(err.message);
       console.error('Bulk summary email error:', err);

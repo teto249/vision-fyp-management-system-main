@@ -260,7 +260,7 @@ export const FirebaseExample = () => {
     });
     
     if (result.success) {
-      console.log('University added:', result.id);
+      // University added
     }
   };
 
@@ -272,7 +272,7 @@ export const FirebaseExample = () => {
     const result = await uploadFile(file, path);
     
     if (result.success) {
-      console.log('File uploaded:', result.url);
+      // File uploaded
     }
   };
 

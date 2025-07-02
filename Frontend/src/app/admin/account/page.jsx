@@ -41,7 +41,7 @@ export default function AdminProfile() {
   useEffect(() => {
     const storedAdminInfo = JSON.parse(localStorage.getItem("adminInfo"));
     if (storedAdminInfo) {
-      console.log("Loaded from localStorage:", storedAdminInfo);
+
       setUserData(storedAdminInfo);
       setFormData((prev) => ({ ...prev, ...storedAdminInfo }));
     } else {
@@ -55,7 +55,7 @@ export default function AdminProfile() {
       setIsLoading(true);
       setError(null);
       const data = await fetchAdminAccount(username);
-      console.log("Fetched data:", JSON.stringify(data, null, 2));
+
       setFormData((prev) => ({
         ...prev,
         ...data,
@@ -73,7 +73,7 @@ export default function AdminProfile() {
 
   useEffect(() => {
     if (userData.username) { // Changed from userData.id
-      console.log("Fetching profile for username:", userData.username);
+
       fetchProfileData(userData.username);
     }
   }, [userData.username]); // Changed dependency

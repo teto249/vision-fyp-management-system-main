@@ -193,7 +193,6 @@ function formatRowData(row: any, role: Role): FormData {
 }
 
 function handleError(error: any, setNotification: (notification: Notification) => void) {
-  console.error("Error:", error);
   const errorMessage = error.response?.data?.message || error.message || "An error occurred";
   setNotification({ type: "error", message: errorMessage }); // Ensure `setNotification` is used correctly
 }

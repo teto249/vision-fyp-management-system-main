@@ -22,12 +22,11 @@ class FirebaseService {
         this.messaging = admin.messaging();
         
         this.isConfigured = true;
-        console.log('✅ Firebase Admin SDK initialized successfully');
       } else {
-        console.warn('⚠️ Firebase Admin SDK not configured - missing FIREBASE_ADMIN_KEY');
+        // Firebase Admin SDK not configured - missing FIREBASE_ADMIN_KEY
       }
     } catch (error) {
-      console.error('❌ Firebase Admin SDK initialization failed:', error.message);
+      // Firebase Admin SDK initialization failed
     }
   }
 

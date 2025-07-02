@@ -40,7 +40,6 @@ const validateSupervisorData = (data: RegistrationData): string[] => {
 
 export async function registerSingleUser(data: RegistrationData) {
   try {
-    console.log("the data that has been received is : ", data);
 
     const response = await fetch(`${API_BASE_URL}/single`, {
       method: "POST",
@@ -58,7 +57,6 @@ export async function registerSingleUser(data: RegistrationData) {
 
     const result = await response.json();
 
-    console.log('✅ Single user registration completed successfully');
     return result;
   } catch (error) {
     console.error("Registration error:", error);
@@ -68,7 +66,6 @@ export async function registerSingleUser(data: RegistrationData) {
 
 export async function registerBulkUsers(data: RegistrationData[]) {
   try {
-    console.log("Starting bulk registration validation...");
     
     // Validate all records before sending
     const validationErrors: string[] = [];
@@ -108,8 +105,6 @@ export async function registerBulkUsers(data: RegistrationData[]) {
       throw new Error(`Validation failed:\n${validationErrors.join('\n')}`);
     }
 
-    console.log(`Sending ${validRecords.length} valid records for registration...`);
-
     const response = await fetch(`${API_BASE_URL}/bulk`, {
       method: "POST",
       headers: {
@@ -126,8 +121,6 @@ export async function registerBulkUsers(data: RegistrationData[]) {
 
     const result = await response.json();
     
-    console.log('✅ Bulk user registration completed successfully');
-    
     // Process results to show which records succeeded/failed
     const processedResults = {
       success: result.results.filter((r: any) => r.success),
@@ -135,7 +128,6 @@ export async function registerBulkUsers(data: RegistrationData[]) {
       message: result.message
     };
 
-    console.log("Bulk registration results:", processedResults);
     return processedResults;
 
   } catch (error) {

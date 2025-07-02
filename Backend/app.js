@@ -120,18 +120,17 @@ app.use((err, req, res, next) => {
 
 // Graceful shutdown with file cleanup
 process.on("SIGTERM", () => {
-  console.log("Received SIGTERM. Performing graceful shutdown...");
 
   // Close server
   server.close(() => {
-    console.log("Server closed. Cleaning up...");
 
     // Cleanup temp files if needed
     const tempDir = path.join(__dirname, "uploads", "temp");
     if (fs.existsSync(tempDir)) {
       fs.rmdir(tempDir, { recursive: true }, (err) => {
-        if (err) console.error("Cleanup error:", err);
-        console.log("Cleanup completed. Exiting process.");
+        if (err) {
+          // Cleanup error
+        }
         process.exit(0);
       });
     } else {
@@ -143,11 +142,7 @@ process.on("SIGTERM", () => {
 // Start server
 const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
-  console.log(`File upload size limit: ${process.env.MAX_FILE_SIZE || "50MB"}`);
-  console.log(
-    `Upload directories initialized at ${path.join(__dirname, "uploads")}`
-  );
+  // Server running
 });
 
 module.exports = app;

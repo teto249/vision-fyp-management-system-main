@@ -11,32 +11,19 @@ const EMAILJS_CONFIG = {
 
 class EmailJSService {
   constructor() {
-    console.log('🔧 EmailJS Config:', {
-      serviceId: EMAILJS_CONFIG.serviceId,
-      publicKey: EMAILJS_CONFIG.publicKey ? EMAILJS_CONFIG.publicKey.substring(0, 8) + '...' : 'MISSING',
-      template: EMAILJS_CONFIG.templates.userRegistration
-    });
-
     if (EMAILJS_CONFIG.publicKey && EMAILJS_CONFIG.publicKey !== 'your_public_key') {
       try {
         emailjs.init(EMAILJS_CONFIG.publicKey);
         this.isConfigured = true;
-        console.log('✅ EmailJS initialized successfully');
       } catch (error) {
-        console.error('❌ EmailJS initialization failed:', error);
         this.isConfigured = false;
       }
     } else {
       this.isConfigured = false;
-      console.warn('⚠️ EmailJS not configured - missing public key');
     }
   }
 
   async sendUserRegistrationEmail(userData, credentials) {
-    console.log('📧 Starting email send process...');
-    console.log('📧 User data:', userData);
-    console.log('📧 Credentials:', credentials);
-
     if (!this.isConfigured) {
       throw new Error('EmailJS is not properly configured');
     }
@@ -78,7 +65,7 @@ class EmailJSService {
           : 'Create project proposals → Review applications → Manage supervision'
       };
 
-      console.log('📧 Final template params:', templateParams);
+
 
       const result = await emailjs.send(
         EMAILJS_CONFIG.serviceId,
@@ -86,7 +73,7 @@ class EmailJSService {
         templateParams
       );
 
-      console.log('✅ Email sent successfully:', result);
+
       return {
         success: true,
         messageId: result.text,
