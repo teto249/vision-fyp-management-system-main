@@ -76,7 +76,7 @@ export async function login(
 
     console.log("Sending login request with credentials:", credentials);
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/auth/login`,
+      `${ "http://localhost:3000"}/api/auth/login`,
       {
         method: "POST",
         headers: {

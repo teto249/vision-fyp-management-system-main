@@ -97,7 +97,7 @@ export async function deleteUser(userId: string, userType: 'student' | 'supervis
       throw new ApiError("User ID and user type are required");
     }
 
-    const url = `http://localhost:5000/api/uniAdmin/users/${encodeURIComponent(userType)}/${encodeURIComponent(userId)}`;
+    const url = `http://localhost:3000/api/uniAdmin/users/${encodeURIComponent(userType)}/${encodeURIComponent(userId)}`;
     const data = await fetchWithAuth(url, {
       method: 'DELETE'
     });
@@ -131,7 +131,7 @@ export async function bulkDeleteUsers(users: Array<{ userId: string; userType: '
       throw new ApiError("Users array is required and cannot be empty");
     }
 
-    const url = `http://localhost:5000/api/uniAdmin/users/bulk`;
+    const url = `http://localhost:3000/api/uniAdmin/users/bulk`;
     const data = await fetchWithAuth(url, {
       method: 'DELETE',
       body: JSON.stringify({ users })

@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:5000/api/supervisor/account";
+const API_BASE_URL = "http://localhost:3000/api/supervisor/account";
 
 interface University {
   id: string;

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import {
   getDocumentById,
+  downloadDocument,
 } from "../../../../api/StudentApi/Document";
 import { logger } from "../../../../utils/logger";
 
@@ -73,19 +74,23 @@ export default function DocumentViewPage({
     fetchDocument();
   }, [unwrappedParams.id, router]);
 
-  const handleDownload = () => {
-    if (!doc?.fileUrl) return;
+  const handleDownload = async () => {
+    if (!doc) return;
 
-    const link = doc.fileUrl;
-    const fileName = `${doc.title}${doc.fileType}`;
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        setError("Authentication required");
+        return;
+      }
 
-    // Create an anchor element and trigger download
-    const a = window.document.createElement("a");
-    a.href = link;
-    a.download = fileName;
-    window.document.body.appendChild(a);
-    a.click();
-    window.document.body.removeChild(a);
+      logger.info("Downloading document:", doc.id, doc.title);
+      await downloadDocument(String(doc.id), doc.title, token);
+      logger.info("Document downloaded successfully:", doc.title);
+    } catch (err) {
+      logger.error("Failed to download document:", err);
+      setError(err instanceof Error ? err.message : "Failed to download document");
+    }
   };
 
   const renderDocumentPreview = () => {

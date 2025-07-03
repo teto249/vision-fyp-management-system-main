@@ -9,6 +9,7 @@ const Task = require("../models/Task");
 const Meeting = require("../models/Meeting");
 const Feedback = require("../models/Feedback");
 const Document = require('../models/Document');
+const fs = require('fs');
 
 // Get Student account
 exports.getStudentAccount = async (req, res) => {
@@ -1446,6 +1447,70 @@ exports.updateMilestone = async (req, res) => {
       message: "Failed to update milestone",
       error: error.message
     });
+  }
+};
+
+// Serve PDF files directly with proper headers for students
+exports.getDocumentPDF = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const studentId = req.user.userId;
+
+    // Verify student has access to this document through their supervisor
+    const student = await Student.findOne({
+      where: { userId: studentId },
+      attributes: ['supervisorId']
+    });
+
+    if (!student || !student.supervisorId) {
+      return res.status(404).json({
+        success: false,
+        message: 'No supervisor assigned'
+      });
+    }
+
+    const document = await Document.findOne({
+      where: { 
+        id,
+        supervisorId: student.supervisorId
+      }
+    });
+
+    if (!document) {
+      return res.status(404).json({ message: 'Document not found' });
+    }
+
+    // Check if we have a file path (new file-based storage)
+    if (document.filePath && fs.existsSync(document.filePath)) {
+      // Set appropriate headers for PDF download
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${document.title}${document.fileType}"`);
+      
+      // Stream the file directly from disk
+      const fileStream = fs.createReadStream(document.filePath);
+      fileStream.pipe(res);
+      return;
+    }
+
+    // Fallback to base64 content (legacy support)
+    if (document.fileContent) {
+      // Convert base64 back to buffer
+      const fileBuffer = Buffer.from(document.fileContent, 'base64');
+      
+      // Set appropriate headers for PDF download
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${document.title}${document.fileType}"`);
+      res.setHeader('Content-Length', fileBuffer.length);
+      
+      // Send the file buffer
+      res.send(fileBuffer);
+      return;
+    }
+
+    return res.status(404).json({ message: 'File content not found' });
+  } catch (error) {
+    console.error('Get PDF error:', error);
+    res.status(500).json({ message: error.message });
   }
 };
 

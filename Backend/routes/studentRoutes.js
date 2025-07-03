@@ -21,6 +21,7 @@ const {
   updateProjectMilestones,
   listDocuments,
   getDocumentContent,
+  getDocumentPDF,
 } = require("../controllers/studentController");
 
 // Student routes
@@ -45,5 +46,6 @@ router.delete("/milestones/:milestoneId/meetings/:meetingId", deleteMeeting);
 // Document routes
 router.get("/documents/supervisor/:supervisorId", listDocuments); // Changed from /documents/:supervisorId/list
 router.get("/documents/:id", getDocumentContent); // Changed from /documents/:id/content
+router.get("/documents/:id/pdf", getDocumentPDF); // Serve PDF files directly with proper headers
 
 module.exports = router;

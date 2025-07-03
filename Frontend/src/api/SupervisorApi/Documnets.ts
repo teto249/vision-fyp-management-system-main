@@ -1,4 +1,4 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const BASE_URL = 'http://localhost:3000/api';
 
 export interface Document {
   id: number;
@@ -23,8 +23,14 @@ export const getDocuments = async (token: string, supervisorId: string): Promise
     },
   });
 
+  console.log("Fetching documents for supervisor:", supervisorId);
+  console.log("Request headers:", {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  });
+  console.log("Response status:", response.status);
   if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+    throw new Error(`HTTP error! status: ${response.text}`);
   }
 
   const data = await response.json();

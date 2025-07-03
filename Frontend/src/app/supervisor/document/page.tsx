@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { DocumentCard } from "../components/Dcumnets/DocumentCard";
 import { Document } from "../../types/document";
 import { Loader2, AlertCircle, RefreshCcw, Upload, X, FileText } from "lucide-react";
+  import { useCallback } from "react";
+
 import {
   getDocuments,
   uploadDocument,
@@ -46,7 +48,8 @@ export default function Documents() {
     description: "",
   });
 
-  const fetchDocuments = async () => {
+
+  const fetchDocuments = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -78,7 +81,7 @@ export default function Documents() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const handleError = (error: unknown) => {
     let errorMessage: string;

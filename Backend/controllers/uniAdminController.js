@@ -154,22 +154,18 @@ exports.updateUniAdminAccount = async (req, res) => {
 // Register single user
 exports.registerSingleUser = async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
-      return res.status(401).json({ message: 'Authentication required' });
-    }
+    console.log('=== REGISTRATION REQUEST DEBUG ===');
+    console.log('Request method:', req.method);
+    console.log('Request URL:', req.url);
+    console.log('Request headers:', req.headers);
+    console.log('Raw body:', req.body);
+    console.log('Body keys:', Object.keys(req.body || {}));
+    console.log('Content-Type:', req.get('Content-Type'));
+    console.log('=====================================');
 
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Use the uniAdmin from middleware
+    const uniAdmin = req.uniAdmin;
 
-    // Get the university ID from the authenticated UniAdmin
-    const uniAdmin = await UniAdmin.findOne({
-      where: { username: decoded.username, role: 'UniAdmin' }
-    });
-
-    if (!uniAdmin) {
-      return res.status(404).json({ message: 'UniAdmin not found' });
-    }
 
     const {
       fullName,
@@ -180,54 +176,110 @@ exports.registerSingleUser = async (req, res) => {
       department,
       role,
       level,
+      contactEmail,
+      officeAddress
     } = req.body;
+
+    console.log('Extracted fields:', {
+      fullName,
+      universityEmail,
+      phoneNumber,
+      address,
+      idNumber,
+      department,
+      role,
+      level,
+      contactEmail,
+      officeAddress
+    });
+
+    // Validate required fields
+    if (!fullName || !universityEmail || !idNumber || !department || !role) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: fullName, universityEmail, idNumber, department, role'
+      });
+    }
+
+    // Check if user already exists
+    let existingUser = null;
+    if (role === 'Student') {
+      existingUser = await Student.findOne({ where: { userId: idNumber } });
+    } else if (role === 'Supervisor') {
+      existingUser = await Supervisor.findOne({ where: { userId: idNumber } });
+    }
+
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: `${role} with ID ${idNumber} already exists`
+      });
+    }
     
-    // For students and supervisors, use ID as password without hashing
+    // Create user data
     const userData = {
       userId: idNumber,
       fullName,
       email: universityEmail,
       universityEmail,
-      password: idNumber, // Store ID as plain password
-      phoneNumber,
-      address,
+      password: idNumber, // Use ID as password
+      phoneNumber: phoneNumber || '',
+      address: address || '',
       department,
       universityId: uniAdmin.universityId,
-      role: role
+      role: role // Keep original case - don't lowercase it
     };
 
+    let newUser = null;
+
     if (role === 'Supervisor') {
-      const { contactEmail, officeAddress } = req.body;
+      if (!contactEmail || !officeAddress) {
+        return res.status(400).json({
+          success: false,
+          message: 'contactEmail and officeAddress are required for supervisors'
+        });
+      }
+      
       userData.contactEmail = contactEmail;
       userData.officeAddress = officeAddress;
-      const supervisor = await Supervisor.create(userData);
+      newUser = await Supervisor.create(userData);
       
-      res.status(201).json({
-        success: true,
-        message: 'Supervisor registered successfully',
-        userId: supervisor.userId,
-        initialPassword: supervisor.userId
-      });
     } else if (role === 'Student') {
-      userData.level = level || 'PSM-1';
-      const student = await Student.create(userData);
-      res.status(201).json({
-        success: true,
-        message: 'Student registered successfully',
-        userId: student.userId,
-        initialPassword: student.userId
-      });
+      if (!level) {
+        return res.status(400).json({
+          success: false,
+          message: 'level is required for students'
+        });
+      }
+      
+      userData.level = level;
+      newUser = await Student.create(userData);
+      
     } else {
-      res.status(400).json({ 
+      return res.status(400).json({ 
         success: false,
-        message: 'Invalid role specified' 
+        message: 'Invalid role. Must be either Student or Supervisor' 
       });
     }
+
+    res.status(201).json({
+      success: true,
+      message: `${role} registered successfully`,
+      user: {
+        userId: newUser.userId,
+        fullName: newUser.fullName,
+        email: newUser.email,
+        role: newUser.role
+      },
+      initialPassword: newUser.userId
+    });
+
   } catch (error) {
+    console.error('Registration error:', error);
     res.status(500).json({ 
       success: false,
       message: 'Registration failed',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 };
@@ -235,80 +287,144 @@ exports.registerSingleUser = async (req, res) => {
 // Register bulk users
 exports.registerBulkUsers = async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
-      return res.status(401).json({ message: 'Authentication required' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // Get the university ID from the authenticated UniAdmin
-    const uniAdmin = await UniAdmin.findOne({
-      where: { username: decoded.username, role: 'UniAdmin' }
-    });
-
-    if (!uniAdmin) {
-      return res.status(404).json({ message: 'UniAdmin not found' });
-    }
-
+    // Use the uniAdmin from middleware
+    const uniAdmin = req.uniAdmin;
     const users = req.body;
+
+    if (!Array.isArray(users) || users.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Users array is required and cannot be empty'
+      });
+    }
+
     const results = [];
 
-    for (const userData of users) {
+    for (const [index, userData] of users.entries()) {
       try {
+        const {
+          fullName,
+          universityEmail,
+          phoneNumber,
+          address,
+          idNumber,
+          department,
+          role,
+          level,
+          contactEmail,
+          officeAddress
+        } = userData;
+
+        // Validate required fields
+        if (!fullName || !universityEmail || !idNumber || !department || !role) {
+          results.push({
+            success: false,
+            idNumber: idNumber || `Record ${index + 1}`,
+            message: 'Missing required fields'
+          });
+          continue;
+        }
+
+        // Check if user already exists
+        let existingUser = null;
+        if (role === 'Student') {
+          existingUser = await Student.findOne({ where: { userId: idNumber } });
+        } else if (role === 'Supervisor') {
+          existingUser = await Supervisor.findOne({ where: { userId: idNumber } });
+        }
+
+        if (existingUser) {
+          results.push({
+            success: false,
+            idNumber,
+            message: `${role} with ID ${idNumber} already exists`
+          });
+          continue;
+        }
+
         const baseUserData = {
-          userId: userData.idNumber,
-          fullName: userData.fullName,
-          email: userData.universityEmail,
-          universityEmail: userData.universityEmail,
-          password: userData.idNumber, // Store ID as plain password
-          phoneNumber: userData.phoneNumber,
-          address: userData.address,
-          department: userData.department,
+          userId: idNumber,
+          fullName,
+          email: universityEmail,
+          universityEmail,
+          password: idNumber,
+          phoneNumber: phoneNumber || '',
+          address: address || '',
+          department,
           universityId: uniAdmin.universityId,
-          role: userData.role
+          role: role // Keep original case for role
         };
 
-        if (userData.role === 'Supervisor') {
-          baseUserData.contactEmail = userData.contactEmail;
-          baseUserData.officeAddress = userData.officeAddress;
-          const supervisor = await Supervisor.create(baseUserData);
+        let newUser = null;
+
+        if (role === 'Supervisor') {
+          if (!contactEmail || !officeAddress) {
+            results.push({
+              success: false,
+              idNumber,
+              message: 'contactEmail and officeAddress are required for supervisors'
+            });
+            continue;
+          }
+          
+          baseUserData.contactEmail = contactEmail;
+          baseUserData.officeAddress = officeAddress;
+          newUser = await Supervisor.create(baseUserData);
+          
+        } else if (role === 'Student') {
+          if (!level) {
+            results.push({
+              success: false,
+              idNumber,
+              message: 'level is required for students'
+            });
+            continue;
+          }
+          
+          baseUserData.level = level;
+          newUser = await Student.create(baseUserData);
+          
+        } else {
           results.push({
-            success: true,
-            userId: supervisor.userId,
-            message: 'Supervisor registered successfully',
-            initialPassword: supervisor.userId
+            success: false,
+            idNumber,
+            message: 'Invalid role. Must be either Student or Supervisor'
           });
-        } else if (userData.role === 'Student') {
-          baseUserData.level = userData.level || 'PSM-1';
-          const student = await Student.create(baseUserData);
-          results.push({
-            success: true,
-            userId: student.userId,
-            message: 'Student registered successfully',
-            initialPassword: student.userId
-          });
+          continue;
         }
+
+        results.push({
+          success: true,
+          idNumber,
+          message: `${role} registered successfully`,
+          userId: newUser.userId
+        });
+
       } catch (error) {
+        console.error(`Error registering user ${userData.idNumber}:`, error);
         results.push({
           success: false,
-          data: userData,
-          error: process.env.NODE_ENV === 'development' ? error.message : 'Registration failed'
+          idNumber: userData.idNumber || `Record ${index + 1}`,
+          message: process.env.NODE_ENV === 'development' ? error.message : 'Registration failed'
         });
       }
     }
 
+    const successCount = results.filter(r => r.success).length;
+    const failCount = results.filter(r => !r.success).length;
+
     res.status(200).json({
       success: true,
-      message: 'Bulk registration completed',
+      message: `Bulk registration completed. ${successCount} succeeded, ${failCount} failed.`,
       results
     });
+
   } catch (error) {
+    console.error('Bulk registration error:', error);
     res.status(500).json({ 
       success: false,
       message: 'Bulk registration failed',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 };
@@ -359,29 +475,8 @@ exports.getUsersByUniversityId = async (req, res) => {
 // Delete user (Student or Supervisor)
 exports.deleteUser = async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
-      return res.status(401).json({ 
-        success: false,
-        message: 'Authentication required' 
-      });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // Get the university ID from the authenticated UniAdmin
-    const uniAdmin = await UniAdmin.findOne({
-      where: { username: decoded.username, role: 'UniAdmin' }
-    });
-
-    if (!uniAdmin) {
-      return res.status(404).json({ 
-        success: false,
-        message: 'UniAdmin not found' 
-      });
-    }
-
+    // Use the uniAdmin from middleware
+    const uniAdmin = req.uniAdmin;
     const { userId, userType } = req.params;
 
     if (!userId || !userType) {
@@ -463,11 +558,11 @@ exports.deleteUser = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: `${normalizedUserType.charAt(0).toUpperCase() + normalizedUserType.slice(1)} deleted successfully`,
+      message: `${userType} deleted successfully`,
       deletedUser: {
         userId: deletedUser.userId,
         fullName: deletedUser.fullName,
-        universityEmail: deletedUser.universityEmail
+        email: deletedUser.email
       }
     });
 
@@ -476,7 +571,7 @@ exports.deleteUser = async (req, res) => {
     res.status(500).json({ 
       success: false,
       message: 'Failed to delete user',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 };
@@ -484,22 +579,8 @@ exports.deleteUser = async (req, res) => {
 // Bulk delete users
 exports.bulkDeleteUsers = async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
-      return res.status(401).json({ message: 'Authentication required' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // Get the university ID from the authenticated UniAdmin
-    const uniAdmin = await UniAdmin.findOne({
-      where: { username: decoded.username, role: 'UniAdmin' }
-    });
-
-    if (!uniAdmin) {
-      return res.status(404).json({ message: 'UniAdmin not found' });
-    }
+    // Use the uniAdmin from middleware
+    const uniAdmin = req.uniAdmin;
 
     const { users } = req.body; // Array of { userId, userType }
 

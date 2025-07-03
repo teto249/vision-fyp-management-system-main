@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { DocumentCard } from "../components/Documents/DocumentCard";
 import { Document } from "../../types/document";
 import {
@@ -9,7 +9,7 @@ import {
   FileText,
   Search,
 } from "lucide-react";
-import { getDocuments } from "../../../api/StudentApi/Document";
+import { getDocuments, downloadDocument } from "../../../api/StudentApi/Document";
 import { logger } from "../../../utils/logger";
 
 // Skeleton loader component
@@ -35,12 +35,16 @@ export default function Documents() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "title">("date");
 
-  const fetchDocuments = async () => {
+  const fetchDocuments = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       const token = localStorage.getItem("authToken");
       const studentInfoStr = localStorage.getItem("studentInfo");
+
+      console.log("=== DEBUG STUDENT DOCUMENT FETCH ===");
+      console.log("Token:", token ? "Present" : "Missing");
+      console.log("Student Info String:", studentInfoStr);
 
       if (!token || !studentInfoStr) {
         setError({
@@ -52,14 +56,24 @@ export default function Documents() {
       }
 
       const studentInfo = JSON.parse(studentInfoStr);
+      console.log("Parsed Student Info:", studentInfo);
 
-      const supervisorId = studentInfo.supervisorId;
+      const supervisorId = studentInfo.supervisorId|| studentInfo.supervisor?.userId;
+      console.log("Supervisor ID:", supervisorId);
 
-      if (!supervisorId) {
-        throw new Error("Invalid supervisor information");
+      if (!supervisorId || supervisorId === null || supervisorId === undefined) {
+        console.error("No supervisorId found in student info");
+        setError({
+          message: "No supervisor assigned. Please contact your administrator to assign a supervisor before accessing documents.",
+          code: "NO_SUPERVISOR",
+          retry: false,
+        });
+        return;
       }
 
+      console.log("Fetching documents for supervisor:", supervisorId);
       const fetchedDocuments = await getDocuments(token, supervisorId);
+      console.log("Fetched documents:", fetchedDocuments);
       setDocuments(fetchedDocuments);
     } catch (error) {
       logger.error("Failed to fetch documents", error);
@@ -67,7 +81,7 @@ export default function Documents() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []); // Empty dependency array to prevent infinite loop
 
   const handleError = (error: unknown) => {
     let errorMessage: string;
@@ -90,6 +104,31 @@ export default function Documents() {
     }
 
     setError({ message: errorMessage, code: errorCode, retry: canRetry });
+  };
+
+  const handleDownload = async (documentId: string, fileName: string) => {
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        setError({
+          message: "Authentication required",
+          code: "AUTH_ERROR",
+          retry: false,
+        });
+        return;
+      }
+
+      console.log("Downloading document:", documentId, fileName);
+      await downloadDocument(documentId, fileName, token);
+      logger.info("Document downloaded successfully:", fileName);
+    } catch (error) {
+      logger.error("Failed to download document:", error);
+      setError({
+        message: error instanceof Error ? error.message : "Failed to download document",
+        code: "DOWNLOAD_ERROR",
+        retry: true,
+      });
+    }
   };
 
   const filteredDocuments = documents
@@ -129,7 +168,7 @@ export default function Documents() {
         <div className="bg-gray-800/80 backdrop-blur-sm rounded-xl p-8 max-w-md w-full shadow-xl">
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-white text-center mb-2">
-            Error Loading Documents
+            {error.code === "NO_SUPERVISOR" ? "No Supervisor Assigned" : "Error Loading Documents"}
           </h2>
           <p className="text-gray-400 text-center mb-6">{error.message}</p>
           {error.retry ? (
@@ -139,6 +178,13 @@ export default function Documents() {
             >
               <RefreshCcw className="h-5 w-5" />
               Try Again
+            </button>
+          ) : error.code === "NO_SUPERVISOR" ? (
+            <button
+              onClick={() => window.history.back()}
+              className="w-full bg-teal-600 hover:bg-teal-700 text-white py-3 px-4 rounded-xl transition-all"
+            >
+              Go Back
             </button>
           ) : (
             <button
@@ -190,11 +236,13 @@ export default function Documents() {
             {filteredDocuments.map((doc) => (
               <DocumentCard
                 key={doc.id}
-                {...doc}
                 id={String(doc.id)}
                 fileName={doc.title}
-                uploadDate={doc.createdAt}
                 description={doc.description ?? ""}
+                uploadDate={doc.createdAt}
+                fileType={doc.fileType}
+                uploadedBy={doc.uploadedBy}
+                onDownload={() => handleDownload(String(doc.id), doc.title)}
               />
             ))}
           </div>

@@ -1,4 +1,4 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const BASE_URL = 'http://localhost:3000/api';
 
 export interface Document {
   id: number;
@@ -67,6 +67,51 @@ export const getDocumentById = async (id: string, token: string): Promise<Docume
       `data:application/pdf;base64,${doc.fileContent}` : 
       undefined
   };
+};
+
+// Download document directly
+export const downloadDocument = async (id: string, fileName: string, token: string): Promise<void> => {
+  try {
+    // Use the PDF endpoint for proper download
+    const downloadUrl = `${BASE_URL}/student/documents/${id}/pdf`;
+    
+    // Create download link
+    const link = window.document.createElement('a');
+    link.href = downloadUrl;
+    link.download = fileName;
+    link.target = "_blank";
+    
+    // Add authorization header by creating a fetch request instead
+    const response = await fetch(downloadUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new DocumentError(`Failed to download document: ${response.status}`);
+    }
+
+    // Get the blob and create object URL
+    const blob = await response.blob();
+    const objectUrl = window.URL.createObjectURL(blob);
+    
+    // Create download link with blob URL
+    link.href = objectUrl;
+    
+    // Trigger download
+    window.document.body.appendChild(link);
+    link.click();
+    window.document.body.removeChild(link);
+    
+    // Clean up object URL
+    window.URL.revokeObjectURL(objectUrl);
+  } catch (error) {
+    throw new DocumentError(
+      error instanceof DocumentError ? error.message : 'Failed to download document'
+    );
+  }
 };
 
 

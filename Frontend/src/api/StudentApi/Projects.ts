@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:5000/api/student";
+const API_BASE_URL = "http://localhost:3000/api/student";
 
 // Keep only relevant interfaces
 export interface Project {
@@ -57,7 +57,7 @@ export interface Meeting {
   date: string;
   time: string;
   link?: string;
-  type: 'Online' | 'Physical';
+  type: "Online" | "Physical";
 }
 
 // Complete Milestone interface with tasks and meetings
@@ -139,45 +139,53 @@ const transformProjectData = (projectData: any) => ({
   startDate: projectData?.startDate,
   endDate: projectData?.endDate,
   supervisor: {
-    id: projectData?.supervisor?.id || '',
-    name: projectData?.supervisor?.name || 'Not assigned',
-    department: projectData?.supervisor?.department || 'Not set'
+    id: projectData?.supervisor?.id || "",
+    name: projectData?.supervisor?.name || "Not assigned",
+    department: projectData?.supervisor?.department || "Not set",
   },
   university: {
-    id: projectData?.university?.id || '',
-    shortName: projectData?.university?.shortName || '',
-    fullName: projectData?.university?.fullName || ''
+    id: projectData?.university?.id || "",
+    shortName: projectData?.university?.shortName || "",
+    fullName: projectData?.university?.fullName || "",
   },
-  milestones: Array.isArray(projectData?.milestones) ? projectData.milestones.map((milestone: any) => ({
-    ...milestone,
-    id: milestone?.id || '',
-    title: milestone?.title || '',
-    description: milestone?.description || '',
-    status: milestone?.status || 'Pending',
-    tasks: Array.isArray(milestone?.tasks) ? milestone.tasks.map((task: any) => ({
-      id: task?.id || '',
-      title: task?.title || '',
-      description: task?.description || '',
-      dueDate: task?.endDate || task?.dueDate || '', // Handle both endDate and dueDate
-      endDate: task?.endDate || task?.dueDate || '', // Keep endDate for compatibility
-      status: task?.status || 'Pending',
-      feedback: Array.isArray(task?.feedback) ? task.feedback.map((feedback: any) => ({
-        id: feedback?.id || '',
-        title: feedback?.title || '',
-        description: feedback?.description || '',
-        date: feedback?.date || feedback?.createdAt || ''
-      })) : []
-    })) : [],
-    meetings: Array.isArray(milestone?.meetings) ? milestone.meetings.map((meeting: any) => ({
-      id: meeting?.id || '',
-      title: meeting?.title || '',
-      purpose: meeting?.title || meeting?.purpose || '', // Map title to purpose for backward compatibility
-      date: meeting?.date || '',
-      time: meeting?.time || '',
-      link: meeting?.link || '',
-      type: meeting?.type || 'Online'
-    })) : []
-  })) : []
+  milestones: Array.isArray(projectData?.milestones)
+    ? projectData.milestones.map((milestone: any) => ({
+        ...milestone,
+        id: milestone?.id || "",
+        title: milestone?.title || "",
+        description: milestone?.description || "",
+        status: milestone?.status || "Pending",
+        tasks: Array.isArray(milestone?.tasks)
+          ? milestone.tasks.map((task: any) => ({
+              id: task?.id || "",
+              title: task?.title || "",
+              description: task?.description || "",
+              dueDate: task?.endDate || task?.dueDate || "", // Handle both endDate and dueDate
+              endDate: task?.endDate || task?.dueDate || "", // Keep endDate for compatibility
+              status: task?.status || "Pending",
+              feedback: Array.isArray(task?.feedback)
+                ? task.feedback.map((feedback: any) => ({
+                    id: feedback?.id || "",
+                    title: feedback?.title || "",
+                    description: feedback?.description || "",
+                    date: feedback?.date || feedback?.createdAt || "",
+                  }))
+                : [],
+            }))
+          : [],
+        meetings: Array.isArray(milestone?.meetings)
+          ? milestone.meetings.map((meeting: any) => ({
+              id: meeting?.id || "",
+              title: meeting?.title || "",
+              purpose: meeting?.title || meeting?.purpose || "", // Map title to purpose for backward compatibility
+              date: meeting?.date || "",
+              time: meeting?.time || "",
+              link: meeting?.link || "",
+              type: meeting?.type || "Online",
+            }))
+          : [],
+      }))
+    : [],
 });
 
 // Get project by student ID
@@ -205,7 +213,8 @@ export const getProjectById = async (studentId: string, token: string) => {
     console.error("Project fetch error:", error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : "Failed to fetch project",
+      message:
+        error instanceof Error ? error.message : "Failed to fetch project",
     };
   }
 };
@@ -213,11 +222,10 @@ export const getProjectById = async (studentId: string, token: string) => {
 // Add milestone - Make sure this is properly exported
 export const addMilestone = async (
   projectId: string,
-  milestoneData: MilestoneData, 
+  milestoneData: MilestoneData,
   token: string
 ): Promise<MilestoneResponse> => {
   try {
-  
     if (!milestoneData.title?.trim()) {
       throw new Error("Title is required");
     }
@@ -232,30 +240,25 @@ export const addMilestone = async (
       title: milestoneData.title.trim(),
       description: milestoneData.description.trim(),
       dueDate: milestoneData.dueDate, // Send as dueDate for backend compatibility
-      status: 'Pending'
+      status: "Pending",
     };
-
-
 
     const response = await fetch(
       `${API_BASE_URL}/project/${projectId}/milestones`,
       {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       }
     );
 
-   
-
     const data = await response.json();
-   
 
     if (!response.ok) {
-      throw new Error(data.message || 'Failed to add milestone');
+      throw new Error(data.message || "Failed to add milestone");
     }
 
     return {
@@ -268,21 +271,25 @@ export const addMilestone = async (
         startDate: data.milestone.startDate,
         endDate: data.milestone.endDate,
         createdAt: data.milestone.createdAt,
-        updatedAt: data.milestone.updatedAt
-      }
+        updatedAt: data.milestone.updatedAt,
+      },
     };
-
   } catch (error) {
-    console.error('Error in addMilestone:', error);
+    console.error("Error in addMilestone:", error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'Failed to add milestone'
+      message:
+        error instanceof Error ? error.message : "Failed to add milestone",
     };
   }
 };
 
 // Update project milestones
-export const updateProjectMilestones = async (projectId: string, milestones: Milestone[], token: string) => {
+export const updateProjectMilestones = async (
+  projectId: string,
+  milestones: Milestone[],
+  token: string
+) => {
   try {
     if (!Array.isArray(milestones)) {
       throw new Error("Invalid milestones format");
@@ -314,7 +321,8 @@ export const updateProjectMilestones = async (projectId: string, milestones: Mil
     console.error("Milestone update error:", error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : "Failed to update milestones",
+      message:
+        error instanceof Error ? error.message : "Failed to update milestones",
     };
   }
 };
@@ -333,30 +341,30 @@ export const addTask = async (
     const response = await fetch(
       `${API_BASE_URL}/milestones/${milestoneId}/tasks`, // Changed from milestone to milestones
       {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(taskData)
+        body: JSON.stringify(taskData),
       }
     );
 
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.message || 'Failed to add task');
+      throw new Error(data.message || "Failed to add task");
     }
 
     return {
       success: true,
-      task: data.task
+      task: data.task,
     };
   } catch (error) {
-    console.error('Error in addTask:', error);
+    console.error("Error in addTask:", error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'Failed to add task'
+      message: error instanceof Error ? error.message : "Failed to add task",
     };
   }
 };
@@ -369,7 +377,7 @@ export const addMeeting = async (
     date: string;
     time: string;
     link?: string;
-    type?: 'Online' | 'Physical';
+    type?: "Online" | "Physical";
   },
   token: string
 ) => {
@@ -377,44 +385,48 @@ export const addMeeting = async (
     const response = await fetch(
       `${API_BASE_URL}/milestones/${milestoneId}/meetings`, // Changed from milestone to milestones
       {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(meetingData)
+        body: JSON.stringify(meetingData),
       }
     );
 
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.message || 'Failed to add meeting');
+      throw new Error(data.message || "Failed to add meeting");
     }
 
     return {
       success: true,
-      meeting: data.meeting
+      meeting: data.meeting,
     };
   } catch (error) {
-    console.error('Error in addMeeting:', error);
+    console.error("Error in addMeeting:", error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'Failed to add meeting'
+      message: error instanceof Error ? error.message : "Failed to add meeting",
     };
   }
 };
 
 // Add this function to handle task updates
-export const updateTask = async (taskId: string, taskData: {
-  status: "Pending" | "In Progress" | "Completed";
-}, token: string) => {
+export const updateTask = async (
+  taskId: string,
+  taskData: {
+    status: "Pending" | "In Progress" | "Completed";
+  },
+  token: string
+) => {
   try {
     const response = await fetch(`${API_BASE_URL}/tasks/${taskId}/status`, {
-      method: 'PUT',
+      method: "PUT",
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(taskData),
     });
@@ -422,18 +434,18 @@ export const updateTask = async (taskId: string, taskData: {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.message || 'Failed to update task');
+      throw new Error(data.message || "Failed to update task");
     }
 
     return {
       success: true,
-      task: data.task
+      task: data.task,
     };
   } catch (error) {
-    console.error('Error updating task:', error);
+    console.error("Error updating task:", error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'Failed to update task'
+      message: error instanceof Error ? error.message : "Failed to update task",
     };
   }
 };
@@ -443,17 +455,17 @@ export const checkAuth = (): { token: string; userInfo: any } => {
   try {
     const token = localStorage.getItem("authToken");
     const userInfoString = localStorage.getItem("studentInfo");
-    
+
     if (!token) {
       throw new Error("No authentication token found");
     }
-    
+
     if (!userInfoString) {
       throw new Error("No user information found");
     }
-    
+
     const userInfo = JSON.parse(userInfoString);
-    
+
     if (!userInfo?.userId && !userInfo?.username) {
       throw new Error("Invalid user information");
     }
@@ -468,11 +480,8 @@ export const checkAuth = (): { token: string; userInfo: any } => {
 // Add registerProject function
 export const registerProject = async (projectData: any, token: string) => {
   try {
-
-    
-    
     // Check if we're in browser environment
-    if (typeof window === 'undefined') {
+    if (typeof window === "undefined") {
       throw new Error("This function can only be called from the browser");
     }
 
@@ -484,7 +493,7 @@ export const registerProject = async (projectData: any, token: string) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(projectData),
       signal: controller.signal,
@@ -492,20 +501,17 @@ export const registerProject = async (projectData: any, token: string) => {
 
     clearTimeout(timeoutId);
 
-   
-    
     // Handle different response scenarios
     let data;
     try {
       data = await response.json();
     } catch (jsonError) {
       console.error("Failed to parse response as JSON:", jsonError);
-      throw new Error(`Server returned invalid JSON. Status: ${response.status}`);
+      throw new Error(
+        `Server returned invalid JSON. Status: ${response.status}`
+      );
     }
 
- 
-    
-    
     if (!response.ok) {
       throw new Error(data.message || `HTTP error! status: ${response.status}`);
     }
@@ -513,43 +519,48 @@ export const registerProject = async (projectData: any, token: string) => {
     return {
       success: true,
       data: data,
-      message: data.message || "Project registered successfully"
+      message: data.message || "Project registered successfully",
     };
   } catch (error) {
     console.error("Project registration error:", error);
-    
+
     // Handle different types of errors
     if (error instanceof Error) {
-      if (error.name === 'AbortError') {
+      if (error.name === "AbortError") {
         return {
           success: false,
-          message: "Request timed out. Please check if the server is running and try again."
+          message:
+            "Request timed out. Please check if the server is running and try again.",
         };
       }
-      
-      if (error.name === 'TypeError' && (error.message.includes('fetch') || error.message.includes('Failed to fetch'))) {
+
+      if (
+        error.name === "TypeError" &&
+        (error.message.includes("fetch") ||
+          error.message.includes("Failed to fetch"))
+      ) {
         return {
           success: false,
-          message: `Unable to connect to server at ${API_BASE_URL}. Please ensure the backend server is running on port 3000.`
+          message: `Unable to connect to server at ${API_BASE_URL}. Please ensure the backend server is running on port 3000.`,
         };
       }
-      
-      if (error.message.includes('CORS')) {
+
+      if (error.message.includes("CORS")) {
         return {
           success: false,
-          message: "Server configuration error. Please contact support."
+          message: "Server configuration error. Please contact support.",
         };
       }
 
       return {
         success: false,
-        message: error.message || "Failed to register project"
+        message: error.message || "Failed to register project",
       };
     }
 
     return {
       success: false,
-      message: "Failed to register project"
+      message: "Failed to register project",
     };
   }
 };
@@ -571,30 +582,31 @@ export const updateMilestone = async (
     const response = await fetch(
       `${API_BASE_URL}/project/${projectId}/milestones/${milestoneId}`,
       {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(milestoneData)
+        body: JSON.stringify(milestoneData),
       }
     );
 
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.message || 'Failed to update milestone');
+      throw new Error(data.message || "Failed to update milestone");
     }
 
     return {
       success: true,
-      milestone: data.milestone
+      milestone: data.milestone,
     };
   } catch (error) {
-    console.error('Error in updateMilestone:', error);
+    console.error("Error in updateMilestone:", error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'Failed to update milestone'
+      message:
+        error instanceof Error ? error.message : "Failed to update milestone",
     };
   }
 };
@@ -609,29 +621,30 @@ export const deleteMilestone = async (
     const response = await fetch(
       `${API_BASE_URL}/project/${projectId}/milestones/${milestoneId}`,
       {
-        method: 'DELETE',
+        method: "DELETE",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       }
     );
 
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.message || 'Failed to delete milestone');
+      throw new Error(data.message || "Failed to delete milestone");
     }
 
     return {
       success: true,
-      message: data.message
+      message: data.message,
     };
   } catch (error) {
-    console.error('Error in deleteMilestone:', error);
+    console.error("Error in deleteMilestone:", error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'Failed to delete milestone'
+      message:
+        error instanceof Error ? error.message : "Failed to delete milestone",
     };
   }
 };
@@ -646,29 +659,29 @@ export const deleteTask = async (
     const response = await fetch(
       `${API_BASE_URL}/milestones/${milestoneId}/tasks/${taskId}`,
       {
-        method: 'DELETE',
+        method: "DELETE",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       }
     );
 
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.message || 'Failed to delete task');
+      throw new Error(data.message || "Failed to delete task");
     }
 
     return {
       success: true,
-      message: data.message
+      message: data.message,
     };
   } catch (error) {
-    console.error('Error in deleteTask:', error);
+    console.error("Error in deleteTask:", error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'Failed to delete task'
+      message: error instanceof Error ? error.message : "Failed to delete task",
     };
   }
 };
@@ -681,7 +694,7 @@ export const updateMeeting = async (
     title: string;
     date: string;
     link?: string;
-    type?: 'Online' | 'Physical';
+    type?: "Online" | "Physical";
   },
   token: string
 ) => {
@@ -689,30 +702,31 @@ export const updateMeeting = async (
     const response = await fetch(
       `${API_BASE_URL}/milestones/${milestoneId}/meetings/${meetingId}`,
       {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(meetingData)
+        body: JSON.stringify(meetingData),
       }
     );
 
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.message || 'Failed to update meeting');
+      throw new Error(data.message || "Failed to update meeting");
     }
 
     return {
       success: true,
-      meeting: data.meeting
+      meeting: data.meeting,
     };
   } catch (error) {
-    console.error('Error in updateMeeting:', error);
+    console.error("Error in updateMeeting:", error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'Failed to update meeting'
+      message:
+        error instanceof Error ? error.message : "Failed to update meeting",
     };
   }
 };
@@ -727,29 +741,30 @@ export const deleteMeeting = async (
     const response = await fetch(
       `${API_BASE_URL}/milestones/${milestoneId}/meetings/${meetingId}`,
       {
-        method: 'DELETE',
+        method: "DELETE",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       }
     );
 
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.message || 'Failed to delete meeting');
+      throw new Error(data.message || "Failed to delete meeting");
     }
 
     return {
       success: true,
-      message: data.message
+      message: data.message,
     };
   } catch (error) {
-    console.error('Error in deleteMeeting:', error);
+    console.error("Error in deleteMeeting:", error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'Failed to delete meeting'
+      message:
+        error instanceof Error ? error.message : "Failed to delete meeting",
     };
   }
 };
@@ -768,8 +783,7 @@ const studentProjectsAPI = {
   updateMeeting,
   deleteMeeting,
   checkAuth,
-  registerProject
+  registerProject,
 };
 
 export default studentProjectsAPI;
-
