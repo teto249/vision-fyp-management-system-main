@@ -23,6 +23,7 @@ function askQuestion(question) {
 
 
 
+
 async function verifyCredentials() {
   console.log('🔍 AWS RDS Credential Verification');
   console.log('=================================\n');

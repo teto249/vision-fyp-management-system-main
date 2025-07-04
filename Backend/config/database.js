@@ -1,134 +1,80 @@
 const { Sequelize } = require("sequelize");
-const mysql = require("mysql2/promise");
 require("dotenv").config();
 
-// Database configuration with cloud support
-const DB_NAME = process.env.DB_NAME || "vision-fyp-management-system";
-const DB_USER = process.env.DB_USER || "root";
-const DB_PASSWORD = process.env.DB_PASSWORD || "";
-const DB_HOST = process.env.DB_HOST || "localhost";
+// AWS RDS MySQL Database Configuration
+const DB_NAME = process.env.DB_NAME;
+const DB_USER = process.env.DB_USER;
+const DB_PASSWORD = process.env.DB_PASSWORD;
+const DB_HOST = process.env.DB_HOST;
 const DB_PORT = process.env.DB_PORT || 3306;
-const DATABASE_URL = process.env.DATABASE_URL; // For cloud databases
-const DB_SSL = process.env.DB_SSL === 'true' || process.env.NODE_ENV === 'production';
 
-console.log('🔧 Database Configuration:');
+// Validate required environment variables
+if (!DB_NAME || !DB_USER || !DB_PASSWORD || !DB_HOST) {
+  console.error('❌ Missing required database environment variables:');
+  console.error('   DB_NAME:', DB_NAME ? '✅' : '❌ Missing');
+  console.error('   DB_USER:', DB_USER ? '✅' : '❌ Missing');
+  console.error('   DB_PASSWORD:', DB_PASSWORD ? '✅' : '❌ Missing');
+  console.error('   DB_HOST:', DB_HOST ? '✅' : '❌ Missing');
+  console.error('');
+  console.error('💡 Please set up your .env file with AWS RDS credentials');
+  process.exit(1);
+}
+
+console.log('🔧 AWS RDS Database Configuration:');
 console.log(`   Host: ${DB_HOST}`);
 console.log(`   Database: ${DB_NAME}`);
 console.log(`   User: ${DB_USER}`);
-console.log(`   SSL: ${DB_SSL}`);
-console.log(`   Environment: ${process.env.NODE_ENV}`);
+console.log(`   Port: ${DB_PORT}`);
+console.log('   SSL: Required (AWS RDS)');
 
-// Create database if it doesn't exist (only for localhost)
-async function createDatabase() {
-  // Skip database creation for cloud databases
-  if (DATABASE_URL || DB_HOST !== 'localhost') {
-    console.log('☁️ Using cloud database - skipping database creation');
-    return;
+// Initialize Sequelize for AWS RDS MySQL
+console.log('☁️ Initializing AWS RDS MySQL connection...');
+const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASSWORD, {
+  host: DB_HOST,
+  port: DB_PORT,
+  dialect: "mysql",
+  logging: false,
+  pool: {
+    max: 10,
+    min: 2,
+    acquire: 60000, // Maximum time to get connection from pool
+    idle: 10000,
+  },
+  dialectOptions: {
+    ssl: {
+      require: true,
+      rejectUnauthorized: false // Required for AWS RDS
+    },
+    connectTimeout: 60000,
+  },
+  retry: {
+    match: [
+      /ETIMEDOUT/,
+      /EHOSTUNREACH/,
+      /ECONNRESET/,
+      /ECONNREFUSED/,
+      /ESOCKETTIMEDOUT/,
+      /EPIPE/,
+      /EAI_AGAIN/,
+      /SequelizeConnectionError/,
+      /SequelizeConnectionRefusedError/,
+      /SequelizeHostNotFoundError/,
+      /SequelizeHostNotReachableError/,
+      /SequelizeInvalidConnectionError/,
+      /SequelizeConnectionTimedOutError/
+    ],
+    max: 3
   }
-
-  try {
-    console.log('🔧 Attempting to create database if not exists...');
-    const connection = await mysql.createConnection({
-      host: DB_HOST,
-      port: DB_PORT,
-      user: DB_USER,
-      password: DB_PASSWORD,
-    });
-    
-    await connection.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;`);
-    await connection.end();
-    console.log('✅ Database creation check completed');
-  } catch (err) {
-    console.error('❌ Database creation failed:', err.message);
-    console.error('💡 This is normal if MySQL is not running or using cloud database');
-    throw err;
-  }
-}
-
-
-// Initialize Sequelize with cloud database support
-let sequelize;
-
-if (DATABASE_URL) {
-  // Use DATABASE_URL for cloud databases (Aurora, PlanetScale, Railway, etc.)
-  console.log('🌐 Using DATABASE_URL connection...');
-  sequelize = new Sequelize(DATABASE_URL, {
-    dialect: "mysql",
-    logging: false,
-    pool: {
-      max: 10,          // Increased for Aurora
-      min: 0,
-      acquire: 30000,
-      idle: 10000,
-    },
-    dialectOptions: {
-      ssl: DB_SSL ? {
-        require: true,
-        rejectUnauthorized: false // For Aurora/cloud databases
-      } : false,
-      connectTimeout: 60000,
-      acquireTimeout: 60000,
-      timeout: 60000,
-    },
-  });
-} else {
-  // Use individual connection parameters for Aurora/traditional setup
-  console.log('🏠 Using individual connection parameters...');
-  sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASSWORD, {
-    host: DB_HOST,
-    port: DB_PORT,
-    dialect: "mysql",
-    logging: false,
-    pool: {
-      max: 10,          // Optimized for Aurora
-      min: 2,           // Keep minimum connections for Aurora
-      acquire: 30000,
-      idle: 10000,
-    },
-    dialectOptions: {
-      ssl: DB_SSL ? {
-        require: true,
-        rejectUnauthorized: false
-      } : false,
-      connectTimeout: 60000,
-      acquireTimeout: 60000,
-      timeout: 60000,
-    },
-    // Aurora-specific optimizations
-    retry: {
-      match: [
-        /ETIMEDOUT/,
-        /EHOSTUNREACH/,
-        /ECONNRESET/,
-        /ECONNREFUSED/,
-        /ETIMEDOUT/,
-        /ESOCKETTIMEDOUT/,
-        /EHOSTUNREACH/,
-        /EPIPE/,
-        /EAI_AGAIN/,
-        /SequelizeConnectionError/,
-        /SequelizeConnectionRefusedError/,
-        /SequelizeHostNotFoundError/,
-        /SequelizeHostNotReachableError/,
-        /SequelizeInvalidConnectionError/,
-        /SequelizeConnectionTimedOutError/
-      ],
-      max: 3
-    }
-  });
-}
+});
 
 const connectDB = async () => {
   try {
-    console.log('📊 Connecting to database...');
+    console.log('📊 Connecting to AWS RDS MySQL database...');
     
-    // First create database if it doesn't exist
-    await createDatabase();
-
     // Test database connection
     console.log('🔌 Testing database connection...');
     await sequelize.authenticate();
-    console.log('✅ Database connection established');
+    console.log('✅ AWS RDS Database connection established');
 
     // Import all models BEFORE checking tables
     console.log('📋 Loading models...');
@@ -191,42 +137,40 @@ const connectDB = async () => {
         institutionId: institution.id,
       });
 
-      if (process.env.NODE_ENV === "development") {
-        // Development mode credentials displayed
-      }
+      console.log('✅ Default data created successfully');
+      console.log('🔑 Default admin credentials:');
+      console.log('   Username: green-admin');
+      console.log('   Password: admin123');
     } else {
       // Tables exist - just sync without force to update any schema changes
-
+      console.log('🔄 Syncing existing database schema...');
       await sequelize.sync({ alter: false });
+      console.log('✅ Database schema synchronized');
     }
   } catch (error) {
-    console.error("❌ Database initialization failed:", error.message);
+    console.error("❌ AWS RDS Database connection failed:", error.message);
 
-    if (error.name === "SequelizeDatabaseError") {
-      console.error("💡 Database Error Details:");
-      console.error("   SQL Error:", error.parent?.sqlMessage || error.message);
-      console.error("   Error Code:", error.parent?.errno);
-      console.error("   SQL State:", error.parent?.sqlState);
-
-      if (error.parent?.errno === 1932) {
-        console.error("🔧 Fix: This error suggests table structure mismatch.");
-        console.error(
-          "   Try dropping the database and restarting the application:"
-        );
-        console.error("   1. Open phpMyAdmin (http://localhost/phpmyadmin)");
-        console.error("   2. Drop the 'vision-fyp-management-system' database");
-        console.error("   3. Restart the Node.js application");
-      }
-    } else if (error.name === "SequelizeConnectionRefusedError") {
-      console.error("💡 Connection refused - MySQL server is not running");
-      console.error("   1. Start XAMPP or MySQL service");
-      console.error("   2. Ensure MySQL is running on port 3306");
+    if (error.name === "SequelizeConnectionRefusedError") {
+      console.error("💡 Connection refused - Check your AWS RDS configuration:");
+      console.error("   1. Verify RDS instance is running and available");
+      console.error("   2. Check security group allows connections on port 3306");
+      console.error("   3. Ensure your IP is whitelisted or use 0.0.0.0/0 for testing");
+      console.error("   4. Verify VPC settings allow public access");
+    } else if (error.name === "SequelizeAccessDeniedError") {
+      console.error("💡 Access denied - Check your credentials:");
+      console.error("   1. Verify DB_USER and DB_PASSWORD in .env file");
+      console.error("   2. Ensure the database user has proper permissions");
+      console.error("   3. Check that the database name exists on RDS");
+    } else if (error.name === "SequelizeHostNotFoundError") {
+      console.error("💡 Host not found - Check your RDS endpoint:");
+      console.error("   1. Verify DB_HOST in .env matches your RDS endpoint");
+      console.error("   2. Ensure RDS instance is running");
+      console.error("   3. Check AWS region settings");
     } else {
       console.error("📋 Full error details:", error.stack);
     }
 
-    // Throw error instead of process.exit to allow graceful handling
-    throw new Error(`Database connection failed: ${error.message}`);
+    throw new Error(`AWS RDS Database connection failed: ${error.message}`);
   }
 };
 
