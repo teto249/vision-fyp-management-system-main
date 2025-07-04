@@ -11,5 +11,8 @@
       "src": "/(.*)",
       "dest": "Frontend/$1"
     }
-  ]
+  ],
+  "env": {
+    "NEXT_PUBLIC_API_URL": "https://vision-fyp-management-system-main-production.up.railway.app"
+  }
 }
