@@ -63,12 +63,9 @@ JWT_SECRET=[SECURED]
 node quick-setup.js          # Automated .env setup and connection test
 ```
 
-### Verification Scripts  
+### Credential Verification
 ```bash
 node verify-credentials.js   # Interactive credential verification
-node test-aws-connection.js  # Standalone connection test
-node verify-clean-startup.js # Complete startup verification
-node inspect-tables.js      # Database table inspection
 ```
 
 ### Production Start
