@@ -1,9 +1,11 @@
 {
+  "name": "vision-fyp-management-system",
+  "version": "1.0.0",
   "scripts": {
-    "dev": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm run dev\"",
-    "build": "cd frontend && npm run build",
-    "start": "cd backend && npm start",
-    "install-all": "npm install && cd frontend && npm install && cd ../backend && npm install"
+    "dev": "concurrently \"cd Backend && npm run dev\" \"cd Frontend && npm run dev\"",
+    "build": "cd Frontend && npm run build",
+    "start": "cd Backend && npm start",
+    "install-all": "npm install && cd Frontend && npm install && cd ../Backend && npm install"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
