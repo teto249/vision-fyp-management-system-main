@@ -2,48 +2,121 @@ const { Sequelize } = require("sequelize");
 const mysql = require("mysql2/promise");
 require("dotenv").config();
 
+// Database configuration with cloud support
 const DB_NAME = process.env.DB_NAME || "vision-fyp-management-system";
 const DB_USER = process.env.DB_USER || "root";
 const DB_PASSWORD = process.env.DB_PASSWORD || "";
 const DB_HOST = process.env.DB_HOST || "localhost";
+const DB_PORT = process.env.DB_PORT || 3306;
+const DATABASE_URL = process.env.DATABASE_URL; // For cloud databases
+const DB_SSL = process.env.DB_SSL === 'true' || process.env.NODE_ENV === 'production';
 
-// Create database if it doesn't exist
+console.log('🔧 Database Configuration:');
+console.log(`   Host: ${DB_HOST}`);
+console.log(`   Database: ${DB_NAME}`);
+console.log(`   User: ${DB_USER}`);
+console.log(`   SSL: ${DB_SSL}`);
+console.log(`   Environment: ${process.env.NODE_ENV}`);
+
+// Create database if it doesn't exist (only for localhost)
 async function createDatabase() {
+  // Skip database creation for cloud databases
+  if (DATABASE_URL || DB_HOST !== 'localhost') {
+    console.log('☁️ Using cloud database - skipping database creation');
+    return;
+  }
+
   try {
     console.log('🔧 Attempting to create database if not exists...');
-    // Create a temporary connection without database selection
     const connection = await mysql.createConnection({
       host: DB_HOST,
+      port: DB_PORT,
       user: DB_USER,
       password: DB_PASSWORD,
     });
-    // Create database if it doesn't exist
+    
     await connection.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;`);
     await connection.end();
     console.log('✅ Database creation check completed');
   } catch (err) {
     console.error('❌ Database creation failed:', err.message);
-    console.error('💡 This is normal if MySQL is not running');
-    throw err; // Re-throw instead of process.exit
+    console.error('💡 This is normal if MySQL is not running or using cloud database');
+    throw err;
   }
 }
 
 
-// Initialize Sequelize
-const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASSWORD, {
-  host: DB_HOST,
-  dialect: "mysql",
-  logging: false,
-  pool: {
-    max: 5,
-    min: 0,
-    acquire: 30000,
-    idle: 10000,
-  },
-  dialectOptions: {
-    connectTimeout: 60000,
-  },
-});
+// Initialize Sequelize with cloud database support
+let sequelize;
+
+if (DATABASE_URL) {
+  // Use DATABASE_URL for cloud databases (Aurora, PlanetScale, Railway, etc.)
+  console.log('🌐 Using DATABASE_URL connection...');
+  sequelize = new Sequelize(DATABASE_URL, {
+    dialect: "mysql",
+    logging: false,
+    pool: {
+      max: 10,          // Increased for Aurora
+      min: 0,
+      acquire: 30000,
+      idle: 10000,
+    },
+    dialectOptions: {
+      ssl: DB_SSL ? {
+        require: true,
+        rejectUnauthorized: false // For Aurora/cloud databases
+      } : false,
+      connectTimeout: 60000,
+      acquireTimeout: 60000,
+      timeout: 60000,
+    },
+  });
+} else {
+  // Use individual connection parameters for Aurora/traditional setup
+  console.log('🏠 Using individual connection parameters...');
+  sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASSWORD, {
+    host: DB_HOST,
+    port: DB_PORT,
+    dialect: "mysql",
+    logging: false,
+    pool: {
+      max: 10,          // Optimized for Aurora
+      min: 2,           // Keep minimum connections for Aurora
+      acquire: 30000,
+      idle: 10000,
+    },
+    dialectOptions: {
+      ssl: DB_SSL ? {
+        require: true,
+        rejectUnauthorized: false
+      } : false,
+      connectTimeout: 60000,
+      acquireTimeout: 60000,
+      timeout: 60000,
+    },
+    // Aurora-specific optimizations
+    retry: {
+      match: [
+        /ETIMEDOUT/,
+        /EHOSTUNREACH/,
+        /ECONNRESET/,
+        /ECONNREFUSED/,
+        /ETIMEDOUT/,
+        /ESOCKETTIMEDOUT/,
+        /EHOSTUNREACH/,
+        /EPIPE/,
+        /EAI_AGAIN/,
+        /SequelizeConnectionError/,
+        /SequelizeConnectionRefusedError/,
+        /SequelizeHostNotFoundError/,
+        /SequelizeHostNotReachableError/,
+        /SequelizeInvalidConnectionError/,
+        /SequelizeConnectionTimedOutError/
+      ],
+      max: 3
+    }
+  });
+}
 
 const connectDB = async () => {
   try {
