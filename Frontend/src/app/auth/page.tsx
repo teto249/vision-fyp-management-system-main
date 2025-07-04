@@ -30,7 +30,7 @@ export default function LoginForm() {
 
     try {
       const data = await login(username, password);
-      console.log("Login successful:", data);
+      
       const role = data.user.role;
 
       // Show success message before redirect

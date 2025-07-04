@@ -76,7 +76,7 @@ export async function login(
       password,
     };
 
-    console.log("Sending login request with credentials:", credentials);
+   
     const response = await fetch(
       `${BASE_URL}/api/auth/login`,
       {
