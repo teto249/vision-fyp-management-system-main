@@ -10,13 +10,21 @@ const Supervisor = require("../models/Supervisor");
 exports.login = async (req, res) => {
   const { username, password } = req.body;
 
-  
+  // Add request timeout protection
+  const timeoutId = setTimeout(() => {
+    if (!res.headersSent) {
+      console.log('⏰ Login request timeout - force response');
+      res.status(408).json({ message: "Request timeout" });
+    }
+  }, 25000); // 25 second timeout
+
   try {
+    console.log('🔐 Login attempt started for username:', username);
+    
     if (!username || !password) {
-      console.log(' Missing credentials');
-      return res
-        .status(400)
-        .json({ message: "Username and password are required" });
+      console.log('❌ Missing credentials');
+      clearTimeout(timeoutId);
+      return res.status(400).json({ message: "Username and password are required" });
     }
 
     let user = null;
@@ -151,10 +159,11 @@ exports.login = async (req, res) => {
       };
     }
 
-    console.log(' Sending response:');
+    console.log('✅ Sending response:');
     console.log('  User role:', userType);
     console.log('  Response user:', responseUser);
 
+    clearTimeout(timeoutId);
     res.status(200).json({
       message: "Login successful",
       token,
@@ -166,15 +175,18 @@ exports.login = async (req, res) => {
     console.error('💥 Login error:', error.message);
     console.error('📋 Error stack:', error.stack);
     
+    clearTimeout(timeoutId);
     // Enhanced error response with more details to help debug
-    res.status(500).json({
-      message: "An unexpected error occurred during login",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
-      details: process.env.NODE_ENV === "development" ? {
-        stack: error.stack,
-        name: error.name
-      } : undefined
-    });
+    if (!res.headersSent) {
+      res.status(500).json({
+        message: "An unexpected error occurred during login",
+        error: process.env.NODE_ENV === "development" ? error.message : undefined,
+        details: process.env.NODE_ENV === "development" ? {
+          stack: error.stack,
+          name: error.name
+        } : undefined
+      });
+    }
   }
 };
 
