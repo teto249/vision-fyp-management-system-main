@@ -1,0 +1,17 @@
+{
+  "name": "vision-fyp-backend",
+  "version": "1.0.0",
+  "description": "Backend for Vision FYP Management System",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "test": "node test-start.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": ["fyp", "management", "system", "backend", "api"],
+  "author": "Vision FYP Team",
+  "license": "MIT"
+}

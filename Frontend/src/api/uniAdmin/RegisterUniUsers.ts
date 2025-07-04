@@ -1,4 +1,5 @@
-const API_BASE_URL = "http://localhost:3000/api/uniAdmin/registration";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+const API_BASE_URL = `${BASE_URL}/api/uniAdmin/registration`;
 
 // Update the interface to include all required fields
 interface RegistrationData {

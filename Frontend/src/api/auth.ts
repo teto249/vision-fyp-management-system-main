@@ -3,6 +3,8 @@ export interface LoginCredentials {
   password: string;
 }
 
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
 // Base interface with common fields
 export interface BaseUserInfo {
   username?: string;
@@ -76,7 +78,7 @@ export async function login(
 
     console.log("Sending login request with credentials:", credentials);
     const response = await fetch(
-      `${ "http://localhost:3000"}/api/auth/login`,
+      `${BASE_URL}/api/auth/login`,
       {
         method: "POST",
         headers: {

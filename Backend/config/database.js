@@ -10,6 +10,7 @@ const DB_HOST = process.env.DB_HOST || "localhost";
 // Create database if it doesn't exist
 async function createDatabase() {
   try {
+    console.log('🔧 Attempting to create database if not exists...');
     // Create a temporary connection without database selection
     const connection = await mysql.createConnection({
       host: DB_HOST,
@@ -19,10 +20,14 @@ async function createDatabase() {
     // Create database if it doesn't exist
     await connection.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;`);
     await connection.end();
+    console.log('✅ Database creation check completed');
   } catch (err) {
-    process.exit(1);
+    console.error('❌ Database creation failed:', err.message);
+    console.error('💡 This is normal if MySQL is not running');
+    throw err; // Re-throw instead of process.exit
   }
 }
+
 
 // Initialize Sequelize
 const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASSWORD, {
@@ -42,13 +47,18 @@ const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASSWORD, {
 
 const connectDB = async () => {
   try {
+    console.log('📊 Connecting to database...');
+    
     // First create database if it doesn't exist
     await createDatabase();
 
     // Test database connection
+    console.log('🔌 Testing database connection...');
     await sequelize.authenticate();
+    console.log('✅ Database connection established');
 
     // Import all models BEFORE checking tables
+    console.log('📋 Loading models...');
     const Institution = require("../models/Institution");
     const MainAdmin = require("../models/MainAdmin");
     const University = require("../models/University");
@@ -59,8 +69,10 @@ const connectDB = async () => {
 
     // Import and initialize model associations
     require("../models/index");
+    console.log('✅ Models loaded successfully');
 
     // Check if any tables exist in the database
+    console.log('🔍 Checking database tables...');
     const [tableResults] = await sequelize.query(
       "SELECT COUNT(*) as table_count FROM information_schema.tables WHERE table_schema = :schema",
       {
@@ -70,9 +82,11 @@ const connectDB = async () => {
     );
 
     const tableCount = tableResults.table_count;
+    console.log(`📊 Found ${tableCount} existing tables`);
 
     if (tableCount === 0) {
       // No tables exist - fresh installation
+      console.log('🔨 Creating database tables (fresh installation)...');
       await sequelize.sync({ force: true });
 
       // Create default institution
@@ -130,11 +144,16 @@ const connectDB = async () => {
         console.error("   2. Drop the 'vision-fyp-management-system' database");
         console.error("   3. Restart the Node.js application");
       }
+    } else if (error.name === "SequelizeConnectionRefusedError") {
+      console.error("💡 Connection refused - MySQL server is not running");
+      console.error("   1. Start XAMPP or MySQL service");
+      console.error("   2. Ensure MySQL is running on port 3306");
     } else {
       console.error("📋 Full error details:", error.stack);
     }
 
-    process.exit(1);
+    // Throw error instead of process.exit to allow graceful handling
+    throw new Error(`Database connection failed: ${error.message}`);
   }
 };
 

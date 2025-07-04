@@ -4,24 +4,141 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
-const { connectDB } = require("./config/database");
-const userRoutes = require("./routes/UserRoutes");
-const authRoutes = require("./routes/authRoutes");
-const adminRoutes = require("./routes/adminRoutes");
-const uniAdminRoutes = require("./routes/uniAdminRoutes");
-const studentRoutes = require("./routes/studentRoutes");
-const supervisorRoutes = require("./routes/supervisorRoutes");
+
+// Load environment variables first
 dotenv.config();
+
+// Enhanced startup debugging
+console.log('🚀 Starting Vision FYP Backend Server...');
+console.log('📅 Timestamp:', new Date().toISOString());
+console.log('🔧 Node.js version:', process.version);
+console.log('🔧 Environment:', process.env.NODE_ENV || 'development');
+console.log('📁 Working directory:', __dirname);
+
+// Test database connection loading
+console.log('📊 Loading database configuration...');
+try {
+  const { connectDB } = require("./config/database");
+  console.log('✅ Database config loaded successfully');
+} catch (dbErr) {
+  console.error('❌ Failed to load database config:', dbErr.message);
+  process.exit(1);
+}
+
+// Load routes with detailed error handling
+console.log('📁 Loading routes and controllers...');
+
+let authRoutes, adminRoutes, uniAdminRoutes, studentRoutes, supervisorRoutes, userRoutes;
+
+try {
+  console.log('   Loading authRoutes...');
+  authRoutes = require("./routes/authRoutes");
+  console.log('   ✅ authRoutes loaded');
+} catch (err) {
+  console.error('   ❌ Failed to load authRoutes:', err.message);
+  process.exit(1);
+}
+
+try {
+  console.log('   Loading adminRoutes...');
+  adminRoutes = require("./routes/adminRoutes");
+  console.log('   ✅ adminRoutes loaded');
+} catch (err) {
+  console.error('   ❌ Failed to load adminRoutes:', err.message);
+  process.exit(1);
+}
+
+try {
+  console.log('   Loading uniAdminRoutes...');
+  uniAdminRoutes = require("./routes/uniAdminRoutes");
+  console.log('   ✅ uniAdminRoutes loaded');
+} catch (err) {
+  console.error('   ❌ Failed to load uniAdminRoutes:', err.message);
+  process.exit(1);
+}
+
+try {
+  console.log('   Loading studentRoutes...');
+  studentRoutes = require("./routes/studentRoutes");
+  console.log('   ✅ studentRoutes loaded');
+} catch (err) {
+  console.error('   ❌ Failed to load studentRoutes:', err.message);
+  process.exit(1);
+}
+
+try {
+  console.log('   Loading supervisorRoutes...');
+  supervisorRoutes = require("./routes/supervisorRoutes");
+  console.log('   ✅ supervisorRoutes loaded');
+} catch (err) {
+  console.error('   ❌ Failed to load supervisorRoutes:', err.message);
+  process.exit(1);
+}
+
+try {
+  console.log('   Loading userRoutes...');
+  userRoutes = require("./routes/UserRoutes");
+  console.log('   ✅ userRoutes loaded');
+} catch (err) {
+  console.error('   ❌ Failed to load userRoutes:', err.message);
+  console.error('   📍 Stack:', err.stack);
+  
+  // Check if the file exists
+  const userRoutesPath = path.join(__dirname, 'routes', 'userRoutes.js');
+  if (fs.existsSync(userRoutesPath)) {
+    console.log('   📄 userRoutes.js file exists at:', userRoutesPath);
+  } else {
+    console.error('   ❌ userRoutes.js file NOT found at:', userRoutesPath);
+    
+    // List all files in routes directory
+    try {
+      const routeFiles = fs.readdirSync(path.join(__dirname, 'routes'));
+      console.log('   📁 Available route files:');
+      routeFiles.forEach(file => console.log(`      - ${file}`));
+    } catch (dirErr) {
+      console.error('   ❌ Error reading routes directory:', dirErr.message);
+    }
+  }
+  process.exit(1);
+}
+
+// Re-import database connection after routes are loaded
+const { connectDB } = require("./config/database");
 
 // Basic error handling for startup
 process.on('uncaughtException', (err) => {
-  console.error('Uncaught Exception:', err.message);
-  console.error(err.stack);
+  console.error('💥 Uncaught Exception:', err.message);
+  console.error('📍 Stack trace:', err.stack);
+  
+  // Check if it's a module not found error
+  if (err.code === 'MODULE_NOT_FOUND') {
+    console.error('🔍 Module resolution issue detected:');
+    console.error('   - Check if all controller files exist');
+    console.error('   - Verify file names match exactly (case-sensitive)');
+    console.error('   - Ensure all exports are properly defined');
+    
+    // List all files in routes and controllers directories
+    const path = require('path');
+    const fs = require('fs');
+    
+    try {
+      console.log('📁 Files in routes directory:');
+      const routeFiles = fs.readdirSync(path.join(__dirname, 'routes'));
+      routeFiles.forEach(file => console.log(`   - ${file}`));
+      
+      console.log('📁 Files in controllers directory:');
+      const controllerFiles = fs.readdirSync(path.join(__dirname, 'controllers'));
+      controllerFiles.forEach(file => console.log(`   - ${file}`));
+    } catch (dirErr) {
+      console.error('❌ Error reading directories:', dirErr.message);
+    }
+  }
+  
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  console.error('🚫 Unhandled Rejection at:', promise, 'reason:', reason);
   process.exit(1);
 });
 
@@ -81,22 +198,63 @@ const createUploadDirs = () => {
 createUploadDirs();
 
 // Connect to database with error handling
-try {
-  console.log('Connecting to database...');
-  connectDB();
-  console.log('Database connection initiated');
-} catch (error) {
-  console.error('Database connection error:', error.message);
-  process.exit(1);
-}
+const connectToDatabase = async () => {
+  try {
+    console.log('📊 Connecting to database...');
+    await connectDB();
+    console.log('✅ Database connection established successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Database connection error:', error.message);
+    console.error('💡 Make sure MySQL/XAMPP is running and database exists');
+    console.error('💡 Check your .env file for correct database credentials');
+    
+    // In development, continue without database
+    if (process.env.NODE_ENV === 'development') {
+      console.log('⚠️  Running in development mode without database connection');
+      return false;
+    } else {
+      console.error('💥 Cannot start server without database connection in production');
+      process.exit(1);
+    }
+  }
+};
+
+// Initialize database connection
+connectToDatabase();
 
 // API Routes
-app.use("/api/users", userRoutes);
+console.log('🛣️  Setting up API routes...');
+
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/uniAdmin", uniAdminRoutes);
 app.use("/api/student", studentRoutes);
 app.use("/api/supervisor", supervisorRoutes);
+app.use("/api/users", userRoutes);
+
+console.log('✅ All API routes configured successfully');
+
+// Log all registered routes for debugging
+try {
+  console.log('📍 Registered routes:');
+  if (app._router && app._router.stack) {
+    app._router.stack.forEach((middleware, index) => {
+      if (middleware.route) {
+        console.log(`   - ${middleware.route.path} (${Object.keys(middleware.route.methods).join(', ').toUpperCase()})`);
+      } else if (middleware.name === 'router' && middleware.handle && middleware.handle.stack) {
+        console.log(`   - Router middleware #${index + 1}`);
+        middleware.handle.stack.forEach((handler, handlerIndex) => {
+          if (handler.route) {
+            console.log(`     - ${handler.route.path} (${Object.keys(handler.route.methods).join(', ').toUpperCase()})`);
+          }
+        });
+      }
+    });
+  }
+} catch (routeErr) {
+  console.error('❌ Error logging routes:', routeErr.message);
+}
 
 // Health check endpoint
 app.get("/health", (req, res) => {
@@ -154,9 +312,13 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Server running successfully on port ${PORT}`);
+  console.log(`🌐 Local: http://localhost:${PORT}`);
+  console.log(`🏥 Health check: http://localhost:${PORT}/health`);
+  console.log('🎯 Backend startup completed successfully!');
+  console.log('═══════════════════════════════════════════════════════════');
 });
 
 // Graceful shutdown with file cleanup
