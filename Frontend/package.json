@@ -30,7 +30,7 @@
     "react-dom": "^19.0.0",
     "react-hot-toast": "^2.5.2",
     "uuid": "^11.1.0",
-    "xlsx": "^0.19.3"
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/chart.js": "^2.9.41",
