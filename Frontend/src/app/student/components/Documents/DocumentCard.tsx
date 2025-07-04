@@ -1,7 +1,8 @@
 // components/Documents/DocumentCard.tsx
 "use client";
 import { useRouter } from "next/navigation";
-import { FileText, Calendar, User, Download, Eye } from "lucide-react";
+import { useState } from "react";
+import { FileText, Calendar, User, Download, Eye, CheckCircle, AlertCircle } from "lucide-react";
 
 interface DocumentCardProps {
   id: string;
@@ -27,6 +28,9 @@ export function DocumentCard({
   onDownload,
 }: DocumentCardProps) {
   const router = useRouter();
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   const formatFileSize = (bytes?: number): string => {
     if (!bytes) return "Unknown size";
@@ -50,6 +54,27 @@ export function DocumentCard({
   const handleActionClick = (e: React.MouseEvent, action: () => void) => {
     e.stopPropagation();
     action();
+  };
+
+  const handleDownloadClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onDownload || isDownloading) return;
+
+    try {
+      setIsDownloading(true);
+      setDownloadError(null);
+      setDownloadSuccess(false);
+      
+      await onDownload();
+      
+      setDownloadSuccess(true);
+      setTimeout(() => setDownloadSuccess(false), 3000);
+    } catch (error) {
+      setDownloadError(error instanceof Error ? error.message : 'Download failed');
+      setTimeout(() => setDownloadError(null), 5000);
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
@@ -87,18 +112,43 @@ export function DocumentCard({
         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex-shrink-0">
           <button
             onClick={(e) => handleActionClick(e, () => router.push(`/student/document/${id}`))}
-            className="p-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white transition-colors"
+            className="p-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white transition-colors shadow-lg hover:shadow-xl"
             title="View Document"
           >
             <Eye size={16} />
           </button>
           {onDownload && (
             <button
-              onClick={(e) => handleActionClick(e, onDownload)}
-              className="p-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors"
-              title="Download Document"
+              onClick={handleDownloadClick}
+              disabled={isDownloading}
+              className={`p-2 rounded-lg text-white transition-all shadow-lg hover:shadow-xl relative ${
+                downloadSuccess 
+                  ? 'bg-green-600 hover:bg-green-700' 
+                  : downloadError 
+                  ? 'bg-red-600 hover:bg-red-700' 
+                  : isDownloading 
+                  ? 'bg-gray-600 cursor-not-allowed' 
+                  : 'bg-blue-600 hover:bg-blue-700'
+              }`}
+              title={
+                downloadSuccess 
+                  ? 'Downloaded successfully!' 
+                  : downloadError 
+                  ? `Error: ${downloadError}` 
+                  : isDownloading 
+                  ? 'Downloading...' 
+                  : 'Download Document'
+              }
             >
-              <Download size={16} />
+              {isDownloading ? (
+                <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+              ) : downloadSuccess ? (
+                <CheckCircle size={16} />
+              ) : downloadError ? (
+                <AlertCircle size={16} />
+              ) : (
+                <Download size={16} />
+              )}
             </button>
           )}
         </div>

@@ -8,6 +8,8 @@ import {
   FileText,
   Download,
   ArrowLeft,
+  CheckCircle,
+  AlertCircle,
 } from "lucide-react";
 import {
   getDocumentById,
@@ -43,6 +45,9 @@ export default function DocumentViewPage({
   const [doc, setDoc] = useState<DocumentType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   // Unwrap params using React.use()
   const unwrappedParams = use(params);
@@ -75,21 +80,30 @@ export default function DocumentViewPage({
   }, [unwrappedParams.id, router]);
 
   const handleDownload = async () => {
-    if (!doc) return;
+    if (!doc || isDownloading) return;
 
     try {
+      setIsDownloading(true);
+      setDownloadError(null);
+      setDownloadSuccess(false);
+      
       const token = localStorage.getItem("authToken");
       if (!token) {
-        setError("Authentication required");
+        setDownloadError("Authentication required");
         return;
       }
 
       logger.info("Downloading document:", doc.id, doc.title);
       await downloadDocument(String(doc.id), doc.title, token);
       logger.info("Document downloaded successfully:", doc.title);
+      setDownloadSuccess(true);
+      setTimeout(() => setDownloadSuccess(false), 3000);
     } catch (err) {
       logger.error("Failed to download document:", err);
-      setError(err instanceof Error ? err.message : "Failed to download document");
+      setDownloadError(err instanceof Error ? err.message : "Failed to download document");
+      setTimeout(() => setDownloadError(null), 5000);
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -173,10 +187,47 @@ export default function DocumentViewPage({
           <div className="flex gap-2">
             <button
               onClick={handleDownload}
-              className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+              disabled={isDownloading}
+              className={`px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-all shadow-lg hover:shadow-xl ${
+                downloadSuccess 
+                  ? 'bg-green-600 hover:bg-green-700 text-white' 
+                  : downloadError 
+                  ? 'bg-red-600 hover:bg-red-700 text-white' 
+                  : isDownloading 
+                  ? 'bg-gray-600 cursor-not-allowed text-gray-300' 
+                  : 'bg-teal-600 hover:bg-teal-700 text-white'
+              }`}
+              title={
+                downloadSuccess 
+                  ? 'Downloaded successfully!' 
+                  : downloadError 
+                  ? `Error: ${downloadError}` 
+                  : isDownloading 
+                  ? 'Downloading...' 
+                  : 'Download Document'
+              }
             >
-              <Download size={20} />
-              Download
+              {isDownloading ? (
+                <>
+                  <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
+                  Downloading...
+                </>
+              ) : downloadSuccess ? (
+                <>
+                  <CheckCircle size={20} />
+                  Downloaded!
+                </>
+              ) : downloadError ? (
+                <>
+                  <AlertCircle size={20} />
+                  Retry Download
+                </>
+              ) : (
+                <>
+                  <Download size={20} />
+                  Download
+                </>
+              )}
             </button>
           </div>
         </div>
