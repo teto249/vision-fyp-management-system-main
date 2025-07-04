@@ -1,19 +1,21 @@
 {
   "version": 2,
-  "name": "vision-fyp-management-system",
   "builds": [
     {
       "src": "Frontend/package.json",
-      "use": "@vercel/next"
+      "use": "@vercel/next",
+      "config": {
+        "distDir": ".next"
+      }
     }
   ],
   "routes": [
     {
+      "handle": "filesystem"
+    },
+    {
       "src": "/(.*)",
       "dest": "Frontend/$1"
     }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  }
+  ]
 }
