@@ -11,6 +11,8 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
+
+
 exports.createUser = async (req, res) => {
   try {
     const user = await User.create(req.body);
@@ -19,3 +21,4 @@ exports.createUser = async (req, res) => {
     res.status(400).json({ message: "Error creating user", error });
   }
 };
+

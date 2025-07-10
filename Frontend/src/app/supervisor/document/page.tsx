@@ -56,7 +56,6 @@ export default function Documents() {
       const token = localStorage.getItem("authToken");
       const supervisorInfoStr = localStorage.getItem("supervisorInfo");
 
-
       if (!token || !supervisorInfoStr) {
         setError({
           message: "Authentication required",
@@ -67,14 +66,43 @@ export default function Documents() {
       }
 
       const supervisorInfo = JSON.parse(supervisorInfoStr);
+      // Check for both userId and username to handle different storage formats
       const supervisorId = supervisorInfo.userId || supervisorInfo.username;
 
       if (!supervisorId) {
-        throw new Error("Invalid supervisor information");
+        console.error("Supervisor info:", supervisorInfo);
+        console.error("Available localStorage keys:", Object.keys(localStorage));
+        console.error("All supervisor-related storage:");
+        ['supervisorInfo', 'adminInfo', 'studentInfo'].forEach(key => {
+          const data = localStorage.getItem(key);
+          if (data) {
+            try {
+              const parsed = JSON.parse(data);
+              console.error(`${key}:`, parsed);
+            } catch (e) {
+              console.error(`${key} (raw):`, data);
+            }
+          }
+        });
+        throw new Error("Invalid supervisor information - missing userId/username");
       }
 
+      console.log("Fetching documents for supervisor:", supervisorId);
       const fetchedDocuments = await getDocuments(token, supervisorId);
-      setDocuments(fetchedDocuments);
+      console.log("Fetched documents:", fetchedDocuments);
+      
+      // Ensure we always set an array, even if the response is unexpected
+      if (Array.isArray(fetchedDocuments)) {
+        setDocuments(fetchedDocuments);
+        console.log(`Successfully loaded ${fetchedDocuments.length} documents`);
+        
+        // Clear any previous errors since we got a successful response
+        setError(null);
+      } else {
+        console.warn("Unexpected documents response format:", fetchedDocuments);
+        setDocuments([]);
+        setError(null); // Don't treat this as an error
+      }
     } catch (error) {
       logger.error('Failed to fetch documents', error);
       handleError(error);
@@ -93,22 +121,37 @@ export default function Documents() {
 
       switch (true) {
         case error.message.includes("network"):
+        case error.message.includes("fetch"):
           errorCode = "NETWORK_ERROR";
+          errorMessage = "Network connection error. Please check your internet connection.";
           break;
         case error.message.includes("401"):
           errorCode = "AUTH_ERROR";
+          errorMessage = "Authentication failed. Please login again.";
           canRetry = false;
           break;
         case error.message.includes("403"):
           errorCode = "PERMISSION_ERROR";
+          errorMessage = "You don't have permission to access documents.";
           canRetry = false;
           break;
         case error.message.includes("404"):
           errorCode = "NOT_FOUND";
-          errorMessage = "Documents not found";
+          errorMessage = "Documents service not found.";
+          break;
+        case error.message.includes("500"):
+          errorCode = "SERVER_ERROR";
+          errorMessage = "Server error. Please try again later.";
+          break;
+        case error.message.includes("supervisor information"):
+        case error.message.includes("userId/username"):
+          errorCode = "AUTH_ERROR";
+          errorMessage = "Session expired or invalid. Please logout and login again.";
+          canRetry = false;
           break;
         default:
           errorCode = "UNKNOWN_ERROR";
+          errorMessage = error.message || "An unexpected error occurred";
       }
     } else {
       errorMessage = "An unexpected error occurred";
@@ -178,10 +221,12 @@ export default function Documents() {
     }
 
     const supervisorInfo = JSON.parse(supervisorInfoStr);
+    // Check for both userId and username to handle different storage formats
     const supervisorId = supervisorInfo.userId || supervisorInfo.username;
 
     if (!supervisorId) {
-      throw new Error("Invalid supervisor information");
+      console.error("Supervisor info:", supervisorInfo);
+      throw new Error("Invalid supervisor information - missing userId/username");
     }
 
     return { token, supervisorId };
@@ -281,7 +326,15 @@ export default function Documents() {
             <div className="col-span-full text-center py-12">
               <FileText size={48} className="mx-auto text-gray-600 mb-4" />
               <h3 className="text-xl font-medium text-white mb-2">No documents yet</h3>
-              <p className="text-gray-400">Upload your first document to get started</p>
+              <p className="text-gray-400 mb-6">Upload your first document to get started</p>
+              <button
+                onClick={() => setIsUploadOpen(true)}
+                className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 rounded-lg 
+                         flex items-center gap-2 transition-colors shadow-lg hover:shadow-xl mx-auto"
+              >
+                <Upload size={20} />
+                Upload Your First Document
+              </button>
             </div>
           ) : (
             documents.map((doc) => (

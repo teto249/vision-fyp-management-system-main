@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { Loader2, AlertCircle, CheckCircle2, User, Shield, Building } from "lucide-react";
 import Profile from "./ui/Profile";
 import ProHeader from "./ui/ProHeader";
+import PasswordResetForm from "../../../components/PasswordResetForm";
 import { fetchUniAdminAccount, updateUniAdminAccount } from "../../../api/uniAdmin/account";
 
 interface University {
@@ -33,6 +34,7 @@ export default function UniAdminProfile() {
   const [userData, setUserData] = useState<FormData | null>(null);
   const [saveStatus, setSaveStatus] = useState<'saving' | 'success' | 'error' | null>(null);
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null!);
 
   const [formData, setFormData] = useState<FormData>({
@@ -375,6 +377,17 @@ export default function UniAdminProfile() {
               isSubmitting={isSubmitting}
             />
 
+            {/* Password Reset Button */}
+            <div className="px-6 py-4 border-b border-slate-700/50">
+              <button
+                onClick={() => setShowPasswordReset(true)}
+                className="flex items-center gap-3 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl group"
+              >
+                <Shield size={20} className="group-hover:rotate-12 transition-transform duration-200" />
+                Change Password
+              </button>
+            </div>
+
             {/* Profile Content */}
             <Profile
               formData={formData}
@@ -389,6 +402,22 @@ export default function UniAdminProfile() {
               saveStatus={saveStatus}
             />
           </div>
+
+          {/* Password Reset Modal */}
+          {showPasswordReset && (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+              <div className="max-w-md w-full">
+                <PasswordResetForm
+                  userType="uniAdmin"
+                  onSuccess={() => {
+                    setShowPasswordReset(false);
+                    setNotification({ type: 'success', message: 'Password changed successfully!' });
+                  }}
+                  onCancel={() => setShowPasswordReset(false)}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Quick Actions Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">

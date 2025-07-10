@@ -1,5 +1,6 @@
 const { DataTypes } = require("sequelize");
 const { sequelize } = require("../config/database");
+const bcrypt = require("bcryptjs");
 
 const Supervisor = sequelize.define("Supervisor", {
   userId: {
@@ -65,6 +66,21 @@ const Supervisor = sequelize.define("Supervisor", {
     type: DataTypes.BOOLEAN,
     defaultValue: true  // New supervisors will need to change password
   }
+}, {
+  tableName: 'Supervisors',
+  timestamps: true,
+  hooks: {
+    beforeSave: async (supervisor) => {
+      if (supervisor.changed('password')) {
+        supervisor.password = await bcrypt.hash(supervisor.password, 10);
+      }
+    }
+  }
 });
+
+// Instance method to check password
+Supervisor.prototype.validatePassword = async function(password) {
+  return await bcrypt.compare(password, this.password);
+};
 
 module.exports = Supervisor;

@@ -30,6 +30,7 @@ import {
 import PerformancePanel from "./components/Dashboard/PerformancePanel";
 import SummaryCard from "./components/Dashboard/SummaryCard";
 import { fetchUsersByUniversity } from "../../api/uniAdmin/FetchUsers";
+import { fetchDashboardAnalytics } from "../../api/uniAdmin/DashboardAnalytics.js";
 
 ChartJS.register(
   CategoryScale,
@@ -125,7 +126,7 @@ const CapacityUsageCard = ({ currentUsers, maxCapacity }) => {
 
         <div className="space-y-3">
           <p className="text-3xl font-bold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent group-hover:from-teal-300 group-hover:to-blue-300 transition-all duration-300">
-            {currentUsers.toLocaleString()}/{maxCapacity.toLocaleString()}
+            {currentUsers.toLocaleString('en-US')}/{maxCapacity.toLocaleString('en-US')}
           </p>
 
           {/* Progress Bar */}
@@ -205,7 +206,7 @@ const ActiveSessionsCard = ({ activeSessions, totalUsers, change }) => {
 
         <div className="space-y-2">
           <p className="text-3xl font-bold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent group-hover:from-teal-300 group-hover:to-blue-300 transition-all duration-300">
-            {activeSessions.toLocaleString()}
+            {activeSessions.toLocaleString('en-US')}
           </p>
 
           <div className="flex items-center space-x-2">
@@ -344,21 +345,16 @@ UserManagementTable.propTypes = {
 };
 
 export default function Dashboard() {
-  const [totalStudents, setTotalStudents] = useState(0);
-  const [totalSupervisors, setTotalSupervisors] = useState(0);
-  const [totalUsers, setTotalUsers] = useState(0);
-  const [activeProjects, setActiveProjects] = useState(0);
-  const [completionRate, setCompletionRate] = useState("0%");
-  const [capacityUsage, setCapacityUsage] = useState("0/1,000");
-  const [activeSessions, setActiveSessions] = useState(0);
+  const [analytics, setAnalytics] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [usersData, setUsersData] = useState({ supervisors: [], students: [] });
-  const [dashboardStats, setDashboardStats] = useState({
-    projects: [],
-    milestoneProgress: [],
-    systemStatus: { active: 0, idle: 0, offline: 0 },
-  });
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Prevent hydration mismatch by ensuring component is mounted
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -388,57 +384,15 @@ export default function Dashboard() {
           );
         }
 
-        // Fetch users data
-        const usersResponse = await fetchUsersByUniversity(universityId);
+        // Fetch both users data and analytics in parallel
+        const [usersResponse, analyticsResponse] = await Promise.all([
+          fetchUsersByUniversity(universityId),
+          fetchDashboardAnalytics(universityId)
+        ]);
 
-        const studentsCount = usersResponse.students?.length || 0;
-        const supervisorsCount = usersResponse.supervisors?.length || 0;
-        const totalUsersCount = studentsCount + supervisorsCount;
-
-        setTotalStudents(studentsCount);
-        setTotalSupervisors(supervisorsCount);
-        setTotalUsers(totalUsersCount);
         setUsersData(usersResponse);
+        setAnalytics(analyticsResponse);
 
-        // Calculate capacity usage (current users / max capacity)
-        const maxCapacity = 1000; // You can make this configurable per university
-        const capacityPercentage = Math.floor(
-          (totalUsersCount / maxCapacity) * 100
-        );
-        setCapacityUsage(
-          `${totalUsersCount}/${maxCapacity} (${capacityPercentage}%)`
-        );
-
-        // Calculate active sessions (simulated based on active users with some randomness)
-        const baseActiveRate = 0.6; // 60% base active rate
-        const variance = 0.1; // ±10% variance
-        const activeRate =
-          baseActiveRate + (Math.random() - 0.5) * variance * 2;
-        const activeSessionsCount = Math.floor(
-          totalUsersCount * Math.max(0.3, Math.min(0.9, activeRate))
-        );
-        setActiveSessions(activeSessionsCount);
-
-        // Calculate real metrics from user data
-        const activeProjectsCount = Math.floor(studentsCount * 0.8); // Assuming 80% of students have active projects
-        const completionPercentage =
-          studentsCount > 0
-            ? Math.floor((supervisorsCount / studentsCount) * 100)
-            : 0;
-
-        setActiveProjects(activeProjectsCount);
-        setCompletionRate(`${Math.min(completionPercentage, 100)}%`);
-
-        // Generate realistic dashboard stats based on real data
-        const projects = generateProjectsFromUserData(usersResponse);
-        const milestoneProgress = generateMilestoneProgress(projects);
-        const systemStatus = generateSystemStatus(totalUsersCount);
-
-        setDashboardStats({
-          projects,
-          milestoneProgress,
-          systemStatus,
-        });
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
         setError(error.message);
@@ -450,71 +404,24 @@ export default function Dashboard() {
     fetchData();
   }, []);
 
-  // Helper function to generate projects based on user data
-  const generateProjectsFromUserData = (userData) => {
-    const { students = [], supervisors = [] } = userData;
-    const projectNames = [
-      "Machine Learning Platform",
-      "Web Development Portal",
-      "Mobile Application",
-      "Data Analytics System",
-      "Cloud Security Framework",
-      "IoT Management System",
-      "Blockchain Implementation",
-      "AI Chatbot Development",
-      "E-commerce Platform",
-      "Database Optimization Tool",
-    ];
-
-    return students
-      .slice(0, Math.min(8, students.length))
-      .map((student, index) => ({
-        id: student.userId || index + 1,
-        name: projectNames[index % projectNames.length],
-        studentName: student.fullName,
-        progress: Math.floor(Math.random() * 60) + 20, // 20-80% progress
-        milestones: Math.floor(Math.random() * 4) + 2, // 2-5 milestones
-        status: ["active", "review", "planning"][Math.floor(Math.random() * 3)],
-      }));
+  // Get data from analytics or use defaults
+  const metrics = analytics?.metrics || {
+    totalStudents: 0,
+    totalSupervisors: 0,
+    totalUsers: 0,
+    totalProjects: 0,
+    activeProjects: 0,
+    completedProjects: 0,
+    completionRate: 0,
+    averageProgress: 0
   };
 
-  // Helper function to generate milestone progress
-  const generateMilestoneProgress = (projects) => {
-    const stages = [
-      "Requirements",
-      "Design",
-      "Implementation",
-      "Testing",
-      "Deployment",
-    ];
-    return stages.map((stage, index) => {
-      const completedProjects = projects.filter(
-        (p) => p.progress > (index + 1) * 20
-      ).length;
-      const percentage =
-        projects.length > 0
-          ? Math.floor((completedProjects / projects.length) * 100)
-          : 0;
-      return percentage;
-    });
-  };
+  const milestoneProgress = analytics?.milestoneProgress || [0, 0, 0, 0, 0];
+  const systemStatus = analytics?.systemStatus || { active: 0, idle: 0, offline: 0 };
+  const projects = analytics?.projects || [];
+  const activeSessions = systemStatus.active;
 
-  // Helper function to generate system status
-  const generateSystemStatus = (totalUsers) => {
-    if (totalUsers === 0) return { active: 0, idle: 0, offline: 0 };
-
-    const activePercentage = 60; // 60% active
-    const idlePercentage = 25; // 25% idle
-    const offlinePercentage = 15; // 15% offline
-
-    return {
-      active: Math.floor((totalUsers * activePercentage) / 100),
-      idle: Math.floor((totalUsers * idlePercentage) / 100),
-      offline: Math.floor((totalUsers * offlinePercentage) / 100),
-    };
-  };
-
-  // Update chart data based on real data
+  // Update chart data based on real analytics data
   const milestoneData = {
     labels: [
       "Requirements",
@@ -526,7 +433,7 @@ export default function Dashboard() {
     datasets: [
       {
         label: "Completion %",
-        data: dashboardStats.milestoneProgress,
+        data: milestoneProgress,
         backgroundColor: [
           "rgba(20, 184, 166, 0.8)",
           "rgba(59, 130, 246, 0.8)",
@@ -552,9 +459,9 @@ export default function Dashboard() {
     datasets: [
       {
         data: [
-          dashboardStats.systemStatus.active,
-          dashboardStats.systemStatus.idle,
-          dashboardStats.systemStatus.offline,
+          systemStatus.active,
+          systemStatus.idle,
+          systemStatus.offline,
         ],
         backgroundColor: [
           "rgba(20, 184, 166, 0.8)",
@@ -637,8 +544,8 @@ export default function Dashboard() {
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-6 h-6 text-teal-400 animate-spin" />
             </div>
-          ) : dashboardStats.projects.length > 0 ? (
-            dashboardStats.projects.slice(0, 4).map((project) => (
+          ) : projects.length > 0 ? (
+            projects.slice(0, 4).map((project) => (
               <div
                 key={project.id}
                 className="p-4 bg-slate-800/30 rounded-xl border border-slate-700/50"
@@ -646,7 +553,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between mb-2">
                   <div>
                     <h4 className="text-white font-medium text-sm">
-                      {project.name}
+                      {project.title}
                     </h4>
                     <p className="text-slate-400 text-xs">
                       {project.studentName}
@@ -664,14 +571,14 @@ export default function Dashboard() {
                 </div>
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-slate-400">
-                    {project.milestones} milestones
+                    {project.milestoneCount} milestones
                   </span>
                   <span
                     className={`px-2 py-1 rounded-full text-xs ${
-                      project.status === "active"
+                      project.status === "In Progress"
                         ? "bg-emerald-900/30 text-emerald-300"
-                        : project.status === "review"
-                        ? "bg-amber-900/30 text-amber-300"
+                        : project.status === "Completed"
+                        ? "bg-blue-900/30 text-blue-300"
                         : "bg-slate-700/50 text-slate-400"
                     }`}
                   >
@@ -705,7 +612,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-center h-full">
               <Loader2 className="w-8 h-8 text-teal-400 animate-spin" />
             </div>
-          ) : totalUsers > 0 ? (
+          ) : metrics.totalUsers > 0 ? (
             <Pie
               data={systemStatusData}
               options={{
@@ -802,6 +709,11 @@ export default function Dashboard() {
     </div>
   );
 
+  // Prevent hydration mismatch by waiting for client-side mounting
+  if (!isMounted) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* Background Effects */}
@@ -851,39 +763,39 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
             <StatCard
               title="Total Students"
-              value={totalStudents}
+              value={metrics.totalStudents}
               icon={GraduationCap}
               color="from-blue-500 to-blue-600"
               isLoading={isLoading}
               error={error}
-              change={8}
+              change={metrics.recentActivity?.newStudents || 0}
             />
             <StatCard
               title="Total Supervisors"
-              value={totalSupervisors}
+              value={metrics.totalSupervisors}
               icon={UserCheck}
               color="from-purple-500 to-purple-600"
               isLoading={isLoading}
               error={error}
-              change={3}
+              change={metrics.recentActivity?.newSupervisors || 0}
             />
             <StatCard
               title="Active Projects"
-              value={activeProjects}
+              value={metrics.activeProjects}
               icon={Target}
               color="from-emerald-500 to-emerald-600"
               isLoading={isLoading}
               error={error}
-              change={12}
+              change={Math.round((metrics.activeProjects / Math.max(metrics.totalProjects, 1)) * 100)}
             />
             <StatCard
               title="Completion Rate"
-              value={completionRate}
+              value={`${metrics.completionRate}%`}
               icon={TrendingUp}
               color="from-amber-500 to-orange-500"
               isLoading={isLoading}
               error={error}
-              change={5}
+              change={metrics.completionRate}
             />
           </div>
 
@@ -892,12 +804,12 @@ export default function Dashboard() {
 
           {/* Summary Cards */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
-            <SummaryCard title="Total Users" value={totalUsers} change={12} />
-            <CapacityUsageCard currentUsers={totalUsers} maxCapacity={1000} />
+            <SummaryCard title="Total Users" value={metrics.totalUsers} change={12} />
+            <CapacityUsageCard currentUsers={metrics.totalUsers} maxCapacity={1000} />
             <ActiveSessionsCard
               activeSessions={activeSessions}
-              totalUsers={totalUsers}
-              change={Math.floor(Math.random() * 10) - 5}
+              totalUsers={metrics.totalUsers}
+              change={5} // Fixed value to prevent hydration issues
             />
           </div>
 

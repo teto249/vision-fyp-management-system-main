@@ -12,7 +12,7 @@ import {
   XMarkIcon,
   PencilIcon
 } from "@heroicons/react/24/outline";
-import { addTask, updateTask, deleteTask } from "../../../../api/StudentApi/Projects";
+import { addTask, updateTask, editTask, deleteTask } from "../../../../api/StudentApi/Projects";
 
 export default function Task({ tasks = [], onTaskUpdate, milestoneId }) {
   const [newTask, setNewTask] = useState({ 
@@ -197,7 +197,7 @@ export default function Task({ tasks = [], onTaskUpdate, milestoneId }) {
         dueDate: editForm.dueDate
       };
 
-      const result = await updateTask(editingTask, taskData, token);
+      const result = await editTask(milestoneId, editingTask, taskData, token);
 
       if (result.success) {
         const updatedTasks = localTasks.map((task) =>

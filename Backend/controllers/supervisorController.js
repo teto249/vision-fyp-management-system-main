@@ -11,6 +11,8 @@ const Task = require('../models/Task');
 const Meeting = require('../models/Meeting');
 const Feedback = require('../models/Feedback');
 const { sequelize } = require('../config/database');
+const Chat = require('../models/Chat');
+const Message = require('../models/Message');
 
 // Define uploads directory
 const uploadsDir = path.join(__dirname, '..', 'uploads');
@@ -335,7 +337,12 @@ exports.getStudentDocuments = async (req, res) => {
 // List documents (metadata only)
 exports.listDocuments = async (req, res) => {
   try {
+    console.log('📄 listDocuments called with params:', req.params);
+    console.log('📄 listDocuments called with headers:', req.headers);
+    
     const { supervisorId } = req.params;
+    
+    console.log('📄 Looking for documents for supervisorId:', supervisorId);
     
     const documents = await Document.findAll({
       where: { supervisorId },
@@ -343,13 +350,18 @@ exports.listDocuments = async (req, res) => {
       order: [['createdAt', 'DESC']]
     });
 
+    console.log('📄 Found documents:', documents.length);
+
     res.status(200).json({ 
       success: true,
       documents 
     });
   } catch (error) {
-    console.error('List documents error:', error);
-    res.status(500).json({ message: error.message });
+    console.error('❌ List documents error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
   }
 };
 
@@ -615,9 +627,10 @@ exports.getSupervisedStudentsWithProjects = async (req, res) => {
     });
 
     if (!students.length) {
-      return res.status(404).json({
-        success: false,
-        message: "No students found for this supervisor"
+      return res.status(200).json({
+        success: true,
+        students: [],
+        message: "No students assigned to this supervisor yet"
       });
     }
 
@@ -700,9 +713,11 @@ exports.getStudentProjectDetails = async (req, res) => {
           include: [
             {
               model: Milestone,
+              as: 'milestones',
               include: [
                 {
                   model: Task,
+                  as: 'tasks',
                   include: [
                     {
                       model: Feedback,
@@ -1423,6 +1438,393 @@ exports.generateAIReport = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to generate AI report"
+    });
+  }
+};
+
+// Chat Functions
+
+// Get all chats for a supervisor
+exports.getSupervisorChats = async (req, res) => {
+  try {
+    const { supervisorId } = req.params;
+
+    const chats = await Chat.findAll({
+      where: { supervisorId },
+      include: [
+        {
+          model: Student,
+          as: 'student',
+          attributes: ['userId', 'fullName', 'email']
+        }
+      ],
+      order: [['lastMessageAt', 'DESC']]
+    });
+
+    res.status(200).json(chats);
+  } catch (error) {
+    console.error('Error fetching supervisor chats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch chats',
+      error: error.message
+    });
+  }
+};
+
+// Get or create a chat between supervisor and student
+exports.getOrCreateSupervisorChat = async (req, res) => {
+  try {
+    const { supervisorId, studentId } = req.body;
+
+    let chat = await Chat.findOne({
+      where: { supervisorId, studentId },
+      include: [
+        {
+          model: Student,
+          as: 'student',
+          attributes: ['userId', 'fullName', 'email']
+        },
+        {
+          model: Supervisor,
+          as: 'supervisor',
+          attributes: ['userId', 'fullName', 'email']
+        }
+      ]
+    });
+
+    if (!chat) {
+      chat = await Chat.create({
+        supervisorId,
+        studentId,
+        lastMessageAt: new Date()
+      });
+
+      // Fetch the chat with associations
+      chat = await Chat.findByPk(chat.id, {
+        include: [
+          {
+            model: Student,
+            as: 'student',
+            attributes: ['userId', 'fullName', 'email']
+          },
+          {
+            model: Supervisor,
+            as: 'supervisor',
+            attributes: ['userId', 'fullName', 'email']
+          }
+        ]
+      });
+    }
+
+    res.status(200).json(chat);
+  } catch (error) {
+    console.error('Error getting or creating supervisor chat:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get or create chat',
+      error: error.message
+    });
+  }
+};
+
+// Get messages for a specific chat
+exports.getSupervisorChatMessages = async (req, res) => {
+  try {
+    const { chatId } = req.params;
+
+    const messages = await Message.findAll({
+      where: { chatId },
+      include: [
+        {
+          model: Student,
+          as: 'senderStudent',
+          attributes: ['userId', 'fullName'],
+          required: false
+        },
+        {
+          model: Supervisor,
+          as: 'senderSupervisor',
+          attributes: ['userId', 'fullName'],
+          required: false
+        }
+      ],
+      order: [['createdAt', 'ASC']]
+    });
+
+    // Process messages to include tagged item data
+    const processedMessages = await Promise.all(
+      messages.map(async (message) => {
+        const messageData = message.toJSON();
+        
+        if (messageData.taggedItemId && messageData.taggedItemType) {
+          try {
+            let taggedItemData = null;
+            
+            switch (messageData.taggedItemType) {
+              case 'document':
+                taggedItemData = await Document.findByPk(messageData.taggedItemId, {
+                  attributes: ['id', 'title', 'description']
+                });
+                break;
+              case 'task':
+                taggedItemData = await Task.findByPk(messageData.taggedItemId, {
+                  attributes: ['id', 'title', 'description', 'status']
+                });
+                break;
+              case 'milestone':
+                taggedItemData = await Milestone.findByPk(messageData.taggedItemId, {
+                  attributes: ['id', 'title', 'description', 'status']
+                });
+                break;
+            }
+            
+            messageData.taggedItemData = taggedItemData;
+          } catch (error) {
+            console.error('Error fetching tagged item data:', error);
+          }
+        }
+        
+        return messageData;
+      })
+    );
+
+    res.status(200).json({ messages: processedMessages });
+  } catch (error) {
+    console.error('Error fetching supervisor chat messages:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch messages',
+      error: error.message
+    });
+  }
+};
+
+// Send a message from supervisor
+exports.sendSupervisorMessage = async (req, res) => {
+  try {
+    const { chatId } = req.params;
+    const { 
+      senderId, 
+      content, 
+      messageType = 'text', 
+      taggedItemId, 
+      taggedItemType,
+      attachmentUrl,
+      attachmentName
+    } = req.body;
+
+    const message = await Message.create({
+      chatId: parseInt(chatId),
+      senderId,
+      senderType: 'supervisor',
+      content,
+      messageType,
+      taggedItemId,
+      taggedItemType,
+      attachmentUrl,
+      attachmentName,
+      isRead: false
+    });
+
+    // Update chat's lastMessageAt
+    await Chat.update(
+      { lastMessageAt: new Date() },
+      { where: { id: chatId } }
+    );
+
+    // Fetch the created message with associations
+    const newMessage = await Message.findByPk(message.id, {
+      include: [
+        {
+          model: Supervisor,
+          as: 'senderSupervisor',
+          attributes: ['userId', 'fullName']
+        }
+      ]
+    });
+
+    // Process message to include tagged item data
+    const messageData = newMessage.toJSON();
+    
+    if (messageData.taggedItemId && messageData.taggedItemType) {
+      try {
+        let taggedItemData = null;
+        
+        switch (messageData.taggedItemType) {
+          case 'document':
+            taggedItemData = await Document.findByPk(messageData.taggedItemId, {
+              attributes: ['id', 'title', 'description']
+            });
+            break;
+          case 'task':
+            taggedItemData = await Task.findByPk(messageData.taggedItemId, {
+              attributes: ['id', 'title', 'description', 'status']
+            });
+            break;
+          case 'milestone':
+            taggedItemData = await Milestone.findByPk(messageData.taggedItemId, {
+              attributes: ['id', 'title', 'description', 'status']
+            });
+            break;
+        }
+        
+        messageData.taggedItemData = taggedItemData;
+      } catch (error) {
+        console.error('Error fetching tagged item data:', error);
+      }
+    }
+
+    res.status(201).json(messageData);
+  } catch (error) {
+    console.error('Error sending supervisor message:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send message',
+      error: error.message
+    });
+  }
+};
+
+// Get taggable items for a student (from supervisor perspective)
+exports.getSupervisorTaggableItems = async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const supervisorId = req.user.userId; // Get supervisor ID from authenticated user
+
+    // Get the student's project
+    const student = await Student.findByPk(studentId, {
+      include: [
+        {
+          model: Project,
+          as: 'project',
+          include: [
+            {
+              model: Milestone,
+              as: 'milestones',
+              attributes: ['id', 'title', 'description', 'status', 'endDate'],
+              include: [
+                {
+                  model: Task,
+                  as: 'tasks',
+                  attributes: ['id', 'title', 'description', 'status', 'endDate']
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    });
+
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student not found'
+      });
+    }
+
+    // Get documents for this student (documents uploaded by or for this student)
+    const studentDocuments = await Document.findAll({
+      where: { 
+        studentId: studentId 
+      },
+      attributes: ['id', 'title', 'description', 'fileType']
+    });
+
+    // Get documents uploaded by the supervisor
+    const supervisorDocuments = await Document.findAll({
+      where: { 
+        supervisorId: supervisorId 
+      },
+      attributes: ['id', 'title', 'description', 'fileType']
+    });
+
+    // Combine all documents
+    const allDocuments = [
+      ...studentDocuments.map(doc => ({
+        id: doc.id.toString(),
+        title: doc.title,
+        description: doc.description,
+        type: 'document',
+        source: 'student'
+      })),
+      ...supervisorDocuments.map(doc => ({
+        id: doc.id.toString(),
+        title: doc.title,
+        description: doc.description,
+        type: 'document',
+        source: 'supervisor'
+      }))
+    ];
+
+    // Extract all tasks from all milestones
+    const allTasks = [];
+    if (student.project?.milestones) {
+      student.project.milestones.forEach(milestone => {
+        if (milestone.tasks) {
+          milestone.tasks.forEach(task => {
+            allTasks.push({
+              id: task.id.toString(),
+              title: task.title,
+              description: task.description,
+              status: task.status,
+              type: 'task'
+            });
+          });
+        }
+      });
+    }
+
+    const result = {
+      documents: allDocuments,
+      tasks: allTasks,
+      milestones: student.project?.milestones?.map(milestone => ({
+        id: milestone.id.toString(),
+        title: milestone.title,
+        description: milestone.description,
+        status: milestone.status,
+        type: 'milestone'
+      })) || []
+    };
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Error fetching supervisor taggable items:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch taggable items',
+      error: error.message
+    });
+  }
+};
+
+// Mark messages as read by supervisor
+exports.markSupervisorMessagesAsRead = async (req, res) => {
+  try {
+    const { chatId } = req.params;
+    const { supervisorId } = req.body;
+
+    await Message.update(
+      { 
+        isRead: true,
+        readAt: new Date()
+      },
+      {
+        where: {
+          chatId: parseInt(chatId),
+          senderType: 'student', // Only mark student messages as read
+          isRead: false
+        }
+      }
+    );
+
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('Error marking supervisor messages as read:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to mark messages as read',
+      error: error.message
     });
   }
 };

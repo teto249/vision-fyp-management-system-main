@@ -202,6 +202,14 @@ export const getProjectById = async (studentId: string, token: string) => {
     const data = await response.json();
 
     if (!response.ok) {
+      // Handle 404 as a special case - student has no project assigned
+      if (response.status === 404) {
+        return {
+          success: false,
+          message: "No project assigned",
+          noProject: true,
+        };
+      }
       throw new Error(data.message || "Failed to fetch project details");
     }
 
@@ -211,6 +219,16 @@ export const getProjectById = async (studentId: string, token: string) => {
     };
   } catch (error) {
     console.error("Project fetch error:", error);
+    
+    // Check if this is a "no project found" error
+    if (error instanceof Error && error.message.includes("No project found")) {
+      return {
+        success: false,
+        message: "No project assigned",
+        noProject: true,
+      };
+    }
+    
     return {
       success: false,
       message:
@@ -443,6 +461,66 @@ export const updateTask = async (
     };
   } catch (error) {
     console.error("Error updating task:", error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Failed to update task",
+    };
+  }
+};
+
+// Add this function to handle full task editing (title, description, due date, status)
+export const editTask = async (
+  milestoneId: string,
+  taskId: string,
+  taskData: {
+    title: string;
+    description?: string;
+    dueDate: string;
+    status?: "Pending" | "In Progress" | "Completed";
+  },
+  token: string
+) => {
+  try {
+    // Validate required fields
+    if (!taskData.title?.trim()) {
+      throw new Error("Title is required");
+    }
+    if (!taskData.dueDate) {
+      throw new Error("Due date is required");
+    }
+
+    const payload = {
+      title: taskData.title.trim(),
+      description: taskData.description?.trim() || "",
+      dueDate: taskData.dueDate, // Send as dueDate since backend prefers this
+      endDate: taskData.dueDate, // Also send as endDate for compatibility
+      status: taskData.status || "Pending",
+    };
+
+    const response = await fetch(
+      `${API_BASE_URL}/milestones/${milestoneId}/tasks/${taskId}`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to update task");
+    }
+
+    return {
+      success: true,
+      task: data.task,
+    };
+  } catch (error) {
+    console.error("Error editing task:", error);
     return {
       success: false,
       message: error instanceof Error ? error.message : "Failed to update task",
@@ -778,6 +856,7 @@ const studentProjectsAPI = {
   updateProjectMilestones,
   addTask,
   updateTask,
+  editTask,
   deleteTask,
   addMeeting,
   updateMeeting,

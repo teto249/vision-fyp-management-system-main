@@ -14,7 +14,7 @@ import {
   Search,
   GraduationCap,
   BookOpen,
-  RefreshCw
+  RefreshCw,
 } from "lucide-react";
 import { logout } from "../../../api/auth";
 
@@ -48,14 +48,14 @@ export default function Navbar({
       let username = null;
       const storedUserInfo = localStorage.getItem("userInfo");
       const storedStudentInfo = localStorage.getItem("studentInfo");
-      
+
       if (storedUserInfo) {
         try {
           const userInfo = JSON.parse(storedUserInfo);
           username = userInfo.username;
         } catch (e) {}
       }
-      
+
       if (!username && storedStudentInfo) {
         try {
           const studentInfo = JSON.parse(storedStudentInfo);
@@ -66,9 +66,11 @@ export default function Navbar({
       if (!username) return;
 
       // Import the API function dynamically to avoid circular imports
-      const { getProjectById } = await import('../../../api/StudentApi/Projects');
+      const { getProjectById } = await import(
+        "../../../api/StudentApi/Projects"
+      );
       const projectResult = await getProjectById(username, token);
-      
+
       if (projectResult.success && projectResult.project) {
         setProjectData(projectResult.project);
         generateNotifications(projectResult.project);
@@ -81,9 +83,9 @@ export default function Navbar({
   };
 
   const markNotificationAsRead = (notificationId) => {
-    setNotifications(prev => 
-      prev.map(notification => 
-        notification.id === notificationId 
+    setNotifications((prev) =>
+      prev.map((notification) =>
+        notification.id === notificationId
           ? { ...notification, unread: false }
           : notification
       )
@@ -98,38 +100,46 @@ export default function Navbar({
     const newNotifications = [];
     const now = new Date();
     const oneWeekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-    
+
     if (!project || !Array.isArray(project.milestones)) {
       setNotifications([]);
       return;
     }
 
-    project.milestones.forEach(milestone => {
+    project.milestones.forEach((milestone) => {
       if (!milestone) return;
 
       // Check for overdue milestones
-      if (milestone.endDate && milestone.status !== 'Completed' && milestone.status !== 'completed') {
+      if (
+        milestone.endDate &&
+        milestone.status !== "Completed" &&
+        milestone.status !== "completed"
+      ) {
         const dueDate = new Date(milestone.endDate);
         if (!isNaN(dueDate)) {
           if (dueDate < now) {
             newNotifications.push({
               id: `milestone-overdue-${milestone.id}`,
               title: "⚠️ Overdue Milestone",
-              message: `"${milestone.title || 'Milestone'}" was due ${getRelativeTime(dueDate)}`,
+              message: `"${
+                milestone.title || "Milestone"
+              }" was due ${getRelativeTime(dueDate)}`,
               time: getRelativeTime(dueDate),
               type: "deadline",
               unread: true,
-              priority: "high"
+              priority: "high",
             });
           } else if (dueDate <= oneWeekFromNow) {
             newNotifications.push({
               id: `milestone-due-${milestone.id}`,
               title: "📅 Milestone Due Soon",
-              message: `"${milestone.title || 'Milestone'}" is due ${getRelativeTime(dueDate)}`,
+              message: `"${
+                milestone.title || "Milestone"
+              }" is due ${getRelativeTime(dueDate)}`,
               time: getRelativeTime(dueDate),
               type: "deadline",
               unread: true,
-              priority: "medium"
+              priority: "medium",
             });
           }
         }
@@ -137,31 +147,39 @@ export default function Navbar({
 
       // Check for overdue tasks
       if (Array.isArray(milestone.tasks)) {
-        milestone.tasks.forEach(task => {
+        milestone.tasks.forEach((task) => {
           if (!task) return;
-          
-          if (task.dueDate && task.status !== 'Completed' && task.status !== 'completed') {
+
+          if (
+            task.dueDate &&
+            task.status !== "Completed" &&
+            task.status !== "completed"
+          ) {
             const dueDate = new Date(task.dueDate);
             if (!isNaN(dueDate)) {
               if (dueDate < now) {
                 newNotifications.push({
                   id: `task-overdue-${task.id}`,
                   title: "⚠️ Overdue Task",
-                  message: `"${task.title || 'Task'}" was due ${getRelativeTime(dueDate)}`,
+                  message: `"${task.title || "Task"}" was due ${getRelativeTime(
+                    dueDate
+                  )}`,
                   time: getRelativeTime(dueDate),
                   type: "deadline",
                   unread: true,
-                  priority: "high"
+                  priority: "high",
                 });
               } else if (dueDate <= oneWeekFromNow) {
                 newNotifications.push({
                   id: `task-due-${task.id}`,
                   title: "📋 Task Due Soon",
-                  message: `"${task.title || 'Task'}" is due ${getRelativeTime(dueDate)}`,
+                  message: `"${task.title || "Task"}" is due ${getRelativeTime(
+                    dueDate
+                  )}`,
                   time: getRelativeTime(dueDate),
                   type: "deadline",
                   unread: true,
-                  priority: "medium"
+                  priority: "medium",
                 });
               }
             }
@@ -169,22 +187,31 @@ export default function Navbar({
 
           // Check for new feedback (if feedback structure exists)
           if (Array.isArray(task.feedback)) {
-            task.feedback.forEach(feedback => {
+            task.feedback.forEach((feedback) => {
               if (!feedback) return;
-              
-              const feedbackDate = new Date(feedback.createdAt || feedback.date);
+
+              const feedbackDate = new Date(
+                feedback.createdAt || feedback.date
+              );
               if (!isNaN(feedbackDate)) {
-                const daysSinceFeedback = Math.floor((now - feedbackDate) / (1000 * 60 * 60 * 24));
-                
-                if (daysSinceFeedback <= 3) { // Show feedback from last 3 days
+                const daysSinceFeedback = Math.floor(
+                  (now - feedbackDate) / (1000 * 60 * 60 * 24)
+                );
+
+                if (daysSinceFeedback <= 3) {
+                  // Show feedback from last 3 days
                   newNotifications.push({
                     id: `feedback-${feedback.id}`,
                     title: "💬 New Supervisor Feedback",
-                    message: `Feedback on "${task.title || 'Task'}": ${feedback.comment || feedback.title || 'New feedback received'}`,
+                    message: `Feedback on "${task.title || "Task"}": ${
+                      feedback.comment ||
+                      feedback.title ||
+                      "New feedback received"
+                    }`,
                     time: getRelativeTime(feedbackDate),
                     type: "feedback",
                     unread: daysSinceFeedback <= 1,
-                    priority: "medium"
+                    priority: "medium",
                   });
                 }
               }
@@ -195,22 +222,27 @@ export default function Navbar({
 
       // Check for upcoming meetings
       if (Array.isArray(milestone.meetings)) {
-        milestone.meetings.forEach(meeting => {
+        milestone.meetings.forEach((meeting) => {
           if (!meeting) return;
-          
-          const meetingDateTime = new Date(`${meeting.date} ${meeting.time || '00:00'}`);
+
+          const meetingDateTime = new Date(
+            `${meeting.date} ${meeting.time || "00:00"}`
+          );
           if (!isNaN(meetingDateTime)) {
-            const hoursUntilMeeting = (meetingDateTime - now) / (1000 * 60 * 60);
-            
+            const hoursUntilMeeting =
+              (meetingDateTime - now) / (1000 * 60 * 60);
+
             if (hoursUntilMeeting > 0 && hoursUntilMeeting <= 24) {
               newNotifications.push({
                 id: `meeting-${meeting.id}`,
                 title: "🤝 Upcoming Meeting",
-                message: `${meeting.purpose || meeting.title || 'Project meeting'} scheduled for ${getRelativeTime(meetingDateTime)}`,
+                message: `${
+                  meeting.purpose || meeting.title || "Project meeting"
+                } scheduled for ${getRelativeTime(meetingDateTime)}`,
                 time: getRelativeTime(meetingDateTime),
                 type: "meeting",
                 unread: true,
-                priority: hoursUntilMeeting <= 2 ? "high" : "medium"
+                priority: hoursUntilMeeting <= 2 ? "high" : "medium",
               });
             }
           }
@@ -219,24 +251,25 @@ export default function Navbar({
     });
 
     // Add project status notifications
-    if (project.status === 'PENDING') {
+    if (project.status === "PENDING") {
       newNotifications.push({
-        id: 'project-pending',
+        id: "project-pending",
         title: "⏳ Project Pending",
         message: "Your project is awaiting supervisor approval",
         time: "ongoing",
         type: "info",
         unread: true,
-        priority: "low"
+        priority: "low",
       });
     }
 
     // Sort by priority and date
     newNotifications.sort((a, b) => {
       const priorityOrder = { high: 3, medium: 2, low: 1 };
-      const priorityDiff = (priorityOrder[b.priority] || 1) - (priorityOrder[a.priority] || 1);
+      const priorityDiff =
+        (priorityOrder[b.priority] || 1) - (priorityOrder[a.priority] || 1);
       if (priorityDiff !== 0) return priorityDiff;
-      
+
       // If same priority, sort by most recent/urgent
       return new Date(b.time) - new Date(a.time);
     });
@@ -257,17 +290,22 @@ export default function Navbar({
       const futureDays = Math.abs(diffDays);
       const futureHours = Math.abs(diffHours);
       const futureMinutes = Math.abs(diffMinutes);
-      
-      if (futureDays > 0) return `in ${futureDays} day${futureDays > 1 ? 's' : ''}`;
-      if (futureHours > 0) return `in ${futureHours} hour${futureHours > 1 ? 's' : ''}`;
-      if (futureMinutes > 0) return `in ${futureMinutes} minute${futureMinutes > 1 ? 's' : ''}`;
-      return 'in a few moments';
+
+      if (futureDays > 0)
+        return `in ${futureDays} day${futureDays > 1 ? "s" : ""}`;
+      if (futureHours > 0)
+        return `in ${futureHours} hour${futureHours > 1 ? "s" : ""}`;
+      if (futureMinutes > 0)
+        return `in ${futureMinutes} minute${futureMinutes > 1 ? "s" : ""}`;
+      return "in a few moments";
     }
 
-    if (diffDays > 0) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-    if (diffHours > 0) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-    if (diffMinutes > 0) return `${diffMinutes} minute${diffMinutes > 1 ? 's' : ''} ago`;
-    return 'just now';
+    if (diffDays > 0) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+    if (diffHours > 0)
+      return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+    if (diffMinutes > 0)
+      return `${diffMinutes} minute${diffMinutes > 1 ? "s" : ""} ago`;
+    return "just now";
   };
 
   const handleLogout = () => {
@@ -348,7 +386,9 @@ export default function Navbar({
                 <div className="absolute right-0 mt-2 w-80 bg-slate-800/95 backdrop-blur-xl shadow-2xl rounded-2xl border border-slate-700/50 z-50">
                   <div className="p-4 border-b border-slate-700/50">
                     <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-white">Notifications</h3>
+                      <h3 className="font-semibold text-white">
+                        Notifications
+                      </h3>
                       <div className="flex items-center space-x-2">
                         <button
                           onClick={refreshNotifications}
@@ -367,42 +407,50 @@ export default function Navbar({
                     {notifications.length === 0 ? (
                       <div className="p-8 text-center">
                         <Bell className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-                        <p className="text-slate-400 text-sm">No notifications</p>
-                        <p className="text-slate-500 text-xs mt-1">You're all caught up!</p>
+                        <p className="text-slate-400 text-sm">
+                          No notifications
+                        </p>
+                        <p className="text-slate-500 text-xs mt-1">
+                          You're all caught up!
+                        </p>
                       </div>
                     ) : (
                       notifications.map((notification) => (
                         <div
                           key={notification.id}
-                          onClick={() => markNotificationAsRead(notification.id)}
+                          onClick={() =>
+                            markNotificationAsRead(notification.id)
+                          }
                           className={`p-4 hover:bg-slate-700/30 transition-colors cursor-pointer border-l-2 ${
                             notification.unread
                               ? "border-blue-500 bg-blue-500/5"
                               : "border-transparent"
                           } ${
-                            notification.priority === 'high' 
-                              ? 'bg-red-500/5 border-red-500/50' 
-                              : notification.priority === 'medium' 
-                              ? 'bg-orange-500/5 border-orange-500/50' 
-                              : ''
+                            notification.priority === "high"
+                              ? "bg-red-500/5 border-red-500/50"
+                              : notification.priority === "medium"
+                              ? "bg-orange-500/5 border-orange-500/50"
+                              : ""
                           }`}
                         >
                           <div className="flex items-start space-x-3">
                             <div
                               className={`w-2 h-2 rounded-full mt-2 ${
-                                notification.priority === 'high' 
-                                  ? 'bg-red-500' 
-                                  : notification.priority === 'medium' 
-                                  ? 'bg-orange-500' 
-                                  : notification.unread 
-                                  ? 'bg-blue-500' 
-                                  : 'bg-slate-600'
+                                notification.priority === "high"
+                                  ? "bg-red-500"
+                                  : notification.priority === "medium"
+                                  ? "bg-orange-500"
+                                  : notification.unread
+                                  ? "bg-blue-500"
+                                  : "bg-slate-600"
                               }`}
                             ></div>
                             <div className="flex-1 min-w-0">
                               <h4
                                 className={`font-medium text-sm ${
-                                  notification.unread ? "text-white" : "text-slate-300"
+                                  notification.unread
+                                    ? "text-white"
+                                    : "text-slate-300"
                                 }`}
                               >
                                 {notification.title}
@@ -482,7 +530,9 @@ export default function Navbar({
                         </p>
                         <div className="flex items-center mt-1">
                           <div className="w-2 h-2 bg-emerald-400 rounded-full mr-2"></div>
-                          <span className="text-xs text-emerald-400">Online</span>
+                          <span className="text-xs text-emerald-400">
+                            Online
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -495,16 +545,9 @@ export default function Navbar({
                       className="flex items-center space-x-3 w-full px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-700/50 transition-colors duration-200"
                     >
                       <User className="w-4 h-4" />
-                      <span className="text-sm font-medium">Profile Settings</span>
-                    </Link>
-
-                    <Link
-                      href="/student/settings"
-                      onClick={() => setProfileOpen(false)}
-                      className="flex items-center space-x-3 w-full px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-700/50 transition-colors duration-200"
-                    >
-                      <Settings className="w-4 h-4" />
-                      <span className="text-sm font-medium">Preferences</span>
+                      <span className="text-sm font-medium">
+                        Profile Settings
+                      </span>
                     </Link>
                   </div>
 

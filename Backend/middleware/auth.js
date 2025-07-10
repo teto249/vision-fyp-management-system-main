@@ -1,6 +1,8 @@
 const jwt = require('jsonwebtoken');
 const UniAdmin = require('../models/UniAdmin');
 const MainAdmin = require('../models/MainAdmin');
+const Student = require('../models/Student');
+const Supervisor = require('../models/Supervisor');
 
 const authenticateToken = async (req, res, next) => {
   try {
@@ -22,7 +24,47 @@ const authenticateToken = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+    
+    // Attach user info to request based on role
+    if (decoded.role === 'Student') {
+      const student = await Student.findOne({
+        where: { userId: decoded.username }
+      });
+      
+      if (!student) {
+        return res.status(404).json({ 
+          success: false,
+          message: 'Student not found' 
+        });
+      }
+      
+      req.user = {
+        userId: student.userId,
+        role: decoded.role,
+        universityId: decoded.universityId
+      };
+    } else if (decoded.role === 'Supervisor') {
+      const supervisor = await Supervisor.findOne({
+        where: { userId: decoded.username }
+      });
+      
+      if (!supervisor) {
+        return res.status(404).json({ 
+          success: false,
+          message: 'Supervisor not found' 
+        });
+      }
+      
+      req.user = {
+        userId: supervisor.userId,
+        role: decoded.role,
+        universityId: decoded.universityId
+      };
+    } else {
+      // For other roles, just use the decoded token data
+      req.user = decoded;
+    }
+    
     next();
   } catch (error) {
     console.error('Auth middleware error:', error);
@@ -32,7 +74,6 @@ const authenticateToken = async (req, res, next) => {
     });
   }
 };
-
 
 const authenticateUniAdmin = async (req, res, next) => {
   try {

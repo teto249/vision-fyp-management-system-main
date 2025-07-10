@@ -1,4 +1,4 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+const BASE_URL ='http://localhost:3000/api';
 
 export interface Document {
   id: number;
@@ -15,26 +15,73 @@ export interface Document {
 
 // Get all documents (metadata only)
 export const getDocuments = async (token: string, supervisorId: string): Promise<Document[]> => {
-  const response = await fetch(`${BASE_URL}/supervisor/documents/${supervisorId}/list`, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  });
+  const url = `${BASE_URL}/supervisor/documents/${supervisorId}/list`;
+  console.log("🌐 Full API URL:", url);
+  console.log("🔑 Token (first 20 chars):", token.substring(0, 20) + "...");
+  console.log("👤 Supervisor ID:", supervisorId);
+  
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
 
-  console.log("Fetching documents for supervisor:", supervisorId);
-  console.log("Request headers:", {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json',
-  });
-  console.log("Response status:", response.status);
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.text}`);
+    console.log("📡 Response status:", response.status);
+    console.log("📡 Response ok:", response.ok);
+    console.log("📡 Response status text:", response.statusText);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("❌ API Error Response:", errorText);
+      
+      // Handle 404 as empty documents (supervisor has no documents)
+      if (response.status === 404) {
+        console.log("📭 No documents found for supervisor (404):", supervisorId);
+        return [];
+      }
+      
+      throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log("📋 API Response data:", data);
+    
+    // Handle different response formats
+    if (data.success === false) {
+      console.log("⚠️ API returned success: false, treating as empty:", data.message);
+      return [];
+    }
+    
+    // Handle empty documents array gracefully
+    if (!data.documents) {
+      console.log("📭 No documents property in response, returning empty array");
+      return [];
+    }
+    
+    if (!Array.isArray(data.documents)) {
+      console.log("⚠️ Documents is not an array, returning empty array");
+      return [];
+    }
+    
+    console.log(`✅ Successfully fetched ${data.documents.length} documents`);
+    return data.documents;
+    
+  } catch (error) {
+    console.error("💥 Error in getDocuments:", error);
+    console.error("💥 Error type:", typeof error);
+  
+    
+    // If it's a network error or fetch fails, don't return empty array
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new Error("Network error - please check your connection");
+    }
+    
+    // Re-throw other errors
+    throw error;
   }
-
-  const data = await response.json();
-  return data.documents || [];
 };
 
 // Upload document

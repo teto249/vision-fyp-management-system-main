@@ -11,6 +11,8 @@ const Milestone = require("./Milestone");
 const Task = require("./Task");
 const Meeting = require("./Meeting");
 const Feedback = require("./Feedback");
+const Chat = require("./Chat");
+const Message = require("./Message");
 
 // Institution & MainAdmin associations
 Institution.hasMany(MainAdmin, { as: "admins", foreignKey: "institutionId" });
@@ -179,6 +181,32 @@ Feedback.belongsTo(Supervisor, {
   as: "supervisor",
 });
 
+// Chat associations
+Chat.belongsTo(Student, { foreignKey: "studentId", targetKey: "userId", as: "student" });
+Chat.belongsTo(Supervisor, { foreignKey: "supervisorId", targetKey: "userId", as: "supervisor" });
+Student.hasMany(Chat, { foreignKey: "studentId", sourceKey: "userId", as: "chats" });
+Supervisor.hasMany(Chat, { foreignKey: "supervisorId", sourceKey: "userId", as: "chats" });
+
+// Message associations
+Message.belongsTo(Chat, { foreignKey: "chatId", as: "chat" });
+Chat.hasMany(Message, { foreignKey: "chatId", as: "messages" });
+
+// Message sender associations (polymorphic)
+// We'll handle the polymorphic relationship manually in queries
+Message.belongsTo(Student, {
+  foreignKey: "senderId",
+  targetKey: "userId",
+  as: "senderStudent",
+  constraints: false
+});
+
+Message.belongsTo(Supervisor, {
+  foreignKey: "senderId",
+  targetKey: "userId",
+  as: "senderSupervisor",
+  constraints: false
+});
+
 // Export all models
 module.exports = {
   User,
@@ -194,4 +222,6 @@ module.exports = {
   Task,
   Meeting,
   Feedback,
+  Chat,
+  Message,
 };

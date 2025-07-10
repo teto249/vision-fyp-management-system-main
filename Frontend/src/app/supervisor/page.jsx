@@ -88,76 +88,88 @@ export default function Supervisor() {
         // Use the single endpoint that returns students with their projects
         const studentsResponse = await getSupervisedStudents();
 
-        if (studentsResponse.success && studentsResponse.students) {
-          // Transform student data to match dashboard expectations
-          const transformedStudents = studentsResponse.students.map(
-            (student) => {
-              let progress = 0;
-              let assignments = [];
-              let attendance = 85; // Default value
+        if (studentsResponse.success) {
+          if (studentsResponse.students && studentsResponse.students.length > 0) {
+            // Transform student data to match dashboard expectations
+            const transformedStudents = studentsResponse.students.map(
+              (student) => {
+                let progress = 0;
+                let assignments = [];
+                let attendance = 85; // Default value
 
-              // Calculate progress and assignments from project data
-              if (student.project && student.project.milestones) {
-                // Calculate progress from milestones
-                const totalMilestones = student.project.milestones.length;
-                const completedMilestones = student.project.milestones.filter(
-                  (milestone) => milestone.status === "Completed"
-                ).length;
+                // Calculate progress and assignments from project data
+                if (student.project && student.project.milestones) {
+                  // Calculate progress from milestones
+                  const totalMilestones = student.project.milestones.length;
+                  const completedMilestones = student.project.milestones.filter(
+                    (milestone) => milestone.status === "Completed"
+                  ).length;
 
-                progress =
-                  totalMilestones > 0
-                    ? Math.round((completedMilestones / totalMilestones) * 100)
-                    : 0;
+                  progress =
+                    totalMilestones > 0
+                      ? Math.round((completedMilestones / totalMilestones) * 100)
+                      : 0;
 
-                // Get tasks as assignments
-                assignments = student.project.milestones.flatMap(
-                  (milestone) =>
-                    milestone.tasks?.map((task) => ({
-                      id: task.id,
-                      title: task.title,
-                      status: task.status.toLowerCase().replace(/\s+/g, "-"),
-                      dueDate: task.endDate,
-                      milestone: milestone.title,
-                      score: null, // Can be added later if needed
-                    })) || []
-                );
+                  // Get tasks as assignments
+                  assignments = student.project.milestones.flatMap(
+                    (milestone) =>
+                      milestone.tasks?.map((task) => ({
+                        id: task.id,
+                        title: task.title,
+                        status: task.status.toLowerCase().replace(/\s+/g, "-"),
+                        dueDate: task.endDate,
+                        milestone: milestone.title,
+                        score: null, // Can be added later if needed
+                      })) || []
+                  );
 
-                // Calculate attendance based on meetings (optional)
-                const totalMeetings = student.project.milestones.reduce(
-                  (sum, milestone) => sum + (milestone.meetings?.length || 0),
-                  0
-                );
-                if (totalMeetings > 0) {
-                  // This is a simple calculation - you can enhance it based on actual attendance data
-                  attendance = Math.min(95, 75 + Math.floor(totalMeetings * 5));
+                  // Calculate attendance based on meetings (optional)
+                  const totalMeetings = student.project.milestones.reduce(
+                    (sum, milestone) => sum + (milestone.meetings?.length || 0),
+                    0
+                  );
+                  if (totalMeetings > 0) {
+                    // This is a simple calculation - you can enhance it based on actual attendance data
+                    attendance = Math.min(95, 75 + Math.floor(totalMeetings * 5));
+                  }
                 }
+
+                return {
+                  id: student.userId,
+                  name: student.fullName,
+                  email: student.email || student.universityEmail,
+                  course: student.department,
+                  level: student.level,
+                  progress,
+                  assignments,
+                  attendance,
+                  lastActive: "Today", // You can calculate this from recent project activity
+                  project: student.project,
+                };
               }
+            );
 
-              return {
-                id: student.userId,
-                name: student.fullName,
-                email: student.email || student.universityEmail,
-                course: student.department,
-                level: student.level,
-                progress,
-                assignments,
-                attendance,
-                lastActive: "Today", // You can calculate this from recent project activity
-                project: student.project,
-              };
-            }
-          );
-
-          setStudents(transformedStudents);
-        } else {
-          // Handle case where no students are found
-          setStudents([]);
-          if (!studentsResponse.success) {
-            setError(studentsResponse.message || "Failed to load student data");
+            setStudents(transformedStudents);
+          } else {
+            // No students assigned - this is normal, not an error
+            setStudents([]);
+            console.log("No students assigned to this supervisor yet");
           }
+        } else {
+          // Only set error if the API call actually failed (not just empty results)
+          setError(studentsResponse.message || "Failed to load student data");
+          setStudents([]);
         }
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
+        
+        // More detailed error logging
+        console.log("Current localStorage contents:");
+        console.log("- authToken:", localStorage.getItem("authToken") ? "Present" : "Missing");
+        console.log("- supervisorInfo:", localStorage.getItem("supervisorInfo"));
+        console.log("- adminInfo:", localStorage.getItem("adminInfo"));
+        console.log("- studentInfo:", localStorage.getItem("studentInfo"));
+        
         setError(error.message || "Failed to fetch data");
         setStudents([]);
       } finally {
@@ -218,9 +230,43 @@ export default function Supervisor() {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* No Students Assigned State */}
+          {!loading && !error && students.length === 0 && (
+            <div className="bg-gray-800 border border-gray-600 rounded-lg p-8 mb-6 text-center">
+              <div className="flex flex-col items-center">
+                <div className="bg-gray-700 rounded-full p-4 mb-4">
+                  <svg
+                    className="h-12 w-12 text-gray-400"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                    />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-300 mb-2">
+                  No Students Assigned
+                </h3>
+                <p className="text-gray-400 mb-4 max-w-md">
+                  You currently don't have any students assigned to you for supervision. 
+                  Students will appear here once they are assigned to your supervision by the University Admin.
+                </p>
+                <div className="text-sm text-gray-500">
+                  <p>If you believe this is an error, please contact your University Administrator.</p>
+                </div>
+              </div>
+            </div>
           )}{" "}
-          {/* Navigation Tabs and Content - Only show when not loading */}
-          {!loading && (
+          {/* Navigation Tabs and Content - Only show when not loading and have students */}
+          {!loading && !error && students.length > 0 && (
             <>              {/* Navigation Tabs */}
               <div className="border-b border-gray-700 mb-6">
                 <nav className="-mb-px flex space-x-8">

@@ -1,9 +1,10 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, Lock, Shield } from "lucide-react";
 import Profile from "./ui/Profile";
 import Divider from "./ui/Divider";
 import ProHeader from "./ui/ProHeader";
+import PasswordResetForm from "../../../components/PasswordResetForm";
 import {
   fetchStudentAccount,
   updateStudentAccount,
@@ -48,6 +49,7 @@ export default function StudentProfile() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [userData, setUserData] = useState<FormData | null>(null);
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     userId: "",
     fullName: "",
@@ -300,6 +302,18 @@ export default function StudentProfile() {
             toggleEditMode={() => setIsEditMode(!isEditMode)}
           />
           <Divider />
+          
+          {/* Password Reset Button */}
+          <div className="px-6 py-4 border-b border-slate-700/50">
+            <button
+              onClick={() => setShowPasswordReset(true)}
+              className="flex items-center gap-3 px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl group"
+            >
+              <Shield size={20} className="group-hover:rotate-12 transition-transform duration-200" />
+              Change Password
+            </button>
+          </div>
+          
           <Profile
             formData={formData}
             fileInputRef={fileInputRef}
@@ -312,6 +326,22 @@ export default function StudentProfile() {
             toggleEditMode={() => setIsEditMode(!isEditMode)}
           />
         </div>
+
+        {/* Password Reset Modal */}
+        {showPasswordReset && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="max-w-md w-full">
+              <PasswordResetForm
+                userType="student"
+                onSuccess={() => {
+                  setShowPasswordReset(false);
+                  setSuccessMessage("Password changed successfully!");
+                }}
+                onCancel={() => setShowPasswordReset(false)}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

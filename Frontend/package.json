@@ -34,6 +34,7 @@
   },
   "devDependencies": {
     "@types/chart.js": "^2.9.41",
+    "@types/estree": "^1.0.8",
     "@types/node": "22.14.0",
     "@types/react": "19.1.0",
     "@types/react-chartjs-2": "^2.0.2",

@@ -13,6 +13,7 @@ import {
   Users,
   Calendar,
   Settings,
+  MessageCircle,
 } from "lucide-react";
 
 export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
@@ -21,11 +22,9 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
   const menuItems = [
     { icon: Home, text: "Dashboard", href: "", badge: null },
     { icon: User, text: "Profile", href: "account", badge: null },
-
+    { icon: MessageCircle, text: "Chat", href: "chat", badge: null },
     { icon: FolderOpen, text: "Projects", href: "project", badge: null },
-
     { icon: FileText, text: "Documents", href: "document", badge: null },
-
   ];
 
   const isActive = (href) => {

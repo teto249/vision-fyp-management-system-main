@@ -245,15 +245,7 @@ export default function Navbar({
                       </button>
                     </Link>
                     
-                    <Link href="/admin/settings">
-                      <button
-                        className="w-full text-left px-4 py-3 hover:bg-gray-700/30 flex items-center space-x-3 text-gray-300 hover:text-teal-400 transition-colors group"
-                        onClick={() => setProfileOpen(false)}
-                      >
-                        <Settings className="w-4 h-4 group-hover:text-teal-400" />
-                        <span>Settings</span>
-                      </button>
-                    </Link>
+              
                   </div>
 
                   <div className="border-t border-gray-700/50 py-2">

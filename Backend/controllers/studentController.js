@@ -11,6 +11,40 @@ const Feedback = require("../models/Feedback");
 const Document = require('../models/Document');
 const fs = require('fs');
 
+// Helper function to calculate project progress
+const calculateProjectProgress = (milestones) => {
+  const allTasks = milestones.flatMap(milestone => milestone.tasks);
+  const totalTasks = allTasks.length;
+  
+  if (totalTasks === 0) return 0;
+  
+  const completedTasks = allTasks.filter(task => task.status === 'Completed').length;
+  return Math.round((completedTasks / totalTasks) * 100);
+};
+
+// Helper function to update project progress
+const updateProjectProgress = async (projectId) => {
+  try {
+    const project = await Project.findByPk(projectId, {
+      include: [{
+        model: Milestone,
+        as: 'milestones',
+        include: [{
+          model: Task,
+          as: 'tasks'
+        }]
+      }]
+    });
+
+    if (project) {
+      const progress = calculateProjectProgress(project.milestones);
+      await project.update({ progress });
+    }
+  } catch (error) {
+    console.error("Error updating project progress:", error);
+  }
+};
+
 // Get Student account
 exports.getStudentAccount = async (req, res) => {
   try {
@@ -407,6 +441,7 @@ exports.getProject = async (req, res) => {
           include: [
             {
               model: Task,
+              as: 'tasks',
               attributes: ["id", "title", "status"],
             },
             {
@@ -840,15 +875,20 @@ exports.deleteTask = async (req, res) => {
 exports.updateTask = async (req, res) => {
   try {
     const { milestoneId, taskId } = req.params;
-    const { status } = req.body;
+    const { title, description, startDate, endDate, dueDate, status } = req.body;
 
-    // Validate status
-    const validStatuses = ['Pending', 'In Progress', 'Completed'];
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid status value"
-      });
+    // Use dueDate if provided, otherwise fallback to endDate
+    const finalEndDate = dueDate || endDate;
+
+    // Validate status if provided
+    if (status) {
+      const validStatuses = ['Pending', 'In Progress', 'Completed'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid status value"
+        });
+      }
     }
 
     const task = await Task.findOne({
@@ -865,15 +905,33 @@ exports.updateTask = async (req, res) => {
       });
     }
 
-    await task.update({ status });
+    // Prepare update data - only update fields that are provided
+    const updateData = {};
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (startDate !== undefined) updateData.startDate = startDate;
+    if (finalEndDate !== undefined) updateData.endDate = finalEndDate;
+    if (status !== undefined) updateData.status = status;
 
-    // Recalculate milestone and project progress
-    const milestone = await Milestone.findByPk(milestoneId, {
-      include: [{ model: Task }]
-    });
-    
-    // Update project progress
-    await updateProjectProgress(milestone.projectId);
+    // Validate required fields if they're being updated
+    if (updateData.title !== undefined && !updateData.title.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Title cannot be empty"
+      });
+    }
+
+    await task.update(updateData);
+
+    // Recalculate milestone and project progress if status was updated
+    if (status !== undefined) {
+      const milestone = await Milestone.findByPk(milestoneId, {
+        include: [{ model: Task, as: 'tasks' }]
+      });
+      
+      // Update project progress
+      await updateProjectProgress(milestone.projectId);
+    }
 
     res.status(200).json({
       success: true,
@@ -1080,6 +1138,22 @@ exports.getDocument = async (req, res) => {
 exports.listDocuments = async (req, res) => {
   try {
     const { supervisorId } = req.params;
+    const studentId = req.user.userId;
+
+    // Verify that the student is actually supervised by this supervisor
+    const student = await Student.findOne({
+      where: { 
+        userId: studentId,
+        supervisorId: supervisorId 
+      }
+    });
+
+    if (!student) {
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized access: You are not supervised by this supervisor'
+      });
+    }
     
     const documents = await Document.findAll({
       where: { supervisorId },
@@ -1093,7 +1167,10 @@ exports.listDocuments = async (req, res) => {
     });
   } catch (error) {
     console.error('List documents error:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
   }
 };
 

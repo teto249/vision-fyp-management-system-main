@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:3000/api/uniAdmin/users";
+const API_BASE_URL = "http://localhost:3001/api/uniAdmin/users";
 
 export interface Supervisor {
   userId: string;
@@ -18,6 +18,19 @@ export interface Student {
   level: string;
   supervisorId?: string;
   role?: "Student";
+  hasProject?: boolean;
+  projectStatus?: string | null;
+  projectTitle?: string | null;
+  projectProgress?: number;
+  project?: {
+    id: string;
+    projectTitle: string;
+    projectType: string;
+    status: string;
+    progress: number;
+    startDate: string;
+    endDate: string;
+  } | null;
 }
 
 export interface UsersResponse {
@@ -97,7 +110,7 @@ export async function deleteUser(userId: string, userType: 'student' | 'supervis
       throw new ApiError("User ID and user type are required");
     }
 
-    const url = `http://localhost:3000/api/uniAdmin/users/${encodeURIComponent(userType)}/${encodeURIComponent(userId)}`;
+    const url = `http://localhost:3001/api/uniAdmin/users/${encodeURIComponent(userType)}/${encodeURIComponent(userId)}`;
     const data = await fetchWithAuth(url, {
       method: 'DELETE'
     });
@@ -131,7 +144,7 @@ export async function bulkDeleteUsers(users: Array<{ userId: string; userType: '
       throw new ApiError("Users array is required and cannot be empty");
     }
 
-    const url = `http://localhost:3000/api/uniAdmin/users/bulk`;
+    const url = `http://localhost:3001/api/uniAdmin/users/bulk`;
     const data = await fetchWithAuth(url, {
       method: 'DELETE',
       body: JSON.stringify({ users })

@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef } from "react";
 import { toast } from "react-hot-toast";
-import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, Shield } from "lucide-react";
 import Profile from "./ui/Profile";
 import ProHeader from "./ui/ProHeader";
+import PasswordResetForm from "../../../components/PasswordResetForm";
 import {
   fetchAdminAccount,
   updateAdminAccount,
@@ -17,6 +18,7 @@ export default function AdminProfile() {
   const [error, setError] = useState(null);
   const [userData, setUserData] = useState({});
   const [saveStatus, setSaveStatus] = useState(null);
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [formData, setFormData] = useState({
     username: "",
     name: "",
@@ -211,6 +213,18 @@ export default function AdminProfile() {
             toggleEditMode={() => setIsEditMode(!isEditMode)}
             saveStatus={saveStatus}
           />
+          
+          {/* Password Reset Button */}
+          <div className="px-6 py-4 border-b border-white/10">
+            <button
+              onClick={() => setShowPasswordReset(true)}
+              className="flex items-center gap-3 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl group"
+            >
+              <Shield size={20} className="group-hover:rotate-12 transition-transform duration-200" />
+              Change Password
+            </button>
+          </div>
+          
           <Profile
             formData={formData}
             fileInputRef={fileInputRef}
@@ -224,6 +238,22 @@ export default function AdminProfile() {
             saveStatus={saveStatus}
           />
         </div>
+
+        {/* Password Reset Modal */}
+        {showPasswordReset && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="max-w-md w-full">
+              <PasswordResetForm
+                userType="admin"
+                onSuccess={() => {
+                  setShowPasswordReset(false);
+                  toast.success("Password changed successfully!");
+                }}
+                onCancel={() => setShowPasswordReset(false)}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Quick Actions */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">

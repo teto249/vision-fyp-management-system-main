@@ -17,7 +17,7 @@ import {
   deleteDocument,
 } from "../../../../api/SupervisorApi/Documnets";
 
-
+const BASE_API = "http://localhost:3001/api/supervisor/documents";
 const formatDate = (dateString: string): string => {
   try {
     const date = new Date(dateString);
@@ -102,7 +102,7 @@ export default function DocumentViewPage({
     if (!doc?.id) return;
 
     // Create direct PDF download link
-    const downloadUrl = `http://localhost:5000/api/supervisor/documents/${doc.id}/pdf`;
+    const downloadUrl = `${BASE_API}/${doc.id}/pdf`;
     const fileName = `${doc.title}${doc.fileType}`;
 
     // Create an anchor element and trigger download

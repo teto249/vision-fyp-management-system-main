@@ -3,9 +3,15 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "concurrently \"cd Backend && npm run dev\" \"cd Frontend && npm run dev\"",
+    "dev:backend": "cd Backend && npm run dev",
+    "dev:frontend": "cd Frontend && npm run dev",
     "build": "cd Frontend && npm run build",
     "start": "cd Backend && npm start",
-    "install-all": "npm install && cd Frontend && npm install && cd ../Backend && npm install"
+    "install-all": "npm install && cd Frontend && npm install && cd ../Backend && npm install",
+    "setup": "npm run install-all",
+    "clean": "cd Backend && rmdir /s /q node_modules 2>nul & cd ../Frontend && rmdir /s /q node_modules 2>nul",
+    "reinstall": "npm run clean && npm run install-all",
+    "test:health": "curl http://localhost:3000/api/health"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
@@ -13,6 +19,7 @@
   "dependencies": {
     "express-async-handler": "^1.2.0",
     "mongoose": "^8.13.2",
+    "node-fetch": "^3.3.2",
     "react-toastify": "^11.0.5"
   }
 }

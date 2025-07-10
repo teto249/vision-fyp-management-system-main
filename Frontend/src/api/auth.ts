@@ -3,7 +3,7 @@ export interface LoginCredentials {
   password: string;
 }
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+const BASE_URL =  'http://localhost:3000';
 
 // Base interface with common fields
 export interface BaseUserInfo {
@@ -76,7 +76,6 @@ export async function login(
       password,
     };
 
-   
     const response = await fetch(
       `${BASE_URL}/api/auth/login`,
       {
@@ -90,7 +89,6 @@ export async function login(
       }
     );
 
-    console.log("Login response status:", response.status);
     const contentType = response.headers.get("content-type");
     const isJson = contentType?.includes("application/json");
 

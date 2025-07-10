@@ -1,5 +1,6 @@
 const { DataTypes } = require("sequelize");
 const { sequelize } = require("../config/database");
+const bcrypt = require("bcryptjs");
 
 const MainAdmin = sequelize.define("MainAdmin", {
   username: {
@@ -51,7 +52,22 @@ const MainAdmin = sequelize.define("MainAdmin", {
     },
     onDelete: "CASCADE",
     onUpdate: "CASCADE",
-  },
+  }
+}, {
+  tableName: 'MainAdmins',
+  timestamps: true,
+  hooks: {
+    beforeSave: async (admin) => {
+      if (admin.changed('password')) {
+        admin.password = await bcrypt.hash(admin.password, 10);
+      }
+    }
+  }
 });
+
+// Instance method to check password
+MainAdmin.prototype.validatePassword = async function(password) {
+  return await bcrypt.compare(password, this.password);
+};
 
 module.exports = MainAdmin;

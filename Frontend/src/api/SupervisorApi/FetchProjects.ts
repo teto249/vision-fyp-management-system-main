@@ -361,12 +361,51 @@ interface StudentWithProject extends Student {
 export const getSupervisedStudents =
   async (): Promise<SupervisedStudentsResponse> => {
     try {
+      const token = localStorage.getItem("authToken");
       const supervisorInfo = JSON.parse(
         localStorage.getItem("supervisorInfo") || "{}"
       );
-      const token = localStorage.getItem("authToken");      if (!token || !supervisorInfo?.userId) {
-        throw new Error("Authentication required");
+
+      console.log('Fetching supervisor:', supervisorInfo);
+
+      if (!token) {
+        throw new Error("Authentication token not found. Please login again.");
       }
+
+      console.log('Supervisor info from localStorage:', supervisorInfo);
+
+      if (!supervisorInfo?.userId || !supervisorInfo?.username) {
+        // Check if we have the supervisor data in different format
+        const allStorageKeys = ['supervisorInfo', 'adminInfo', 'studentInfo'];
+        let foundSupervisorData = null;
+        
+        for (const key of allStorageKeys) {
+          const data = localStorage.getItem(key);
+          if (data) {
+            try {
+              const parsed = JSON.parse(data);
+              console.log(`Checking ${key}:`, parsed);
+              if (parsed.role === 'Supervisor' && (parsed.username || parsed.userId)) {
+                foundSupervisorData = parsed;
+                // Store it in the correct location
+                localStorage.setItem("supervisorInfo", JSON.stringify(parsed));
+                break;
+              }
+            } catch (e) {
+              console.log(`Error parsing ${key}:`, e);
+            }
+          }
+        }
+
+        if (!foundSupervisorData) {
+          throw new Error("Supervisor information not found. Please login again.");
+        }
+        
+        // Update supervisorInfo with found data
+        Object.assign(supervisorInfo, foundSupervisorData);
+      }
+
+      console.log('Using supervisor ID:', supervisorInfo.userId);
 
       // First fetch students
       const response = await fetch(
@@ -383,7 +422,8 @@ export const getSupervisedStudents =
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch students");
+        console.error('API Error:', data);
+        throw new Error(data.message || `Failed to fetch students (${response.status})`);
       }
 
       // Transform the data to include projects and related data

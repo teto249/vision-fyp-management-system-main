@@ -1,5 +1,6 @@
 
-import { AcademicCapIcon, BuildingOfficeIcon, ChevronDownIcon, EnvelopeIcon, PhoneIcon,MapPinIcon } from "@heroicons/react/24/outline";
+import { AcademicCapIcon, BuildingOfficeIcon, ChevronDownIcon, EnvelopeIcon, PhoneIcon,MapPinIcon, ChatBubbleLeftIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
+import { useRouter } from "next/navigation";
 import ProjectDetails from "./ProjectDetails";
 import type { Student } from "../../types/types";
 interface StudentCardProps {
@@ -55,6 +56,13 @@ export default function StudentCard({
   onToggle,
   onViewProject,
 }: StudentCardProps) {
+  const router = useRouter();
+
+  const handleChatClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    router.push(`/supervisor/chat?studentId=${student.studentId}`);
+  };
+
   return (
     <div
       className="bg-gray-800/50 backdrop-blur rounded-xl border border-gray-700 
@@ -63,9 +71,16 @@ export default function StudentCard({
       <div className="p-6 cursor-pointer" onClick={onToggle}>
         <div className="flex justify-between items-start">
           <div className="flex-1">
-            <h3 className="text-xl font-bold text-gray-100 mb-2">
+            <h3 className="text-xl font-bold text-gray-100 mb-1">
               {student.fullName}
             </h3>
+            {/* Project Title */}
+            {student.project?.projectTitle && (
+              <p className="text-sm text-teal-400 font-medium mb-2 flex items-center gap-1">
+                <DocumentTextIcon className="h-4 w-4" />
+                {student.project.projectTitle}
+              </p>
+            )}
             <div className="flex items-center gap-4 text-sm text-gray-400">
               <span className="flex items-center gap-1">
                 <AcademicCapIcon className="h-4 w-4" />
@@ -103,6 +118,15 @@ export default function StudentCard({
           </div>
 
           <div className="flex gap-4 mt-6 pt-6 border-t border-gray-700">
+            <button
+              onClick={handleChatClick}
+              className="flex-1 py-2 px-4 bg-blue-600 hover:bg-blue-700 
+                       text-white rounded-lg transition-colors duration-200 
+                       flex items-center justify-center gap-2"
+            >
+              <ChatBubbleLeftIcon className="h-4 w-4" />
+              Chat
+            </button>
             <button
               onClick={(e) => {
                 e.stopPropagation();

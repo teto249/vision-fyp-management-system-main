@@ -12,7 +12,8 @@ import {
   BarChart3,
   Calendar,
   Settings,
-  HelpCircle
+  HelpCircle,
+  MessageCircle
 } from "lucide-react";
 
 export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
@@ -22,7 +23,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
     { icon: Home, text: "Dashboard", href: "", badge: null },
     { icon: User, text: "Profile", href: "account", badge: null },
     { icon: FolderOpen, text: "My Project", href: "myProject", badge: null },
-    
+    { icon: MessageCircle, text: "Chat with Supervisor", href: "chat", badge: null },
     { icon: Plus, text: "Register New Project", href: "registerproject", badge: null },
     { icon: FileText, text: "Documents", href: "document", badge: null },
    

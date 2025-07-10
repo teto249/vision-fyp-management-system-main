@@ -253,6 +253,7 @@ exports.registerUniversity = async (req, res) => {
     await transaction.rollback();
     console.error("University registration error:", error);
     
+    
     // Handle Sequelize validation errors
     if (error.name === 'SequelizeValidationError') {
       const validationErrors = error.errors.map(err => ({

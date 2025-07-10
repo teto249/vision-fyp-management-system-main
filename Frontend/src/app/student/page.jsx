@@ -122,11 +122,18 @@ export default function Dashboard() {
           setProjectData(projectResult.project);
           calculateStats(projectResult.project);
           generateRecentActivities(projectResult.project);
+        } else if (projectResult.noProject) {
+          // Student has not been assigned a project yet - this is normal
+          console.log("Student has not been assigned a project yet:", username);
+          setProjectData(null);
         } else {
-          // No project found or failed to load project
+          // Other error occurred
+          console.error("Failed to load project:", projectResult.message);
+          setProjectData(null);
         }
       } catch (error) {
         console.error("Error loading project data:", error);
+        setProjectData(null);
       }
     } catch (error) {
       console.error("Error loading dashboard data:", error);
@@ -468,7 +475,7 @@ export default function Dashboard() {
         </div>
 
         {/* Project Overview */}
-        {projectData && (
+        {projectData ? (
           <div className="bg-gray-800 text-gray-200 p-6 rounded-xl shadow-lg border border-gray-700 mb-8">
             <h3 className="text-xl font-semibold mb-4">Current Project</h3>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -529,6 +536,22 @@ export default function Dashboard() {
                   <p className="text-gray-400">No supervisor assigned yet</p>
                 )}
               </div>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-gray-800 text-gray-200 p-8 rounded-xl shadow-lg border border-gray-700 mb-8 text-center">
+            <BookOpenIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold mb-2">No Project Assigned</h3>
+            <p className="text-gray-400 mb-4">
+              You haven't been assigned a project yet. Please contact your academic advisor or check back later.
+            </p>
+            <div className="bg-blue-900/30 border border-blue-800/50 rounded-lg p-4 text-left">
+              <h4 className="text-blue-300 font-medium text-sm mb-2">What you can do:</h4>
+              <ul className="text-blue-200 text-sm space-y-1">
+                <li>• Contact your academic advisor for project assignment</li>
+                <li>• Check the project registration portal</li>
+                <li>• Ensure you meet all prerequisites for project enrollment</li>
+              </ul>
             </div>
           </div>
         )}

@@ -1,5 +1,7 @@
 const express = require("express");
 const router = express.Router();
+const { authenticateToken } = require("../middleware/auth");
+const ChatController = require("../controllers/chatController");
 
 const {
   getStudentAccount,
@@ -24,6 +26,9 @@ const {
   getDocumentPDF,
 } = require("../controllers/studentController");
 
+// Apply authentication middleware to all routes
+router.use(authenticateToken);
+
 // Student routes
 router.get("/account", getStudentAccount);
 router.put("/account", updateStudentAccount);
@@ -47,5 +52,13 @@ router.delete("/milestones/:milestoneId/meetings/:meetingId", deleteMeeting);
 router.get("/documents/supervisor/:supervisorId", listDocuments); // Changed from /documents/:supervisorId/list
 router.get("/documents/:id", getDocumentContent); // Changed from /documents/:id/content
 router.get("/documents/:id/pdf", getDocumentPDF); // Serve PDF files directly with proper headers
+
+// Chat routes
+router.get("/chat/supervisor/:supervisorId", authenticateToken, ChatController.getOrCreateChat);
+router.get("/chat/:chatId/messages", authenticateToken, ChatController.getChatMessages);
+router.post("/chat/:chatId/messages", authenticateToken, ChatController.sendMessage);
+router.put("/chat/:chatId/messages/read", authenticateToken, ChatController.markMessagesAsRead);
+router.get("/chat/:chatId/search", authenticateToken, ChatController.searchMessages);
+router.get("/chat/taggable-items", authenticateToken, ChatController.getTaggableItems);
 
 module.exports = router;

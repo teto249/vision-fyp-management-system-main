@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, FormEvent } from "react";
+import { Eye, EyeOff, User, Lock, LogIn, Home, ArrowLeft, Shield } from "lucide-react";
 import { login, logout, AuthError } from "../../api/auth";
 
 export default function LoginForm() {
@@ -72,140 +73,153 @@ export default function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-8 p-4 bg-gray-900 text-gray-200">
-      {/* Upper Part */}
-      <div className="flex items-center">
-        <Link href="/" className="flex items-center">
-          <Image
-            src="/logo.png"
-            alt="Logo"
-            width={70}
-            height={70}
-            className="rounded-full"
-            priority
-          />
-          <span className="text-4xl font-serif font-bold text-green-400">
-            VISION
-          </span>
-        </Link>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 relative overflow-hidden">
+      {/* Background Elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-slate-500/5 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute top-1/2 left-0 w-64 h-64 bg-emerald-500/3 rounded-full blur-2xl" />
+        <div className="absolute top-1/3 right-0 w-80 h-80 bg-slate-500/3 rounded-full blur-2xl" />
       </div>
 
-      {/* Lower Part */}
-      <form
-        onSubmit={handleSubmit}
-        className="bg-gray-800 w-full max-w-md rounded-xl shadow-lg p-8"
-      >
-        <h2 className="text-3xl font-bold text-green-400 mb-8 text-center">
-          Welcome Back
-        </h2>
-
-        {error && (
-          <div className="mb-4 p-3 bg-red-900 text-red-100 rounded-lg text-sm">
-            {error}
-          </div>
-        )}
-
-        <div
-          id="success-message"
-          className="hidden mb-4 p-3 bg-green-900 text-green-100 rounded-lg text-sm"
-        >
-          Login successful! Redirecting...
-        </div>
-
-        <div className="mb-6">
-          <label
-            htmlFor="username"
-            className="block text-gray-300 text-sm font-medium mb-2"
-          >
-            Username
-          </label>
-          <input
-            type="text"
-            id="username"
-            name="username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-            className="w-full px-4 py-3 rounded-lg border border-gray-600 bg-gray-700 text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-400 transition-colors"
-            placeholder="Enter your ID or email"
-          />
-        </div>
-
-        <div className="mb-6">
-          <label
-            htmlFor="password"
-            className="block text-gray-300 text-sm font-medium mb-2"
-          >
-            Password
-          </label>
-          <div className="relative">
-            <input
-              type={showPassword ? "text" : "password"}
-              id="password"
-              name="password"
-              required
-              className="w-full px-4 py-3 rounded-lg border border-gray-600 bg-gray-700 text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-400 transition-colors"
-              placeholder="Enter your password"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-200"
-            >
-              {showPassword ? "Hide" : "Show"}
-            </button>
-          </div>
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className={`w-full bg-green-400 text-gray-900 py-3 px-6 rounded-lg font-medium hover:bg-green-500 transition-colors ${
-            loading ? "opacity-70 cursor-not-allowed" : ""
-          }`}
-        >
-          {loading ? (
-            <span className="flex items-center justify-center">
-              <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                />
-              </svg>
-              Signing In...
-            </span>
-          ) : (
-            "Sign In"
-          )}
-        </button>
-
-        <div className="mt-6 text-center">
-          <Link
-            href="/forgot-password"
-            className="text-sm text-green-400 hover:text-green-500 transition-colors"
-          >
-            Forgot password?
+      <div className="relative z-10 w-full max-w-md">
+        {/* Logo Section */}
+        <div className="text-center mb-8">
+          <Link href="/" className="inline-flex items-center group">
+            <div className="relative">
+              <div className="w-16 h-16 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-2xl group-hover:scale-105 transition-transform duration-300">
+                <Shield className="w-8 h-8 text-white" />
+              </div>
+              <div className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-400 rounded-full border-2 border-slate-900 animate-pulse"></div>
+            </div>
+            <div className="ml-4">
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-600 bg-clip-text text-transparent">
+                VISION
+              </h1>
+              <p className="text-slate-400 text-sm font-medium">Management System</p>
+            </div>
           </Link>
         </div>
 
-        <Link href="/">
-          <button
-            type="button"
-            className="mt-6 w-full flex items-center justify-center gap-2 bg-gray-700 border border-gray-600 text-gray-300 py-3 px-6 rounded-lg font-medium hover:bg-gray-600 transition-colors"
-          >
-            Back to Home
-          </button>
-        </Link>
-      </form>
+        {/* Login Form */}
+        <div className="bg-slate-800/60 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl p-8 transition-all duration-300 hover:shadow-3xl">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-white mb-2">Welcome Back</h2>
+            <p className="text-slate-400">Sign in to access your dashboard</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/30 text-red-300 rounded-xl p-4 flex items-start space-x-3 animate-in slide-in-from-top-2 duration-300">
+                <div className="w-5 h-5 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                </div>
+                <div className="text-sm font-medium">{error}</div>
+              </div>
+            )}
+
+            {/* Success Message */}
+            <div
+              id="success-message"
+              className="hidden bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 rounded-xl p-4 flex items-start space-x-3 animate-in slide-in-from-top-2 duration-300"
+            >
+              <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <div className="w-2 h-2 bg-emerald-400 rounded-full"></div>
+              </div>
+              <div className="text-sm font-medium">Login successful! Redirecting...</div>
+            </div>
+
+            {/* Username Field */}
+            <div className="space-y-2">
+              <label htmlFor="username" className="block text-sm font-medium text-slate-300">
+                Username or Email
+              </label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <User className="w-5 h-5 text-slate-400 group-focus-within:text-emerald-400 transition-colors duration-200" />
+                </div>
+                <input
+                  type="text"
+                  id="username"
+                  name="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                  className="w-full pl-12 pr-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all duration-200"
+                  placeholder="Enter your ID or email"
+                />
+              </div>
+            </div>
+
+            {/* Password Field */}
+            <div className="space-y-2">
+              <label htmlFor="password" className="block text-sm font-medium text-slate-300">
+                Password
+              </label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Lock className="w-5 h-5 text-slate-400 group-focus-within:text-emerald-400 transition-colors duration-200" />
+                </div>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  id="password"
+                  name="password"
+                  required
+                  className="w-full pl-12 pr-12 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all duration-200"
+                  placeholder="Enter your password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-white transition-colors duration-200"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Sign In Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className={`w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white py-3 px-6 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-2 ${
+                loading ? "animate-pulse" : ""
+              }`}
+            >
+              {loading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <span>Signing In...</span>
+                </>
+              ) : (
+                <>
+                  <LogIn className="w-5 h-5" />
+                  <span>Sign In</span>
+                </>
+              )}
+            </button>
+
+            {/* Back to Home Button */}
+            <Link href="/">
+              <button
+                type="button"
+                className="w-full flex items-center justify-center space-x-2 bg-slate-700/50 hover:bg-slate-600/50 border border-slate-600/50 text-slate-300 hover:text-white py-3 px-6 rounded-xl font-medium transition-all duration-300 transform hover:scale-[1.02]"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span>Back to Home</span>
+              </button>
+            </Link>
+          </form>
+        </div>
+
+        {/* Footer */}
+        <div className="text-center mt-8">
+          <p className="text-slate-500 text-sm">
+            Secure access to your academic management portal
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

@@ -56,6 +56,19 @@ interface Student {
   department: string;
   level: string;
   supervisorId?: string;
+  hasProject?: boolean;
+  projectStatus?: string | null;
+  projectTitle?: string | null;
+  projectProgress?: number;
+  project?: {
+    id: string;
+    projectTitle: string;
+    projectType: string;
+    status: string;
+    progress: number;
+    startDate: string;
+    endDate: string;
+  } | null;
 }
 
 interface Supervisor {
@@ -72,6 +85,10 @@ interface ReportStats {
   totalStudents: number;
   totalSupervisors: number;
   activeProjects: number;
+  totalProjects: number;
+  completedProjects: number;
+  studentsWithProjects: number;
+  studentsWithoutProjects: number;
   completionRate: number;
   activeSessions: number;
   systemUptime: number;
@@ -154,22 +171,24 @@ const AIReportGenerator: React.FC<{
     const ratio =
       supervisorCount > 0 ? (studentCount / supervisorCount).toFixed(1) : "0";
 
+    const projectParticipationRate = studentCount > 0 
+      ? Math.round((stats.studentsWithProjects / studentCount) * 100) 
+      : 0;
+
     return `This comprehensive analysis covers ${studentCount} students and ${supervisorCount} supervisors within the university system. 
     The current student-to-supervisor ratio of ${ratio}:1 ${
       parseFloat(ratio) > 15
         ? "indicates potential workload concerns"
         : "demonstrates balanced supervision capacity"
     }. 
-    Overall system performance shows ${
-      stats.completionRate
-    }% completion rate with ${
-      stats.activeProjects
-    } active projects currently underway. 
-    The analysis reveals ${
-      stats.activeSessions > stats.totalUsers * 0.7
-        ? "high engagement levels"
-        : "moderate engagement patterns"
-    } across the platform.`;
+    Project engagement shows ${projectParticipationRate}% of students (${stats.studentsWithProjects}/${studentCount}) have active projects, with ${stats.activeProjects} currently in progress and ${stats.completedProjects} completed. 
+    ${stats.studentsWithoutProjects > 0 
+      ? `${stats.studentsWithoutProjects} students still need project assignments. ` 
+      : "All students have been assigned projects. "
+    }
+    Overall project completion rate stands at ${stats.completionRate}%, indicating ${
+      stats.completionRate >= 80 ? "excellent" : stats.completionRate >= 60 ? "good" : "concerning"
+    } project management outcomes.`;
   };
 
   const generateKeyFindings = (
@@ -242,6 +261,30 @@ const AIReportGenerator: React.FC<{
           : "falls below"
       } expected benchmarks`
     );
+
+    // Project participation analysis
+    const participationRate = students.length > 0 
+      ? Math.round((stats.studentsWithProjects / students.length) * 100) 
+      : 0;
+    
+    findings.push(
+      `${participationRate}% of students (${stats.studentsWithProjects}/${students.length}) are currently engaged in projects${
+        stats.studentsWithoutProjects > 0 
+          ? `, with ${stats.studentsWithoutProjects} students awaiting project assignment`
+          : ""
+      }`
+    );
+
+    // Project status distribution
+    if (stats.activeProjects > 0 || stats.completedProjects > 0) {
+      findings.push(
+        `Project portfolio consists of ${stats.activeProjects} active projects and ${stats.completedProjects} completed projects, showing ${
+          stats.activeProjects > stats.completedProjects 
+            ? "strong ongoing project activity"
+            : "balanced project completion pipeline"
+        }`
+      );
+    }
 
     return findings;
   };
@@ -542,6 +585,10 @@ export default function SystemReportsPage() {
     totalStudents: 0,
     totalSupervisors: 0,
     activeProjects: 0,
+    totalProjects: 0,
+    completedProjects: 0,
+    studentsWithProjects: 0,
+    studentsWithoutProjects: 0,
     completionRate: 0,
     activeSessions: 0,
     systemUptime: 0,
@@ -589,24 +636,58 @@ export default function SystemReportsPage() {
       const students = usersResponse.students || [];
       const supervisors = usersResponse.supervisors || [];
 
+      // Debug logging
+      console.log("Students data:", students);
+      console.log("Students count:", students.length);
+      console.log("Sample student:", students[0]);
+
+      // Calculate actual project statistics from student data
+      const studentsWithProjects = students.filter((student: Student) => 
+        student.hasProject === true || (student.project && student.project !== null)
+      );
+      console.log("Students with projects:", studentsWithProjects);
+      
+      const activeProjects = studentsWithProjects.filter((student: Student) => 
+        student.projectStatus === 'In Progress' || student.projectStatus === 'Pending'
+      ).length;
+      const completedProjects = studentsWithProjects.filter((student: Student) => 
+        student.projectStatus === 'Completed'
+      ).length;
+
+      // Ensure all values are defined with proper defaults
+      const studentsWithProjectsCount = studentsWithProjects.length || 0;
+      const totalStudentsCount = students.length || 0;
+      const activeProjectsCount = activeProjects || 0;
+      const completedProjectsCount = completedProjects || 0;
+
+      console.log("Stats calculation:", {
+        studentsWithProjectsCount,
+        totalStudentsCount,
+        activeProjectsCount,
+        completedProjectsCount
+      });
+
       const calculatedStats = {
-        totalUsers: students.length + supervisors.length,
-        totalStudents: students.length,
-        totalSupervisors: supervisors.length,
-        activeProjects: Math.floor(students.length * 0.8),
+        totalUsers: (students.length || 0) + (supervisors.length || 0),
+        totalStudents: totalStudentsCount,
+        totalSupervisors: supervisors.length || 0,
+        activeProjects: activeProjectsCount,
+        totalProjects: studentsWithProjectsCount,
+        completedProjects: completedProjectsCount,
+        studentsWithProjects: studentsWithProjectsCount,
+        studentsWithoutProjects: totalStudentsCount - studentsWithProjectsCount,
         completionRate:
-          students.length > 0
-            ? Math.min(
-                Math.floor((supervisors.length / students.length) * 100),
-                100
-              )
+          studentsWithProjectsCount > 0
+            ? Math.round((completedProjectsCount / studentsWithProjectsCount) * 100)
             : 0,
         activeSessions: Math.floor(
-          (students.length + supervisors.length) * (0.6 + Math.random() * 0.2)
+          ((students.length || 0) + (supervisors.length || 0)) * (0.6 + Math.random() * 0.2)
         ),
         systemUptime: 99.8,
         avgResponseTime: 1.2,
       };
+
+      console.log("Final calculated stats:", calculatedStats);
 
       setData({ students, supervisors });
       setStats(calculatedStats);
@@ -977,12 +1058,40 @@ export default function SystemReportsPage() {
                 trend={8}
               />
               <ReportStatsCard
-                title="Completion Rate"
+                title="Students with Projects"
+                value={`${stats.studentsWithProjects}/${stats.totalStudents}`}
+                icon={GraduationCap}
+                color="from-teal-500 to-cyan-600"
+                subtitle={`${Math.round((stats.studentsWithProjects / Math.max(stats.totalStudents, 1)) * 100)}% have projects`}
+                trend={15}
+              />
+              <ReportStatsCard
+                title="Project Completion"
                 value={`${stats.completionRate}%`}
                 icon={TrendingUp}
                 color="from-purple-500 to-purple-600"
-                subtitle="Project success rate"
+                subtitle={`${stats.completedProjects} completed`}
                 trend={5}
+              />
+            </div>
+
+            {/* Additional Project Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <ReportStatsCard
+                title="Students Without Projects"
+                value={stats.studentsWithoutProjects}
+                icon={AlertTriangle}
+                color="from-red-500 to-red-600"
+                subtitle="Need project assignment"
+                trend={-10}
+              />
+              <ReportStatsCard
+                title="Total Projects"
+                value={stats.totalProjects}
+                icon={FileText}
+                color="from-indigo-500 to-indigo-600"
+                subtitle="All registered projects"
+                trend={stats.totalProjects > 0 ? 25 : 0}
               />
               <ReportStatsCard
                 title="System Uptime"
@@ -1078,6 +1187,109 @@ export default function SystemReportsPage() {
                     }}
                   />
                 </div>
+              </div>
+            </div>
+
+            {/* Student Project Status Table */}
+            <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 shadow-2xl">
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="w-8 h-8 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center">
+                  <GraduationCap className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">
+                    Student Project Status
+                  </h3>
+                  <p className="text-sm text-slate-400">
+                    Overview of project assignments and progress
+                  </p>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-700">
+                      <th className="text-left py-3 px-4 text-slate-300 font-medium">Student</th>
+                      <th className="text-left py-3 px-4 text-slate-300 font-medium">Department</th>
+                      <th className="text-left py-3 px-4 text-slate-300 font-medium">Level</th>
+                      <th className="text-left py-3 px-4 text-slate-300 font-medium">Project Status</th>
+                      <th className="text-left py-3 px-4 text-slate-300 font-medium">Project Title</th>
+                      <th className="text-left py-3 px-4 text-slate-300 font-medium">Progress</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.students.map((student: Student, index: number) => (
+                      <tr key={student.userId} className={`border-b border-slate-800 hover:bg-slate-800/30 transition-colors ${index % 2 === 0 ? 'bg-slate-900/20' : ''}`}>
+                        <td className="py-3 px-4">
+                          <div>
+                            <div className="text-white font-medium">{student.fullName}</div>
+                            <div className="text-slate-400 text-xs">{student.userId}</div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-slate-300">{student.department}</td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                            student.level === 'PSM-1' 
+                              ? 'bg-blue-500/20 text-blue-400'
+                              : 'bg-purple-500/20 text-purple-400'
+                          }`}>
+                            {student.level}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          {student.hasProject ? (
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                              student.projectStatus === 'Completed' 
+                                ? 'bg-green-500/20 text-green-400'
+                                : student.projectStatus === 'In Progress'
+                                ? 'bg-yellow-500/20 text-yellow-400'
+                                : 'bg-blue-500/20 text-blue-400'
+                            }`}>
+                              {student.projectStatus}
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 rounded text-xs font-medium bg-red-500/20 text-red-400">
+                              No Project
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          {student.hasProject ? (
+                            <div className="text-slate-300 max-w-xs truncate">
+                              {student.projectTitle || 'Untitled Project'}
+                            </div>
+                          ) : (
+                            <span className="text-slate-500 italic">Not assigned</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          {student.hasProject ? (
+                            <div className="flex items-center space-x-2">
+                              <div className="w-16 bg-slate-700 rounded-full h-2">
+                                <div 
+                                  className="bg-gradient-to-r from-teal-500 to-cyan-500 h-2 rounded-full transition-all duration-300"
+                                  style={{ width: `${Math.min(student.projectProgress || 0, 100)}%` }}
+                                />
+                              </div>
+                              <span className="text-slate-400 text-xs">
+                                {student.projectProgress || 0}%
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-slate-500 text-xs">N/A</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                
+                {data.students.length === 0 && (
+                  <div className="text-center py-8 text-slate-400">
+                    No students found
+                  </div>
+                )}
               </div>
             </div>
 

@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const path = require("path");
+const { authenticateToken } = require("../middleware/auth");
 const { 
   getSupervisorAccount, 
   updateSupervisorAccount, 
@@ -23,7 +24,14 @@ const {
   deleteTask,
   deleteMeeting,
   deleteMilestone,
-  generateAIReport
+  generateAIReport,
+  // Chat functions
+  getSupervisorChats,
+  getOrCreateSupervisorChat,
+  getSupervisorChatMessages,
+  sendSupervisorMessage,
+  getSupervisorTaggableItems,
+  markSupervisorMessagesAsRead
 } = require("../controllers/supervisorController");
 
 
@@ -51,7 +59,18 @@ router.get("/account", getSupervisorAccount);
 router.put("/account", updateSupervisorAccount);
 
 // Document management routes
-router.get("/documents/:supervisorId/list", listDocuments); // List documents (metadata only)
+router.get("/documents/:supervisorId/list", (req, res, next) => {
+  console.log('🛣️ Documents list route hit with params:', req.params);
+  console.log('🛣️ Full URL:', req.originalUrl);
+  console.log('🛣️ Method:', req.method);
+  next();
+}, listDocuments); // List documents (metadata only)
+
+// Add a simple test route to verify routing works
+router.get("/documents/test", (req, res) => {
+  console.log('🧪 Test route hit');
+  res.json({ message: "Test route working", timestamp: new Date().toISOString() });
+});
 router.get("/documents/:id/content", getDocumentContent); // Get single document with content
 router.get("/documents/:id/pdf", getDocumentPDF); // Serve PDF files directly with proper headers
 
@@ -135,5 +154,13 @@ router.use((err, req, res, next) => {
 
 // AI Report generation
 router.post('/:supervisorId/ai-report', generateAIReport);
+
+// Chat routes (with authentication)
+router.get('/chats/:supervisorId', authenticateToken, getSupervisorChats);
+router.post('/chat', authenticateToken, getOrCreateSupervisorChat);
+router.get('/chat/:chatId/messages', authenticateToken, getSupervisorChatMessages);
+router.post('/chat/:chatId/message', authenticateToken, sendSupervisorMessage);
+router.get('/chat/taggable-items/:studentId', authenticateToken, getSupervisorTaggableItems);
+router.post('/chat/:chatId/read', authenticateToken, markSupervisorMessagesAsRead);
 
 module.exports = router;

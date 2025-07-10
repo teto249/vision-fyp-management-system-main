@@ -11,7 +11,10 @@ import {
   CheckCircle,
   X,
 } from "lucide-react";
-import { getDocuments, downloadDocument } from "../../../api/StudentApi/Document";
+import {
+  getDocuments,
+  downloadDocument,
+} from "../../../api/StudentApi/Document";
 import { logger } from "../../../utils/logger";
 
 // Skeleton loader component
@@ -32,7 +35,7 @@ interface ErrorState {
 
 interface ToastNotification {
   id: string;
-  type: 'success' | 'error' | 'info';
+  type: "success" | "error" | "info";
   message: string;
   duration?: number;
 }
@@ -44,32 +47,78 @@ export default function Documents() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "title">("date");
   const [toasts, setToasts] = useState<ToastNotification[]>([]);
+  const [noSupervisor, setNoSupervisor] = useState(false);
 
-  const addToast = (toast: Omit<ToastNotification, 'id'>) => {
+  // Add keyboard navigation for document grid
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle arrow keys when not focused on input elements
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLSelectElement ||
+        e.target instanceof HTMLButtonElement
+      ) {
+        return;
+      }
+
+      const cards = document.querySelectorAll('[data-document-card]');
+      const currentFocused = document.activeElement as HTMLElement;
+      const currentIndex = Array.from(cards).findIndex(card => card === currentFocused || card.contains(currentFocused));
+
+      if (currentIndex === -1) return;
+
+      let nextIndex = currentIndex;
+      const gridCols = window.innerWidth >= 1024 ? 3 : window.innerWidth >= 640 ? 2 : 1;
+
+      switch (e.key) {
+        case 'ArrowRight':
+          nextIndex = Math.min(currentIndex + 1, cards.length - 1);
+          break;
+        case 'ArrowLeft':
+          nextIndex = Math.max(currentIndex - 1, 0);
+          break;
+        case 'ArrowDown':
+          nextIndex = Math.min(currentIndex + gridCols, cards.length - 1);
+          break;
+        case 'ArrowUp':
+          nextIndex = Math.max(currentIndex - gridCols, 0);
+          break;
+        default:
+          return;
+      }
+
+      if (nextIndex !== currentIndex) {
+        e.preventDefault();
+        (cards[nextIndex] as HTMLElement).focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [documents.length]); // Use documents.length instead of filteredDocuments
+
+  const addToast = (toast: Omit<ToastNotification, "id">) => {
     const id = Date.now().toString();
     const newToast = { ...toast, id };
-    setToasts(prev => [...prev, newToast]);
-    
+    setToasts((prev) => [...prev, newToast]);
+
     // Auto-remove toast after duration
     setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
+      setToasts((prev) => prev.filter((t) => t.id !== id));
     }, toast.duration || 3000);
   };
 
   const removeToast = (id: string) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
+    setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
   const fetchDocuments = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
+      setNoSupervisor(false);
       const token = localStorage.getItem("authToken");
       const studentInfoStr = localStorage.getItem("studentInfo");
-
-      console.log("=== DEBUG STUDENT DOCUMENT FETCH ===");
-      console.log("Token:", token ? "Present" : "Missing");
-      console.log("Student Info String:", studentInfoStr);
 
       if (!token || !studentInfoStr) {
         setError({
@@ -84,7 +133,7 @@ export default function Documents() {
       try {
         studentInfo = JSON.parse(studentInfoStr);
       } catch (parseError) {
-        console.error("Failed to parse student info:", parseError);
+        // Handle invalid session data gracefully
         setError({
           message: "Invalid session data. Please log in again.",
           code: "INVALID_SESSION",
@@ -93,42 +142,42 @@ export default function Documents() {
         return;
       }
 
-      console.log("Parsed Student Info:", studentInfo);
+      const supervisorId =
+        studentInfo.supervisorId || studentInfo.supervisor?.userId;
 
-      const supervisorId = studentInfo.supervisorId || studentInfo.supervisor?.userId;
-      console.log("Supervisor ID:", supervisorId);
-
-      if (!supervisorId || supervisorId === null || supervisorId === undefined) {
-        console.error("No supervisorId found in student info");
-        setError({
-          message: "No supervisor assigned. Please contact your administrator to assign a supervisor before accessing documents.",
-          code: "NO_SUPERVISOR",
-          retry: false,
-        });
+      if (
+        !supervisorId ||
+        supervisorId === null ||
+        supervisorId === undefined
+      ) {
+        // Handle no supervisor case gracefully - this is a normal state for new students
+        setDocuments([]);
+        setNoSupervisor(true);
         return;
       }
 
-      console.log("Fetching documents for supervisor:", supervisorId);
       const fetchedDocuments = await getDocuments(token, supervisorId);
-      console.log("Fetched documents:", fetchedDocuments);
       setDocuments(fetchedDocuments);
-      
+
       // Show success message if documents are found
       if (fetchedDocuments.length > 0) {
         addToast({
-          type: 'success',
-          message: `Found ${fetchedDocuments.length} document${fetchedDocuments.length > 1 ? 's' : ''}`,
+          type: "success",
+          message: `Found ${fetchedDocuments.length} document${
+            fetchedDocuments.length > 1 ? "s" : ""
+          }`,
           duration: 2000,
         });
       }
     } catch (error) {
       logger.error("Failed to fetch documents", error);
       handleError(error);
-      
+
       // Add toast notification for errors
       addToast({
-        type: 'error',
-        message: error instanceof Error ? error.message : 'Failed to load documents',
+        type: "error",
+        message:
+          error instanceof Error ? error.message : "Failed to load documents",
         duration: 5000,
       });
     } finally {
@@ -143,27 +192,42 @@ export default function Documents() {
 
     if (error instanceof Error) {
       errorMessage = error.message;
-      
+
       // Better error categorization
-      if (error.message.includes("401") || error.message.includes("unauthorized")) {
+      if (
+        error.message.includes("401") ||
+        error.message.includes("unauthorized")
+      ) {
         errorCode = "AUTH_ERROR";
         errorMessage = "Session expired. Please log in again.";
         canRetry = false;
-      } else if (error.message.includes("403") || error.message.includes("forbidden")) {
+      } else if (
+        error.message.includes("403") ||
+        error.message.includes("forbidden")
+      ) {
         errorCode = "PERMISSION_ERROR";
         errorMessage = "You don't have permission to access these documents.";
         canRetry = false;
-      } else if (error.message.includes("404") || error.message.includes("not found")) {
+      } else if (
+        error.message.includes("404") ||
+        error.message.includes("not found")
+      ) {
         errorCode = "NOT_FOUND";
-        errorMessage = "Documents not found. Please check with your supervisor.";
+        errorMessage =
+          "Documents not found. Please check with your supervisor.";
         canRetry = true;
-      } else if (error.message.includes("network") || error.message.includes("fetch")) {
+      } else if (
+        error.message.includes("network") ||
+        error.message.includes("fetch")
+      ) {
         errorCode = "NETWORK_ERROR";
-        errorMessage = "Network connection failed. Please check your internet connection.";
+        errorMessage =
+          "Network connection failed. Please check your internet connection.";
         canRetry = true;
       } else if (error.message.includes("supervisor")) {
         errorCode = "NO_SUPERVISOR";
-        errorMessage = "No supervisor assigned. Please contact your administrator.";
+        errorMessage =
+          "No supervisor assigned. Please contact your administrator.";
         canRetry = false;
       } else {
         errorCode = "UNKNOWN_ERROR";
@@ -184,58 +248,58 @@ export default function Documents() {
       const token = localStorage.getItem("authToken");
       if (!token) {
         addToast({
-          type: 'error',
-          message: 'Please log in to download documents',
+          type: "error",
+          message: "Please log in to download documents",
         });
         return;
       }
 
       // Check if document exists before attempting download
-      const document = documents.find(doc => String(doc.id) === documentId);
+      const document = documents.find((doc) => String(doc.id) === documentId);
       if (!document) {
         addToast({
-          type: 'error',
-          message: 'Document not found',
+          type: "error",
+          message: "Document not found",
         });
         return;
       }
 
       addToast({
-        type: 'info',
+        type: "info",
         message: `Preparing download for ${fileName}...`,
         duration: 2000,
       });
 
       console.log("Downloading document:", documentId, fileName);
       await downloadDocument(documentId, fileName, token);
-      
+
       addToast({
-        type: 'success',
+        type: "success",
         message: `${fileName} downloaded successfully!`,
         duration: 4000,
       });
-      
+
       logger.info("Document downloaded successfully:", fileName);
     } catch (error) {
       logger.error("Failed to download document:", error);
-      
-      let errorMessage = 'Unknown error';
+
+      let errorMessage = "Unknown error";
       if (error instanceof Error) {
-        if (error.message.includes('401')) {
-          errorMessage = 'Session expired. Please log in again.';
-        } else if (error.message.includes('403')) {
-          errorMessage = 'You don\'t have permission to download this document.';
-        } else if (error.message.includes('404')) {
-          errorMessage = 'Document not found on server.';
-        } else if (error.message.includes('network')) {
-          errorMessage = 'Network error. Please check your connection.';
+        if (error.message.includes("401")) {
+          errorMessage = "Session expired. Please log in again.";
+        } else if (error.message.includes("403")) {
+          errorMessage = "You don't have permission to download this document.";
+        } else if (error.message.includes("404")) {
+          errorMessage = "Document not found on server.";
+        } else if (error.message.includes("network")) {
+          errorMessage = "Network error. Please check your connection.";
         } else {
           errorMessage = error.message;
         }
       }
-      
+
       addToast({
-        type: 'error',
+        type: "error",
         message: `Failed to download ${fileName}: ${errorMessage}`,
         duration: 6000,
       });
@@ -263,7 +327,7 @@ export default function Documents() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 p-8">
+      <div className="min-h-screen bg-gradient-to-br  p-8">
         <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array.from({ length: 6 }).map((_, i) => (
             <DocumentSkeleton key={i} />
@@ -293,6 +357,19 @@ export default function Documents() {
       }
     };
 
+    const getErrorIcon = () => {
+      switch (error.code) {
+        case "NO_SUPERVISOR":
+          return (
+            <AlertCircle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
+          );
+        default:
+          return (
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          );
+      }
+    };
+
     const getErrorAction = () => {
       switch (error.code) {
         case "NO_SUPERVISOR":
@@ -305,7 +382,7 @@ export default function Documents() {
                 Go Back
               </button>
               <button
-                onClick={() => window.location.href = "/student"}
+                onClick={() => (window.location.href = "/student")}
                 className="w-full bg-gray-600 hover:bg-gray-700 text-white py-3 px-4 rounded-xl transition-all"
               >
                 Go to Dashboard
@@ -316,7 +393,7 @@ export default function Documents() {
         case "INVALID_SESSION":
           return (
             <button
-              onClick={() => window.location.href = "/login"}
+              onClick={() => (window.location.href = "/login")}
               className="w-full bg-teal-600 hover:bg-teal-700 text-white py-3 px-4 rounded-xl transition-all"
             >
               Go to Login
@@ -341,7 +418,7 @@ export default function Documents() {
             </div>
           ) : (
             <button
-              onClick={() => window.location.href = "/student"}
+              onClick={() => (window.location.href = "/student")}
               className="w-full bg-teal-600 hover:bg-teal-700 text-white py-3 px-4 rounded-xl transition-all"
             >
               Go to Dashboard
@@ -351,13 +428,15 @@ export default function Documents() {
     };
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br  flex items-center justify-center p-4">
         <div className="bg-gray-800/80 backdrop-blur-sm rounded-xl p-8 max-w-md w-full shadow-xl border border-gray-700">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          {getErrorIcon()}
           <h2 className="text-xl font-bold text-white text-center mb-2">
             {getErrorTitle()}
           </h2>
-          <p className="text-gray-400 text-center mb-6 leading-relaxed">{error.message}</p>
+          <p className="text-gray-400 text-center mb-6 leading-relaxed">
+            {error.message}
+          </p>
           {getErrorAction()}
         </div>
       </div>
@@ -365,14 +444,21 @@ export default function Documents() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br  py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         <header className="mb-8">
           <h1 className="text-4xl font-bold text-white mb-4">
             Course Documents
           </h1>
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <p className="text-gray-400">Access your course materials</p>
+            <p className="text-gray-400">
+              Access your course materials
+              {documents.length > 0 && (
+                <span className="ml-2 text-teal-400 font-medium">
+                  ({documents.length} document{documents.length !== 1 ? 's' : ''} available)
+                </span>
+              )}
+            </p>
             <div className="flex gap-4 w-full sm:w-auto">
               <div className="relative flex-1 sm:flex-initial">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
@@ -381,47 +467,171 @@ export default function Documents() {
                   placeholder="Search documents..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full sm:w-64 bg-gray-800/50 backdrop-blur-sm text-white rounded-xl pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  className="w-full sm:w-64 bg-gray-800/50 backdrop-blur-sm text-white rounded-xl pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all duration-300"
                 />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                    aria-label="Clear search"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
               </div>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as "date" | "title")}
-                className="bg-gray-800/50 backdrop-blur-sm text-white rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="bg-gray-800/50 backdrop-blur-sm text-white rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all duration-300"
               >
                 <option value="date">Sort by Date</option>
                 <option value="title">Sort by Title</option>
               </select>
+              <button
+                onClick={fetchDocuments}
+                disabled={loading}
+                className="p-2 bg-gray-800/50 backdrop-blur-sm text-white rounded-xl hover:bg-gray-700/50 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Refresh documents"
+                aria-label="Refresh documents"
+              >
+                <RefreshCcw size={20} className={loading ? 'animate-spin' : ''} />
+              </button>
             </div>
           </div>
+          
+          {/* Search results info */}
+          {searchQuery && (
+            <div className="mt-4 text-sm text-gray-400">
+              {filteredDocuments.length > 0 ? (
+                <span>
+                  Found {filteredDocuments.length} document{filteredDocuments.length !== 1 ? 's' : ''} 
+                  matching &ldquo;{searchQuery}&rdquo;
+                </span>
+              ) : (
+                <span>No documents found matching &ldquo;{searchQuery}&rdquo;</span>
+              )}
+            </div>
+          )}
         </header>
 
         {filteredDocuments.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredDocuments.map((doc) => (
-              <DocumentCard
-                key={doc.id}
-                id={String(doc.id)}
-                fileName={doc.title}
-                description={doc.description ?? ""}
-                uploadDate={doc.createdAt}
-                fileType={doc.fileType}
-                uploadedBy={doc.uploadedBy}
-                onDownload={() => handleDownload(String(doc.id), doc.title)}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredDocuments.map((doc, index) => (
+                <div key={`doc-${doc.id}-${index}`} data-document-card>
+                  <DocumentCard
+                    id={String(doc.id)}
+                    fileName={doc.title}
+                    description={doc.description ?? ""}
+                    uploadDate={doc.createdAt}
+                    fileType={doc.fileType}
+                    uploadedBy={doc.uploadedBy}
+                    onDownload={() => handleDownload(String(doc.id), doc.title)}
+                  />
+                </div>
+              ))}
+            </div>
+            
+            {/* Pagination info for large datasets */}
+            {documents.length > 12 && (
+              <div className="mt-8 text-center text-sm text-gray-400">
+                Showing {filteredDocuments.length} of {documents.length} documents
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="ml-2 text-teal-400 hover:text-teal-300 underline"
+                  >
+                    Show all
+                  </button>
+                )}
+              </div>
+            )}
+            
+            {/* Keyboard navigation hint */}
+            {filteredDocuments.length > 1 && (
+              <div className="mt-6 text-center text-xs text-gray-500">
+                💡 Use arrow keys to navigate between documents
+              </div>
+            )}
+          </>
         ) : (
           <div className="text-center py-16 bg-gray-800/30 backdrop-blur-sm rounded-xl">
-            <FileText className="h-16 w-16 text-gray-600 mx-auto mb-4" />
-            <h3 className="text-xl font-medium text-white mb-2">
-              No documents found
-            </h3>
-            <p className="text-gray-400">
-              {searchQuery
-                ? "Try adjusting your search"
-                : "No documents have been shared yet"}
-            </p>
+            {noSupervisor ? (
+              <>
+                <AlertCircle className="h-16 w-16 text-amber-500 mx-auto mb-4" />
+                <h3 className="text-xl font-medium text-white mb-2">
+                  No Supervisor Assigned
+                </h3>
+                <p className="text-gray-400 mb-6 max-w-md mx-auto leading-relaxed">
+                  You need a supervisor assigned before you can access course
+                  documents. Please contact your administrator or check back later.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto">
+                  <button
+                    onClick={() => window.history.back()}
+                    className="bg-teal-600 hover:bg-teal-700 text-white py-3 px-6 rounded-xl transition-all"
+                  >
+                    Go Back
+                  </button>
+                  <button
+                    onClick={() => (window.location.href = "/student")}
+                    className="bg-gray-600 hover:bg-gray-700 text-white py-3 px-6 rounded-xl transition-all"
+                  >
+                    Go to Dashboard
+                  </button>
+                </div>
+              </>
+            ) : searchQuery ? (
+              <>
+                <Search className="h-16 w-16 text-gray-600 mx-auto mb-4" />
+                <h3 className="text-xl font-medium text-white mb-2">
+                  No Results Found
+                </h3>
+                <p className="text-gray-400 mb-6 max-w-md mx-auto leading-relaxed">
+                  No documents match your search for &ldquo;{searchQuery}&rdquo;. Try a different keyword or browse all documents.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto">
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="bg-teal-600 hover:bg-teal-700 text-white py-3 px-6 rounded-xl transition-all"
+                  >
+                    Clear Search
+                  </button>
+                  <button
+                    onClick={fetchDocuments}
+                    className="bg-gray-600 hover:bg-gray-700 text-white py-3 px-6 rounded-xl transition-all flex items-center justify-center gap-2"
+                  >
+                    <RefreshCcw size={16} />
+                    Refresh
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <FileText className="h-16 w-16 text-gray-600 mx-auto mb-4" />
+                <h3 className="text-xl font-medium text-white mb-2">
+                  No Documents Available
+                </h3>
+                <p className="text-gray-400 mb-6 max-w-md mx-auto leading-relaxed">
+                  Your supervisor hasn&apos;t shared any documents yet. Check back later or contact your supervisor.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto">
+                  <button
+                    onClick={fetchDocuments}
+                    className="bg-teal-600 hover:bg-teal-700 text-white py-3 px-6 rounded-xl transition-all flex items-center justify-center gap-2"
+                  >
+                    <RefreshCcw size={16} />
+                    Check Again
+                  </button>
+                  <button
+                    onClick={() => (window.location.href = "/student")}
+                    className="bg-gray-600 hover:bg-gray-700 text-white py-3 px-6 rounded-xl transition-all"
+                  >
+                    Go to Dashboard
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -432,34 +642,41 @@ export default function Documents() {
           <div
             key={toast.id}
             className={`rounded-xl p-4 text-white shadow-2xl backdrop-blur-sm transform transition-all duration-500 ease-out ${
-              toast.type === 'success'
-                ? 'bg-gradient-to-r from-green-600/90 to-green-700/90 border border-green-500/50'
-                : toast.type === 'error'
-                ? 'bg-gradient-to-r from-red-600/90 to-red-700/90 border border-red-500/50'
-                : 'bg-gradient-to-r from-blue-600/90 to-blue-700/90 border border-blue-500/50'
+              toast.type === "success"
+                ? "bg-gradient-to-r from-green-600/90 to-green-700/90 border border-green-500/50"
+                : toast.type === "error"
+                ? "bg-gradient-to-r from-red-600/90 to-red-700/90 border border-red-500/50"
+                : "bg-gradient-to-r from-blue-600/90 to-blue-700/90 border border-blue-500/50"
             } animate-in slide-in-from-right-full fade-in duration-300`}
             style={{
               animationDelay: `${index * 100}ms`,
-              animationFillMode: 'backwards'
+              animationFillMode: "backwards",
             }}
           >
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0 mt-0.5">
-                {toast.type === 'success' ? (
+                {toast.type === "success" ? (
                   <CheckCircle size={20} className="text-green-200" />
-                ) : toast.type === 'error' ? (
+                ) : toast.type === "error" ? (
                   <AlertCircle size={20} className="text-red-200" />
                 ) : (
                   <FileText size={20} className="text-blue-200" />
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium leading-relaxed break-words">{toast.message}</p>
-                {toast.type === 'info' && (
+                <p className="text-sm font-medium leading-relaxed break-words">
+                  {toast.message}
+                </p>
+                {toast.type === "info" && (
                   <div className="mt-2 w-full bg-white/20 rounded-full h-1">
-                    <div 
+                    <div
                       className="bg-white h-1 rounded-full transition-all duration-1000 ease-out"
-                      style={{ width: '0%', animation: `progress ${toast.duration || 3000}ms linear forwards` }}
+                      style={{
+                        width: "0%",
+                        animation: `progress ${
+                          toast.duration || 3000
+                        }ms linear forwards`,
+                      }}
                     />
                   </div>
                 )}
@@ -479,8 +696,12 @@ export default function Documents() {
       {/* Add CSS for progress animation */}
       <style jsx>{`
         @keyframes progress {
-          from { width: 0%; }
-          to { width: 100%; }
+          from {
+            width: 0%;
+          }
+          to {
+            width: 100%;
+          }
         }
       `}</style>
     </div>

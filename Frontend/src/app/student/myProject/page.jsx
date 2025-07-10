@@ -116,12 +116,12 @@ export default function MyProject() {
 
       if (result.success) {
         setProjectData(result.project);
+      } else if (result.noProject) {
+        // Student has no project assigned - this is normal
+        setProjectData(null);
+        setError(null);
       } else {
-        if (result.message && result.message.includes("No project found")) {
-          setProjectData(null);
-        } else {
-          throw new Error(result.message || "Failed to fetch project");
-        }
+        throw new Error(result.message || "Failed to fetch project");
       }
     } catch (err) {
       console.error("Fetch project error:", err);
