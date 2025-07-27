@@ -4,7 +4,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, FormEvent } from "react";
-import { Eye, EyeOff, User, Lock, LogIn, Home, ArrowLeft, Shield } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  User,
+  Lock,
+  LogIn,
+  Home,
+  ArrowLeft,
+  Shield,
+} from "lucide-react";
 import { login, logout, AuthError } from "../../api/auth";
 
 export default function LoginForm() {
@@ -31,7 +40,7 @@ export default function LoginForm() {
 
     try {
       const data = await login(username, password);
-      
+
       const role = data.user.role;
 
       // Show success message before redirect
@@ -96,7 +105,9 @@ export default function LoginForm() {
               <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-600 bg-clip-text text-transparent">
                 VISION
               </h1>
-              <p className="text-slate-400 text-sm font-medium">Management System</p>
+              <p className="text-slate-400 text-sm font-medium">
+                Management System
+              </p>
             </div>
           </Link>
         </div>
@@ -127,12 +138,17 @@ export default function LoginForm() {
               <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
                 <div className="w-2 h-2 bg-emerald-400 rounded-full"></div>
               </div>
-              <div className="text-sm font-medium">Login successful! Redirecting...</div>
+              <div className="text-sm font-medium">
+                Login successful! Redirecting...
+              </div>
             </div>
 
             {/* Username Field */}
             <div className="space-y-2">
-              <label htmlFor="username" className="block text-sm font-medium text-slate-300">
+              <label
+                htmlFor="username"
+                className="block text-sm font-medium text-slate-300"
+              >
                 Username or Email
               </label>
               <div className="relative group">
@@ -154,7 +170,10 @@ export default function LoginForm() {
 
             {/* Password Field */}
             <div className="space-y-2">
-              <label htmlFor="password" className="block text-sm font-medium text-slate-300">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-slate-300"
+              >
                 Password
               </label>
               <div className="relative group">
@@ -174,7 +193,11 @@ export default function LoginForm() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-white transition-colors duration-200"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
                 </button>
               </div>
             </div>
